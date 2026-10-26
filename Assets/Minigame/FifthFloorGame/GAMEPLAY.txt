@@ -1,0 +1,39 @@
+(START)
+
+	-  Scene awal dimulai dari kedatangan pesawat, kemudian agen melompat dari bagian belakang pesawat.
+	- Scene kedua dimulai dari angle menghadap ke landing spot (agen tiba di tempat gameplay) dan muncul 		  penjelasan gameplay.
+
+(GAMEPLAY)
+	- Gameplay dimulai dari penjelasan (tutorial yang berisi gambar) Terdapat 3 jenis layout apartemen
+		* Pintu Hijau adalah tempat dimana player harus memasukan koran (dimana rythm game dimulai)
+		  jika player melewati pintu tersebut maka akan terdapat pengurangan skor? atau miss aja?
+		
+		* Pintu Merah merupakan jebakan...terdapat mekanisme yang sama dengan pintu hijau tapi bedanya 			  jika player memasukan koran, terdapat penalty. jadi player harus melewati/mengabaikan.
+		
+		* Pintu Kuning merupakan Layout standart (tidak terdapat event)
+
+(ENDING) 
+	
+	- Ending dapat dicapai jika player mencapai jika player sampai ke extraction zone dan memicu trigger 	 	  (helipad) dan kamera berganti angle dari Bawah memperlihatkan pesawat pergi.
+
+ 
+	
+
+(START)
+
+	- The opening scene begins with the arrival of an aircraft, from which an agent jumps out from the 	  rear.
+	- The second scene starts with an angle facing the landing spot (where the agent arrives in the 	  gameplay area), followed by an on-screen explanation of the gameplay.
+
+(GAMEPLAY)
+
+	- Gameplay begins with an instructional segment (a tutorial featuring images). There are three types of 	  apartment layouts:
+
+		* Green Doors: These are the locations where the player must deliver a newspaper (triggering 		  the rhythm game sequence). If the player passes by one of these doors without delivering a 		  newspaper, will it result in a score deduction, or simply count as a "miss"?
+		
+		* Red Doors: These are traps. They feature a mechanism similar to the green doors, but with a 		  catch: delivering a newspaper here incurs a penalty. Therefore, the player must bypass or 		  ignore them.
+		
+		* Yellow Doors: These represent a standard layout (no events occur here).
+
+(ENDING)
+
+	- The ending is reached when the player arrives at the extraction zone and activates the trigger (the 	  helipad). The camera angle then shifts to a low-angle view, showing the aircraft departing.

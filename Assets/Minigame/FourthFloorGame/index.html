@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>読祭 マッチングゲーム！</title>
+  <link rel="icon" href="images/card-back.png" type="image/png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="lanterns" aria-hidden="true">
+    <span class="lantern"></span><span class="lantern"></span><span class="lantern"></span>
+    <span class="lantern"></span><span class="lantern"></span><span class="lantern"></span>
+    <span class="lantern"></span><span class="lantern"></span><span class="lantern"></span>
+  </div>
+
+  <main class="game">
+
+    <header class="topbar">
+      <h1 id="title" class="title">読祭 マッチングゲーム！</h1>
+
+      <div class="progress">
+        <div class="progress-text">
+          <span id="progress-label"></span>
+          <b id="progress-text">0 / 0</b>
+        </div>
+        <div class="bar" id="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <i id="progress-fill"></i>
+        </div>
+      </div>
+    </header>
+
+    <p id="message" class="message info" role="status" aria-live="polite"></p>
+
+    <div id="booths" class="booths"></div>
+
+    <section class="tray-wrap">
+      <div id="tray" class="tray"></div>
+    </section>
+  </main>
+
+  <div id="congrats" class="congrats" hidden>
+    <div class="congrats-panel" role="status">
+      <img id="congrats-back" class="congrats-back" alt="" hidden>
+      <div class="congrats-emoji" aria-hidden="true">🎉</div>
+      <h2 id="congrats-title" class="congrats-title"></h2>
+      <p id="congrats-text"></p>
+      <small id="congrats-hint"></small>
+    </div>
+  </div>
+
+  <div id="fx" aria-hidden="true"></div>
+
+  <script src="data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
