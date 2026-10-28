@@ -21,12 +21,8 @@ public static class SchoolDresser
     [MenuItem("Tools/Elevator Game/School/Place School Props (All Floors)")]
     static void PlaceAllProps() => SchoolKit.ForFloors("Place School Props", 1, 5, PlaceProps);
 
-    [MenuItem("Tools/Elevator Game/School/Arrange Rooms (3F, 5F)")]
-    static void ArrangeRooms()
-    {
-        SchoolKit.ForFloors("Arrange Rooms", 3, 3, Arrange);
-        SchoolKit.ForFloors("Arrange Rooms", 5, 5, Arrange);
-    }
+    [MenuItem("Tools/Elevator Game/School/Arrange Rooms (2F, 3F, 5F)")]
+    static void ArrangeRooms() => SchoolKit.ForFloors("Arrange Rooms", 2, 5, Arrange);
 
     static void Dress(Scene scene, int floor)
     {
@@ -43,10 +39,13 @@ public static class SchoolDresser
         PropsUpper.Apply(scene, floor);
     }
 
-    // The fixed room layouts (each a no-op on other floors): 3F desks and drafting rows, 5F laptops and care/CE
+    // The fixed room layouts (each a no-op on other floors): 2F reception door, 3F desks and drafting rows,
+    // 5F laptops, care/CE and the alley cut through the corridor wall (after the surfaces, so the hole stays)
     static void Arrange(Scene scene, int floor)
     {
+        SchoolLayout2F.Apply(scene, floor);
         SchoolLayout3F.Apply(scene, floor);
         SchoolLayout5F.Apply(scene, floor);
+        AlleyCutter.Apply(scene, floor);
     }
 }
