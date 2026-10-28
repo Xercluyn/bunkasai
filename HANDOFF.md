@@ -123,6 +123,36 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
 - 5F: `AlleyCutter` removes two wall panels (z −45.83 and z −20.39, x −171..−150). That connects the corridor, through the closed pocket, to the hallway behind the elevators. The source images are in `Assets/Problems`.
 - Menu: **Arrange Rooms (2F, 3F, 5F)**. Dress School runs it too.
 
+## Next: editor-tools refactor (planned, not started)
+The user wants Tools > Elevator Game tidied up: combine the overlaps and drop the redundant parts, **without losing any function** they use to set up buildings, characters, floors and minigames. Review afterwards.
+
+Duplicate helpers known so far, each to be merged into one home (e.g. a shared `Assets/Editor/EditorKit.cs`):
+- **`EnsureFolder`:** in `WallGapCloser.cs`, `WallDoubleSider.cs` and `School/SchoolKit.cs`.
+- **"Open each floor, apply, save, restore" loops:** `WallDoubleSider.MakeAllDoubleSided`, `SchoolKit.ForFloors` and every "(All Floors)" menu. Use `SchoolKit.ForFloors` everywhere.
+- **Building-root lookups:** `AlleyCutter.BuildingRoots` and `SchoolKit.FindInBuilding`. Both should call `FloorPlayerSetup.BuildingRoots`.
+- **Hiding FBX children:** `SchoolLayout3F.Hide` and `AlleyCutter.HideInHole`.
+- **Ground raycasts:** `SchoolLayout3F.Ground`, the one in SchoolLayout5F, `PropsUpper.FloorSpot`, PropsLower's floor height and `IndoorLightingSetup.DropToFloor`.
+- **Overlap checks:** `SchoolLayout3F.CheckOverlap` and the one in SchoolLayout5F.
+- **Material helpers:** PropsUpper `A`/`H`, PropsLower `M` and `SchoolKit.Mat`/`Accent`.
+- **Mesh save-in-place and "(2s)" naming:** ShellDresser, WallDoubleSider, WallGapCloser and AlleyCutter.
+
+Menu tidy-up, keeping every function reachable:
+- **School menus:** `School/Dress School (This Floor / All Floors)` on top, with the individual steps under `School/Steps/…`.
+- **Arrange step:** fold Arrange 2F/3F/5F and Cut 5F Alley into Arrange Rooms.
+- **Place School Props:** merge the 1F-3F and 4F-5F items into one.
+- **Easy Mode:** rename "Apply Easy Mode". It now writes the *harder* 5F values, so call it e.g. "Apply Difficulty Values".
+- **Old helpers:** check whether `FourthFloorArtWatcher` and any helpers that use the old scene names are still needed.
+
+Runtime scripts:
+- Keep `FloorMenuButton` and `LevelOneMenu`, the empty shells that scenes reference.
+- Check the big files (`SecondFloorGame.cs`, and `PropsUpper.cs` at about 700 lines) against the 800-line limit.
+
+Process for the next session:
+1. Inventory every `[MenuItem]` and who calls what. Both inventory subagents were stopped this session before they finished.
+2. Refactor in small commits, running `Tools/compile.ps1` after each.
+3. Run the code-reviewer subagent.
+4. Re-run Dress School in Unity and check that the scenes don't change.
+
 ## Not done yet / next steps
 1. **Play-test everything.** None of today's polish pass has run in Unity yet; it was only compile-checked. Watch for:
    - footsteps in time on 1F and 5F (tune `Footsteps.strideBodyHeights`, `volume`);
