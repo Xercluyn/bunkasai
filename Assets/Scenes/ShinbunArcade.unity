@@ -377,11 +377,12 @@ MonoBehaviour:
   agentAnimator: {fileID: 9100000, guid: 30d90abb01e9b87409ed2f0bc7e2138a, type: 2}
   buildingMaterial: {fileID: 2100000, guid: 9b61be45b53ff71459ce5aaed8f8bb9f, type: 2}
   skylineMaterial: {fileID: 2100000, guid: edac479052eddba438c9ba753c662715, type: 2}
-  hallways: 14
-  runSpeed: 7
+  hallways: 10
+  quickFinish: 1
+  runSpeed: 7.5
   agentSize: 0.8
-  promptTime: 1
-  perfectWindow: 0.1
+  promptTime: 1.1
+  perfectWindow: 0.08
   goodWindow: 0.25
   throwTime: 0.7
   perfectPoints: 100
