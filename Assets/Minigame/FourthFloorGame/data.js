@@ -4,6 +4,7 @@ window.FESTIVAL_DATA = {
     title: "読祭 マッチングゲーム！",
     cardBack: "images/card-back.png",
     cardsPerGame: null,
+    onlyFeatured: true,   // true = 1 card per department (cards marked featured: true). false = all cards
     hintAfterMistakes: 3
   },
 
@@ -19,7 +20,7 @@ window.FESTIVAL_DATA = {
 
 
   foods: [
-    { id: "churros",        name: "チュロス",               image: "images/foods/churros.png",         emoji: "🥖", departmentId: "eizo-housou" },
+    { id: "churros",        name: "チュロス",               image: "images/foods/churros.png",         emoji: "🥖", departmentId: "eizo-housou", featured: true },
     { id: "chocobanana",    name: "チョコバナナ",           image: "images/foods/chocobanana.png",     emoji: "🍌", departmentId: "it-team" },
 
     { id: "icecream",       name: "アイスクリーム",         image: "images/foods/icecream.png",        emoji: "🍦", departmentId: "eizo-housou" },
@@ -27,15 +28,15 @@ window.FESTIVAL_DATA = {
 
     { id: "yakitori",       name: "焼き鳥",                 image: "images/foods/yakitori.png",        emoji: "🍢", departmentId: "kaigo" },
     { id: "molkky",         name: "モルック",               image: "images/foods/molkky.png",          emoji: "🎯", departmentId: "it-team" },
-    { id: "sui-gyoza",      name: "水餃子",                 image: "images/foods/sui-gyoza.png",       emoji: "🥟", departmentId: "tv" },
+    { id: "sui-gyoza",      name: "水餃子",                 image: "images/foods/sui-gyoza.png",       emoji: "🥟", departmentId: "tv", featured: true },
 
     { id: "minigame",       name: "ミニゲーム",             image: "images/foods/minigame.png",        emoji: "🎮", departmentId: "it-team" },
     { id: "escape",         name: "脱出ゲーム",             image: "images/foods/escape.png",          emoji: "🚪", departmentId: "eizo-housou" },
 
-    { id: "ai-newspaper",   name: "AIで自分新聞",           image: "images/foods/ai-newspaper.png",    emoji: "📰", departmentId: "it-team" },
+    { id: "ai-newspaper",   name: "AIで自分新聞",           image: "images/foods/ai-newspaper.png",    emoji: "📰", departmentId: "it-team", featured: true },
     { id: "toast",          name: "トースト",               image: "images/foods/toast.png",           emoji: "🍞", departmentId: "rinsho" },
 
-    { id: "machi-sketch",   name: "まちと本棚スケッチ",     image: "images/foods/machi-sketch.png",    emoji: "✏️", departmentId: "arch-team" },
+    { id: "machi-sketch",   name: "まちと本棚スケッチ",     image: "images/foods/machi-sketch.png",    emoji: "✏️", departmentId: "arch-team", featured: true },
     { id: "tenshin",        name: "点心",                   image: "images/foods/tenshin.png",         emoji: "🥟", departmentId: "it-team" },
 
     { id: "chashitsu",      name: "茶室",                   image: "images/foods/chashitsu.png",       emoji: "🍵", departmentId: "arch-team" },
@@ -46,13 +47,13 @@ window.FESTIVAL_DATA = {
     { id: "myanmar-sweets", name: "ミャンマーのスイーツ",   image: "images/foods/myanmar-sweets.png",  emoji: "🍰", departmentId: "arch-team" },
 
     { id: "electric-work",  name: "電気工事",               image: "images/foods/electric-work.png",   emoji: "🔌", departmentId: "denki" },
-    { id: "irairabo",       name: "イライラ棒",             image: "images/foods/irairabo.png",        emoji: "⚡", departmentId: "denki" },
+    { id: "irairabo",       name: "イライラ棒",             image: "images/foods/irairabo.png",        emoji: "⚡", departmentId: "denki", featured: true },
 
-    { id: "medical-exhibit",name: "医療機器展示・体験",     image: "images/foods/medical-exhibit.png", emoji: "🩺", departmentId: "rinsho" },
+    { id: "medical-exhibit",name: "医療機器展示・体験",     image: "images/foods/medical-exhibit.png", emoji: "🩺", departmentId: "rinsho", featured: true },
     { id: "yaki-gyoza",     name: "焼き餃子",               image: "images/foods/yaki-gyoza.png",      emoji: "🥟", departmentId: "tv" },
 
     { id: "elderly-sim",    name: "高齢者疑似体験",         image: "images/foods/elderly-sim.png",     emoji: "🧓", departmentId: "kaigo" },
-    { id: "teyoku",         name: "手浴体験",               image: "images/foods/teyoku.png",          emoji: "🤲", departmentId: "kaigo" },
+    { id: "teyoku",         name: "手浴体験",               image: "images/foods/teyoku.png",          emoji: "🤲", departmentId: "kaigo", featured: true },
     { id: "fukushi-yogu",   name: "福祉用具展示",           image: "images/foods/fukushi-yogu.png",    emoji: "♿", departmentId: "kaigo" }
   ],
 

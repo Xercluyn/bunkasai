@@ -379,6 +379,7 @@ MonoBehaviour:
   skylineMaterial: {fileID: 2100000, guid: edac479052eddba438c9ba753c662715, type: 2}
   hallways: 14
   runSpeed: 7
+  agentSize: 0.8
   promptTime: 1
   perfectWindow: 0.1
   goodWindow: 0.25
@@ -391,7 +392,7 @@ MonoBehaviour:
   planeAltitude: 30
   planeSpeed: 40
   planeRotationFix: {x: 0, y: 0, z: 0}
-  returnScene: FifthFloorScene
+  returnScene: FifthScene
 --- !u!4 &2103410344
 Transform:
   m_ObjectHideFlags: 0

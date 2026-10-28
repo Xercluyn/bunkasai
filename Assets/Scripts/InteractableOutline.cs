@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
-/// Orange outline around an object the player can use (the elevator, the arcade box). It pulses gently all
-/// the time and turns brighter and thicker while its ElevatorPlayZone shows the Play button.
+/// Orange line around an object the player can use (the elevator, the arcade box). It pulses gently all
+/// the time and turns brighter and thicker while its ElevatorPlayZone shows the Play button. Only the rim
+/// past the object's silhouette shows (the object hides the rest), and walls in front hide it too.
 /// Added by Tools > Elevator Game > Outline Interactables; the model needs Read/Write enabled.
 /// </summary>
 public class InteractableOutline : MonoBehaviour
@@ -13,6 +15,9 @@ public class InteractableOutline : MonoBehaviour
     public Color color = new Color(1f, 0.55f, 0.1f);
     [Tooltip("Outline width in screen pixels when idle and when the player can interact.")]
     public float idleWidth = 3f, focusWidth = 6f;
+    [Tooltip("How far behind the object the outline sits, as a fraction of its distance from the camera. " +
+             "Raise it if orange shows on the object's face; lower it if the line goes missing around small raised parts.")]
+    public float depthPush = 0.002f;
 
     [Tooltip("Outline only part of one mesh, e.g. the elevator's button: the mesh...")]
     public MeshFilter partMesh;
@@ -23,7 +28,8 @@ public class InteractableOutline : MonoBehaviour
     [System.NonSerialized] public bool focused;
 
     static readonly Dictionary<Mesh, Mesh> smoothed = new Dictionary<Mesh, Mesh>();
-    static readonly int ColorId = Shader.PropertyToID("_Color"), WidthId = Shader.PropertyToID("_Width");
+    static readonly int ColorId = Shader.PropertyToID("_Color"), WidthId = Shader.PropertyToID("_Width"),
+        DepthPushId = Shader.PropertyToID("_DepthPush");
     Material material;
     float focus;
 
@@ -31,7 +37,9 @@ public class InteractableOutline : MonoBehaviour
     void Start()
     {
         if (outlineMaterial == null) { enabled = false; return; }
-        material = new Material(outlineMaterial);
+        // The expanded copy, a little behind the object so only its rim shows
+        material = new Material(outlineMaterial) { renderQueue = (int)RenderQueue.Transparent + 2 };
+        material.SetFloat(DepthPushId, depthPush);
         foreach (var mf in GetComponentsInChildren<MeshFilter>())
         {
             if (mf.sharedMesh == null || mf.GetComponent<MeshRenderer>() == null) continue;
@@ -47,7 +55,7 @@ public class InteractableOutline : MonoBehaviour
             hull.GetComponent<MeshFilter>().sharedMesh = Smoothed(source);
             var r = hull.GetComponent<MeshRenderer>();
             r.sharedMaterial = material;
-            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.shadowCastingMode = ShadowCastingMode.Off;
             r.receiveShadows = false;
         }
     }

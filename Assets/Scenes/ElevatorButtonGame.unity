@@ -1079,8 +1079,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4ed1e66c39a3ae49a6f42d3d6e835b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FloorMinigame
-  nextLevelScene: 
-  floorScene: FirstFloorScene
+  nextLevelScene: SecondScene
+  floorScene: FirstScene
 --- !u!82 &1852088825
 AudioSource:
   m_ObjectHideFlags: 0

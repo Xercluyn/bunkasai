@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>かわいいどうぶつのなまえをまなぼう</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="sky"><i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i></div>
+<div class="app" id="app">
+  <header class="top">
+    <h1 class="title" lang="ja"><span>かわいい どうぶつの</span><span>なまえを まなぼう</span></h1>
+    <button class="menuBtn" id="menuBtn" aria-label="メニュー" aria-haspopup="true" aria-expanded="false">☰</button>
+  </header>
+  <div id="quiz" style="display:contents">
+    <div class="bar">
+      <div class="dots" id="dots"></div>
+      <div class="timer" id="timer"><svg viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="26"/><circle class="ring" id="ring" cx="32" cy="32" r="26"/></svg><b id="tnum">5</b></div>
+    </div>
+    <p class="hint" lang="ja">絵をタップして音を聞こう。正しい答えを選んでね。</p>
+    <div class="pic" id="pic" role="button" tabindex="0" aria-label="音を聞く"><span class="sun"></span><span id="emoji"></span><span class="spk">🔊</span></div>
+    <div class="opts" id="opts"></div>
+  </div>
+  <div class="end hidden" id="end">
+    <div class="trophy" id="trophy">🏆</div>
+    <h2 id="endTitle"></h2>
+    <p id="endMsg" lang="ja"></p>
+    <button class="play" id="again" lang="ja">もう一度あそぶ</button>
+  </div>
+</div>
+<ul class="menu hidden" id="menu" role="menu" lang="ja">
+  <li role="none"><button role="menuitem" data-act="hear">🔊 <span>もう一度 きく</span></button></li>
+  <li role="none"><button role="menuitem" data-act="mute">🔇 <span id="muteLbl">おとを OFFにする</span></button></li>
+  <li role="none"><button role="menuitem" data-act="restart">🔄 <span>はじめから</span></button></li>
+  <li role="none"><button role="menuitem" data-act="help">❓ <span>あそびかた</span></button></li>
+</ul>
+<div class="toast hidden" id="toast" lang="ja"></div>
+<script src="script.js"></script>
+</body>
+</html>

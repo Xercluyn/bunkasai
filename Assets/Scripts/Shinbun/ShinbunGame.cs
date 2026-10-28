@@ -33,7 +33,10 @@ public class ShinbunGame : MonoBehaviour
 
     [Header("Course")]
     [Tooltip("Number of hallway pieces between the two helipads.")]
-    public int hallways = 14;
+    public int hallways = 7;   // easy mode (was 14)
+
+    [Tooltip("Back to the floor as soon as the run reaches the end, skipping the plane pickup and the results.")]
+    public bool quickFinish = true;
     public float runSpeed = 7f;
 
     [Header("Agent")]
@@ -43,9 +46,9 @@ public class ShinbunGame : MonoBehaviour
 
     [Header("Timing (seconds)")]
     [Tooltip("How long the ring takes to close before the moment to press.")]
-    public float promptTime = 1f;
+    public float promptTime = 1.3f;
     public float perfectWindow = 0.1f;
-    public float goodWindow = 0.25f;
+    public float goodWindow = 0.35f;
     [Tooltip("How long the agent stops to throw.")]
     public float throwTime = 0.7f;
 
@@ -64,7 +67,7 @@ public class ShinbunGame : MonoBehaviour
     public Vector3 planeRotationFix;
 
     [Tooltip("Scene to go back to; its quest is cleared when the mission is complete.")]
-    public string returnScene = "FifthFloorScene";
+    [SceneName] public string returnScene = "FifthFloorScene";
 
     float agentHeight = 1.8f;
     float S => agentHeight / 1.8f;   // camera framing below was laid out for a 1.8 tall agent
@@ -102,6 +105,15 @@ public class ShinbunGame : MonoBehaviour
         yield return Intro();
         yield return Tutorial();
         yield return Run();
+        if (quickFinish)
+        {
+            // reaching the end of the hallways wins: back to the floor right away
+            audioSource.PlayOneShot(sfxWin);
+            hud.Caption(L.T("ゴール！クリア！", "Goal! Cleared!"));
+            yield return new WaitForSeconds(1.2f);
+            Leave(true);
+            yield break;
+        }
         yield return Ending();
 
         audioSource.PlayOneShot(sfxWin);
@@ -281,7 +293,7 @@ public class ShinbunGame : MonoBehaviour
         // Jump: fall onto the pad; press as the ring closes to land cleanly
         agentT.SetParent(null, true);
         agentT.rotation = Quaternion.LookRotation(level.runDir);
-        hud.Caption("リングが重なったら スペース で着地！");
+        hud.Caption(L.T("リングが重なったら スペース で着地！", "Press Space when the rings meet to land!"));
         const float gravity = 30f, maxFall = 40f;
         float v = 0f;
         bool judged = false;
@@ -299,7 +311,7 @@ public class ShinbunGame : MonoBehaviour
                 {
                     judged = true;
                     hud.HidePrompt();
-                    Score(perfect, perfect ? "PERFECT 着地！" : "GOOD 着地！");
+                    Score(perfect, perfect ? L.T("PERFECT 着地！", "PERFECT landing!") : L.T("GOOD 着地！", "GOOD landing!"));
                 }
             }
             Vector3 follow = agentT.position + (level.cameraSide * 12f + Vector3.up * 1.5f) * S;
@@ -441,7 +453,7 @@ public class ShinbunGame : MonoBehaviour
         agentT.position = pad;
         agentT.rotation = Quaternion.LookRotation(level.runDir);
         Play("Idle");
-        hud.Caption("ヘリパッドに到着！迎えの飛行機を待とう");
+        hud.Caption(L.T("ヘリパッドに到着！迎えの飛行機を待とう", "Reached the helipad! Wait for the plane to pick you up"));
 
         // Low angle from the helipad floor, looking up at the agent and the sky
         Vector3 low = pad + (level.cameraSide * 5f - level.runDir * 4f + Vector3.up * 0.4f) * S;
@@ -510,7 +522,7 @@ public class ShinbunGame : MonoBehaviour
         trapsHit++;
         combo = 0;
         score = Mathf.Max(0, score - trapPenalty);
-        hud.Pop($"トラップ！ -{trapPenalty}", UiKit.Bad);
+        hud.Pop(L.T($"トラップ！ -{trapPenalty}", $"Trap! -{trapPenalty}"), UiKit.Bad);
         audioSource.PlayOneShot(sfxBad);
         StartCoroutine(Shake(0.35f, 0.15f));
         UpdateScore();
@@ -519,7 +531,7 @@ public class ShinbunGame : MonoBehaviour
     void Dodge()
     {
         score += dodgePoints;
-        hud.Pop($"回避！ +{dodgePoints}", UiKit.Good);
+        hud.Pop(L.T($"回避！ +{dodgePoints}", $"Dodged! +{dodgePoints}"), UiKit.Good);
         UpdateScore();
     }
 

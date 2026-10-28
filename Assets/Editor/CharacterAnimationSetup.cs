@@ -8,8 +8,8 @@ using UnityEngine;
 
 /// <summary>
 /// Tools > Elevator Game > Setup Character Animation.
-/// Takes the Mixamo downloads in Assets/Animations (an idle "With Skin", a walk and an optional run and
-/// jump "Without Skin"), sets them up as Humanoid clips, builds the Idle/Walk/Run/Jump controller and
+/// Takes the Mixamo downloads in Assets/Animations (an idle "With Skin", a walk and an optional run
+/// "Without Skin"), sets them up as Humanoid clips, builds the Idle/Walk/Run controller and
 /// swaps the rigged model in for the current player.
 /// </summary>
 public static class CharacterAnimationSetup
@@ -26,8 +26,8 @@ public static class CharacterAnimationSetup
         {
             EditorUtility.DisplayDialog("Setup Character Animation",
                 "Put the Mixamo downloads in " + Folder + ":\n\n" +
-                "  • an Idle FBX downloaded \"With Skin\" (name containing \"idle\")\n" +
-                "  • a Walking FBX downloaded \"Without Skin\", In Place (name containing \"walk\")", "OK");
+                "  • an Idle FBX downloaded \"With Skin\" (e.g. onigiri_idle.fbx)\n" +
+                "  • a Walking FBX downloaded \"Without Skin\", In Place (e.g. onigiri_walk.fbx)", "OK");
             return;
         }
 
@@ -55,10 +55,9 @@ public static class CharacterAnimationSetup
         var idleClip = LoadClip(idlePath);
         var walkClip = LoadClip(walkPath);
         var runClip = SetupRun(avatar);
-        var jumpClip = SetupJump(avatar);
 
-        // 3. Controller: Speed switches Idle/Walk/Run; PlayerMovement plays Jump
-        var controller = BuildController(idleClip, walkClip, runClip, jumpClip);
+        // 3. Controller: Speed switches Idle/Walk/Run
+        var controller = BuildController(idleClip, walkClip, runClip);
 
         // 4. Swap the rigged model in for the current player
         SwapPlayerModel(idlePath, avatar, controller);
@@ -93,79 +92,6 @@ public static class CharacterAnimationSetup
         return LoadClip(runPath);
     }
 
-    // Optional jump clip: plays once and keeps its own up/down motion in the pose, so the
-    // body rises and lands exactly as animated.
-    static AnimationClip SetupJump(Avatar avatar)
-    {
-        string jumpPath = FindFbx("jump");
-        if (jumpPath == null) return null;
-        var importer = ImportWithAvatar(jumpPath, avatar);
-        SetupClips(importer, false);
-        var clip = LoadClip(jumpPath);
-
-        // Fire OnJumpLand on the frame the feet touch down, so walking can cut the recovery short
-        if (FindAirborne(clip, out float takeoff, out float land))
-        {
-            var clips = importer.clipAnimations;
-            clips[0].events = new[]
-            {
-                new AnimationEvent
-                {
-                    functionName = "OnJumpLand",
-                    time = land / clip.length       // importer event times are normalized
-                }
-            };
-            importer.clipAnimations = clips;
-            importer.SaveAndReimport();
-            clip = LoadClip(jumpPath);
-            Debug.Log($"Jump clip: feet leave the ground at {takeoff:0.00}s and land at {land:0.00}s.");
-        }
-        else
-        {
-            Debug.LogWarning("Couldn't find when the jump clip lands; the jump will play to its end before walking resumes.");
-        }
-        return clip;
-    }
-
-    // Sample the lower foot's height to find when both feet are off the ground.
-    static bool FindAirborne(AnimationClip clip, out float takeoff, out float land)
-    {
-        takeoff = land = 0f;
-        var bindings = AnimationUtility.GetCurveBindings(clip);
-        AnimationCurve Curve(string prop) => bindings.Where(b => b.propertyName == prop)
-            .Select(b => AnimationUtility.GetEditorCurve(clip, b)).FirstOrDefault();
-
-        var left = Curve("LeftFootT.y");
-        var right = Curve("RightFootT.y");
-        var body = Curve("RootT.y");
-        if ((left == null || right == null) && body == null) return false;
-        float Height(float t) => left != null && right != null
-            ? Mathf.Min(left.Evaluate(t), right.Evaluate(t))
-            : body.Evaluate(t);
-
-        const int samples = 300;
-        float start = Height(0f), peak = start, peakTime = 0f;
-        for (int i = 0; i <= samples; i++)
-        {
-            float t = clip.length * i / samples;
-            float h = Height(t);
-            if (h > peak) { peak = h; peakTime = t; }
-        }
-        if (peak - start < 1e-4f) return false;
-
-        float threshold = start + 0.1f * (peak - start);
-        takeoff = -1f;
-        land = clip.length;
-        for (int i = 0; i <= samples; i++)
-        {
-            float t = clip.length * i / samples;
-            float h = Height(t);
-            if (takeoff < 0f && h > threshold) takeoff = t;
-            if (t > peakTime && h <= threshold) { land = t; break; }
-        }
-        return takeoff >= 0f && land > takeoff;
-    }
-
     // straight: pull the clip's sideways/forward drift and hip twist out of the pose into root motion,
     // which is discarded (applyRootMotion is off), so the body stays centred and faces straight ahead.
     internal static void SetupClips(ModelImporter importer, bool loop, bool straight = false)
@@ -176,7 +102,7 @@ public static class CharacterAnimationSetup
             c.loopTime = loop;
             c.loopPose = loop;                 // blend the last frame into the first for a seamless cycle
             c.lockRootRotation = !straight;
-            c.lockRootHeightY = true;          // baked: vertical motion (incl. a jump's height) stays in the pose
+            c.lockRootHeightY = true;          // baked: vertical motion stays in the pose
             c.lockRootPositionXZ = !straight;
             c.keepOriginalOrientation = !straight;   // straight: root follows the body's average facing
             c.keepOriginalPositionY = false;
@@ -204,17 +130,14 @@ public static class CharacterAnimationSetup
         SetupClips((ModelImporter)AssetImporter.GetAtPath(idlePath), true);
         SetupClips((ModelImporter)AssetImporter.GetAtPath(walkPath), true);
         var runClip = avatar != null ? SetupRun(avatar) : null;
-        var jumpClip = avatar != null ? SetupJump(avatar) : null;
-        BuildController(LoadClip(idlePath), LoadClip(walkPath), runClip, jumpClip);
-        Debug.Log("Rebuilt " + ControllerPath + " with Idle, Walk" + (runClip != null ? ", Run" : "") +
-                  (jumpClip != null ? ", Jump" : "") + " states." +
-                  (runClip == null ? " (No FBX with \"run\" in its name found in " + Folder + ".)" : "") +
-                  (jumpClip == null ? " (No FBX with \"jump\" in its name found in " + Folder + ".)" : ""));
+        BuildController(LoadClip(idlePath), LoadClip(walkPath), runClip);
+        Debug.Log("Rebuilt " + ControllerPath + " with Idle, Walk" + (runClip != null ? ", Run" : "") + " states." +
+                  (runClip == null ? " (No FBX with \"run\" in its name found in " + Folder + ".)" : ""));
     }
 
     // Separate Idle and Walk states with short cross-fades. A blend tree would sync the 1 s walk
     // cycle to the 10 s idle while blending, which makes the walk stall and step backwards on stop.
-    static AnimatorController BuildController(AnimationClip idle, AnimationClip walk, AnimationClip run, AnimationClip jump)
+    static AnimatorController BuildController(AnimationClip idle, AnimationClip walk, AnimationClip run)
     {
         // Rebuild in place so scene references to the controller stay valid
         var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath)
@@ -262,9 +185,6 @@ public static class CharacterAnimationSetup
         }
         AddTransition(idleState, walkState, AnimatorConditionMode.Greater, 0.15f);
         AddTransition(walkState, idleState, AnimatorConditionMode.Less, 0.2f);
-
-        // No transitions: PlayerMovement cross-fades into Jump on Space and back out on landing
-        if (jump != null) sm.AddState("Jump").motion = jump;
 
         EditorUtility.SetDirty(controller);
         AssetDatabase.SaveAssets();

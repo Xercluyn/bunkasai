@@ -13,21 +13,21 @@ using UnityEngine.UI;
 [RequireComponent(typeof(AudioSource))]
 public class FloorMinigame : MonoBehaviour
 {
-    const float TOTAL_TIME = 30f;
+    const float TOTAL_TIME = 45f;      // easy mode (was 30)
     const int NEED = 3;
     const float FLIP = 0.3f;
     const float HOLD = 0.5f;      // how long a wrong card stays face-up before turning back
-    const int MAX_TAPS = 7;
+    const int MAX_TAPS = 10;           // easy mode (was 7)
 
     enum Dir { Up, Right, Down, Left }
     static readonly float[] ROT = { 0f, 90f, 180f, 270f };
     enum State { Idle, Playing, Paused, Over }
 
     [Tooltip("Scene loaded by 「次のステージへ」. Leave empty until the next level exists.")]
-    public string nextLevelScene = "";
+    [SceneName] public string nextLevelScene = "";
 
     [Tooltip("The 3D floor scene (used by 「← 戻る」, and by a win when no next level is set).")]
-    public string floorScene = "FirstFloorScene";
+    [SceneName] public string floorScene = "FirstFloorScene";
 
     class Card
     {
@@ -135,25 +135,25 @@ public class FloorMinigame : MonoBehaviour
 
         // header
         var header = UiKit.Headline(wrap, 34,
-            ("ようこそ！", UiKit.Accent, UiKit.Hex("#b3560b")),
-            ("1階ゲーム", UiKit.Accent2, UiKit.Hex("#8e1f58")),
-            ("へ〜", UiKit.Accent, UiKit.Hex("#b3560b")));
+            (L.T("ようこそ！", "Welcome to"), UiKit.Accent, UiKit.Hex("#b3560b")),
+            (L.T("1階ゲーム", " the 1F Game"), UiKit.Accent2, UiKit.Hex("#8e1f58")),
+            (L.T("へ〜", "!"), UiKit.Accent, UiKit.Hex("#b3560b")));
         UiKit.Place(header, 0f, 0f, W, 40f);
 
         // HUD
         float mw = (W - 16f) / 3f;
-        BuildMeter(wrap, 0f, mw, "残り時間", out timeVal, out timeMeterBorder, out var timeBottom);
+        BuildMeter(wrap, 0f, mw, L.T("残り時間", "TIME LEFT"), out timeVal, out timeMeterBorder, out var timeBottom);
         var barBg = UiKit.Box("TimerBar", timeBottom, UiKit.Bg2, 3f);
         UiKit.Place(barBg.rectTransform, 0f, 0f, mw - 28f, 6f);
         timeBarImg = UiKit.Box("Fill", barBg.transform, UiKit.Accent, 3f);
         timeBar = UiKit.Stretch(timeBarImg.rectTransform);
         timeBar.pivot = new Vector2(0f, 0.5f);
 
-        BuildMeter(wrap, mw + 8f, mw, "発見数", out scoreVal, out _, out var scoreBottom);
+        BuildMeter(wrap, mw + 8f, mw, L.T("発見数", "FOUND"), out scoreVal, out _, out var scoreBottom);
         scorePips = BuildPips(scoreBottom, 3, 18f);
 
-        BuildMeter(wrap, (mw + 8f) * 2f, mw, "残り回数", out tapVal, out tapMeterBorder, out var tapBottom);
-        tapPips = BuildPips(tapBottom, MAX_TAPS, 10f);
+        BuildMeter(wrap, (mw + 8f) * 2f, mw, L.T("残り回数", "TAPS LEFT"), out tapVal, out tapMeterBorder, out var tapBottom);
+        tapPips = BuildPips(tapBottom, MAX_TAPS, 9f);
 
         // board
         const float pad = 16f, gap = 14f, border = 2f;
@@ -165,8 +165,8 @@ public class FloorMinigame : MonoBehaviour
 
         // actions
         float actionsY = 160f + boardH + 14f;
-        restartPlayBtn = UiKit.SubButton(wrap, "↻ リスタート", out var rpText);
-        passBtn = UiKit.SubButton(wrap, "一時停止中", out var passText);
+        restartPlayBtn = UiKit.SubButton(wrap, L.T("↻ リスタート", "↻ Restart"), out var rpText);
+        passBtn = UiKit.SubButton(wrap, L.T("一時停止中", "Paused"), out var passText);
         float w1 = rpText.preferredWidth + 60f, w2 = passText.preferredWidth + 60f;
         float ax = (W - (w1 + 12f + w2)) * 0.5f;
         UiKit.Place((RectTransform)restartPlayBtn.transform, ax, actionsY, w1, 46f);
@@ -175,13 +175,13 @@ public class FloorMinigame : MonoBehaviour
         restartPlayBtn.onClick.AddListener(StartGame);   // リスタート: new shuffle, timer and taps reset
         passBtn.onClick.AddListener(Pause);              // パス: pause; 続ける: resume from the same spot
 
-        var foot = UiKit.Label(wrap, "「↑」を3枚見つけよう！", 13, UiKit.Muted, TextAnchor.MiddleCenter, false);
+        var foot = UiKit.Label(wrap, L.T("「↑」を3枚見つけよう！", "Find three \"↑\" cards!"), 13, UiKit.Muted, TextAnchor.MiddleCenter, false);
         UiKit.Place(foot.rectTransform, 0f, actionsY + 46f + 14f, W, 18f);
 
         BuildOverlays(root);
 
         // back to the 3D floor; above the overlays so it always works
-        var back = UiKit.SubButton(root, "← 戻る", out var backText);
+        var back = UiKit.SubButton(root, L.T("← 戻る", "← Back"), out var backText);
         var brt = (RectTransform)back.transform;
         UiKit.Place(brt, 16f, 12f, backText.preferredWidth + 60f, 46f);
         back.onClick.AddListener(() => SceneManager.LoadScene(floorScene));
@@ -222,46 +222,46 @@ public class FloorMinigame : MonoBehaviour
     {
         // Start screen
         var start = Overlay(root, "StartScreen", out startScreen);
-        UiKit.Headline(start, 38, ("ようこそ！", UiKit.Accent, UiKit.Hex("#b3560b")));
+        UiKit.Headline(start, 38, (L.T("ようこそ！", "Welcome to"), UiKit.Accent, UiKit.Hex("#b3560b")));
         UiKit.Headline(start, 38,
-            ("1階ゲーム", UiKit.Accent2, UiKit.Hex("#8e1f58")),
-            ("へ〜", UiKit.Accent, UiKit.Hex("#b3560b")));
+            (L.T("1階ゲーム", " the 1F Game"), UiKit.Accent2, UiKit.Hex("#8e1f58")),
+            (L.T("へ〜", "!"), UiKit.Accent, UiKit.Hex("#b3560b")));
         var rules = Column(start, "Rules", 8f);
-        Rule(rules, "↑", UiKit.Good, "「↑」のカードを3枚見つけよう！");
-        Rule(rules, "✕", UiKit.Bad, "違うカードは「?」に戻ります。場所を覚えよう！");
-        Rule(rules, "7", UiKit.Accent, "押せるのは7回まで。");
-        Rule(rules, "30", UiKit.Bad, "制限時間は30秒。急げ！");
-        Rule(rules, "▶▶", UiKit.Accent, "「パス」で一時停止、「続ける」で再開！");
-        UiKit.MainButton(start, "スタート！", out _).onClick.AddListener(StartGame);
+        Rule(rules, "↑", UiKit.Good, L.T("「↑」のカードを3枚見つけよう！", "Find the three \"↑\" cards!"));
+        Rule(rules, "✕", UiKit.Bad, L.T("違うカードは「?」に戻ります。場所を覚えよう！", "Wrong cards turn back to \"?\". Remember where they are!"));
+        Rule(rules, MAX_TAPS.ToString(), UiKit.Accent, L.T($"押せるのは{MAX_TAPS}回まで。", $"You can tap up to {MAX_TAPS} times."));
+        Rule(rules, ((int)TOTAL_TIME).ToString(), UiKit.Bad, L.T($"制限時間は{(int)TOTAL_TIME}秒。急げ！", $"You have {(int)TOTAL_TIME} seconds. Hurry!"));
+        Rule(rules, "▶▶", UiKit.Accent, L.T("「パス」で一時停止、「続ける」で再開！", "\"Pause\" stops the game, \"Continue\" resumes it!"));
+        UiKit.MainButton(start, L.T("スタート！", "Start!"), out _).onClick.AddListener(StartGame);
 
         // Win screen
         var win = Overlay(root, "WinScreen", out winScreen);
-        UiKit.Headline(win, 38, ("おめでとう！", UiKit.Good, UiKit.Hex("#13703c")));
+        UiKit.Headline(win, 38, (L.T("おめでとう！", "Congratulations!"), UiKit.Good, UiKit.Hex("#13703c")));
         var winStats = StatRow(win);
-        winTime = Stat(winStats, "クリアタイム", "0.0秒");
-        Stat(winStats, "発見数", "3/3");
-        UiKit.MainButton(win, "次のステージへ", out _).onClick.AddListener(NextLevel);
+        winTime = Stat(winStats, L.T("クリアタイム", "CLEAR TIME"), L.T("0.0秒", "0.0s"));
+        Stat(winStats, L.T("発見数", "FOUND"), "3/3");
+        UiKit.MainButton(win, L.T("次のステージへ", "Next Stage"), out _).onClick.AddListener(NextLevel);
 
         // Game over screen
         var lose = Overlay(root, "LoseScreen", out loseScreen);
-        UiKit.Headline(lose, 38, ("ゲームオーバー！", UiKit.Bad, UiKit.Hex("#7d1520")));
+        UiKit.Headline(lose, 38, (L.T("ゲームオーバー！", "Game Over!"), UiKit.Bad, UiKit.Hex("#7d1520")));
         var loseStats = StatRow(lose);
-        loseReason = Stat(loseStats, "理由", "時間切れ");
+        loseReason = Stat(loseStats, L.T("理由", "REASON"), L.T("時間切れ", "Time's up"));
         loseReason.fontSize = 20;
-        loseScore = Stat(loseStats, "発見数", "0/3");
+        loseScore = Stat(loseStats, L.T("発見数", "FOUND"), "0/3");
         loseNote = Reason(lose, "");
-        UiKit.MainButton(lose, "もう一度", out _).onClick.AddListener(StartGame);
+        UiKit.MainButton(lose, L.T("もう一度", "Try Again"), out _).onClick.AddListener(StartGame);
 
         // Pass screen
         var pass = Overlay(root, "PassScreen", out passScreen);
-        UiKit.Headline(pass, 38, ("一時停止中", UiKit.Accent, UiKit.Hex("#b3560b")));
+        UiKit.Headline(pass, 38, (L.T("一時停止中", "Paused"), UiKit.Accent, UiKit.Hex("#b3560b")));
         var passStats = StatRow(pass);
-        passTime = Stat(passStats, "残り時間", "0.0秒");
-        passScore = Stat(passStats, "発見数", "0/3");
-        passTaps = Stat(passStats, "残り回数", "7/7");
-        Reason(pass, "ゲームを一時停止しました。「続ける」で止めた所から再開します。");
-        UiKit.MainButton(pass, "続ける ▶", out _).onClick.AddListener(Resume);
-        UiKit.SubButton(pass, "↻ リスタート", out _).onClick.AddListener(StartGame);
+        passTime = Stat(passStats, L.T("残り時間", "TIME LEFT"), L.T("0.0秒", "0.0s"));
+        passScore = Stat(passStats, L.T("発見数", "FOUND"), "0/3");
+        passTaps = Stat(passStats, L.T("残り回数", "TAPS LEFT"), "7/7");
+        Reason(pass, L.T("ゲームを一時停止しました。「続ける」で止めた所から再開します。", "The game is paused. \"Continue\" picks up where you left off."));
+        UiKit.MainButton(pass, L.T("続ける ▶", "Continue ▶"), out _).onClick.AddListener(Resume);
+        UiKit.SubButton(pass, L.T("↻ リスタート", "↻ Restart"), out _).onClick.AddListener(StartGame);
 
         startScreen.SetActive(true);
         winScreen.SetActive(false);
@@ -520,7 +520,7 @@ public class FloorMinigame : MonoBehaviour
     void RenderTime(float left)
     {
         float t = Mathf.Max(0f, left);
-        timeVal.text = t.ToString("0.0") + Small("秒");
+        timeVal.text = t.ToString("0.0") + Small(L.T("秒", "s"));
         timeBar.localScale = new Vector3(t / TOTAL_TIME, 1f, 1f);
         timeDanger = t < 10f;
     }
@@ -660,7 +660,7 @@ public class FloorMinigame : MonoBehaviour
         foreach (var c in pendingBad) Hide(c);
         pendingBad.Clear();
         passBtn.interactable = false;
-        passTime.text = Mathf.Max(0f, TOTAL_TIME - pausedElapsed).ToString("0.0") + "秒";
+        passTime.text = Mathf.Max(0f, TOTAL_TIME - pausedElapsed).ToString("0.0") + L.T("秒", "s");
         passScore.text = score + "/3";
         passTaps.text = (MAX_TAPS - taps) + "/" + MAX_TAPS;
         ShowOverlay(passScreen);
@@ -688,22 +688,23 @@ public class FloorMinigame : MonoBehaviour
 
         if (result == "win")
         {
-            winTime.text = elapsed.ToString("0.0") + "秒";
+            winTime.text = elapsed.ToString("0.0") + L.T("秒", "s");
             endTimer = StartCoroutine(Delay(FLIP + 0.25f, () =>
             {
                 ShowOverlay(winScreen);
                 audioSource.PlayOneShot(sfxWin);
                 confetti.Burst();
+                endTimer = StartCoroutine(Delay(WinExit, NextLevel));   // straight on to the next floor
             }));
         }
         else
         {
             if (result == "time") audioSource.PlayOneShot(sfxBad);
-            loseReason.text = result == "time" ? "時間切れ" : "回数切れ";
+            loseReason.text = result == "time" ? L.T("時間切れ", "Time's up") : L.T("回数切れ", "Out of taps");
             loseScore.text = score + "/3";
             loseNote.text = result == "time"
-                ? "30秒が経過しました。もう一度挑戦しよう！"
-                : "7回押し切りました。もう一度挑戦しよう！";
+                ? L.T($"{(int)TOTAL_TIME}秒が経過しました。もう一度挑戦しよう！", $"{(int)TOTAL_TIME} seconds are up. Try again!")
+                : L.T($"{MAX_TAPS}回押し切りました。もう一度挑戦しよう！", $"You used all {MAX_TAPS} taps. Try again!");
             // show where every arrow was
             endTimer = StartCoroutine(Delay(result == "time" ? 0.15f : FLIP + 0.35f, () =>
             {
@@ -721,14 +722,23 @@ public class FloorMinigame : MonoBehaviour
 
     void NextLevel()
     {
+        if (GameProgress.PlayingSingleFloor)
+        {
+            // only the first floor was picked on the menu: winning here clears it (the ending shows there)
+            GameProgress.ClearQuest(floorScene);
+            SceneManager.LoadScene(floorScene);
+            return;
+        }
         if (!string.IsNullOrEmpty(nextLevelScene) && Application.CanStreamedLevelBeLoaded(nextLevelScene))
         {
-            SceneManager.LoadScene(nextLevelScene);
+            ElevatorRide.Go(nextLevelScene, 1, 2);   // the first floor's elevator rides up to the second
             return;
         }
         Debug.LogWarning("FloorMinigame: next level scene not set or not in Build Settings; returning to the floor.");
         SceneManager.LoadScene(floorScene);
     }
+
+    const float WinExit = 1.2f;   // seconds the win shows before the game ends by itself
 
     /* ---------- timers (setTimeout equivalents) ---------- */
     Coroutine After(float seconds, Action action) => StartCoroutine(Delay(seconds, action));

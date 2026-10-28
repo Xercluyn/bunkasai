@@ -4,8 +4,9 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// Third-person camera (PUBG-style): follows the player from behind, over the right shoulder.
-/// The mouse orbits it around the character, it swings back behind the character while it walks,
-/// and it pulls in when a wall is in the way.
+/// The mouse orbits it around the character and it pulls in when a wall is in the way. It never turns
+/// by itself: WASD moves relative to the camera, so a camera that followed the character's facing
+/// would keep turning A/D strafes into circles.
 /// Put it on the Main Camera. Esc frees the cursor; click the game view to look around again.
 /// </summary>
 public class ThirdPersonCamera : MonoBehaviour
@@ -25,22 +26,21 @@ public class ThirdPersonCamera : MonoBehaviour
     public float maxPitch = 60f;
     public float startPitch = 12f;
 
-    [Header("Follow")]
-    [Tooltip("Swing round behind the character while it walks (mouse look still works).")]
-    public bool followBehind = true;
-    [Tooltip("How quickly the camera swings behind the character.")]
-    public float followSharpness = 3f;
-    [Tooltip("Seconds after moving the mouse before the camera swings back behind.")]
-    public float followDelay = 0.5f;
-
     [Tooltip("Layers the camera can't pass through.")]
     public LayerMask obstacleMask = ~0;
 
     /// <summary>Set by UI that needs a free mouse cursor (e.g. the elevator Play button).</summary>
     public static bool uiNeedsCursor;
 
-    float yaw, pitch, height = 1.8f, currentDistance, lastLookTime = float.NegativeInfinity;
-    Vector3 lastTargetPos;
+    /// <summary>Set while a panel that must be clicked is open (the ending). Kept apart from uiNeedsCursor,
+    /// which play zones switch off when their button hides.</summary>
+    public static bool panelOpen;
+
+    // no domain reload on entering Play Mode: start each session with the cursor rules reset
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void NewSession() => uiNeedsCursor = panelOpen = false;
+
+    float yaw, pitch, height = 1.8f, currentDistance;
     bool userFreedCursor;
     Collider[] targetColliders;
     Camera cam;
@@ -63,7 +63,6 @@ public class ThirdPersonCamera : MonoBehaviour
         yaw = target.eulerAngles.y;
         pitch = startPitch;
         currentDistance = distance * height;
-        lastTargetPos = target.position;
     }
 
     void OnDisable()
@@ -82,9 +81,7 @@ public class ThirdPersonCamera : MonoBehaviour
             Vector2 d = mouse.delta.ReadValue() * mouseSensitivity;
             yaw += d.x;
             pitch = Mathf.Clamp(pitch - d.y, minPitch, maxPitch);
-            if (d.sqrMagnitude > 0.0001f) lastLookTime = Time.time;
         }
-        FollowBehind();
 
         Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);
         Vector3 head = target.position + Vector3.up * (pivotHeight * height);
@@ -100,20 +97,6 @@ public class ThirdPersonCamera : MonoBehaviour
             : Mathf.Lerp(currentDistance, allowed, 1f - Mathf.Exp(-6f * Time.deltaTime));
 
         transform.SetPositionAndRotation(head + toCam.normalized * currentDistance, rot);
-    }
-
-    // Ease the yaw toward the character's back while it walks. Walking toward the camera is left alone,
-    // so pressing S doesn't spin the view round.
-    void FollowBehind()
-    {
-        Vector3 moved = target.position - lastTargetPos;
-        lastTargetPos = target.position;
-        moved.y = 0f;
-        bool walking = Time.deltaTime > 0f && moved.magnitude / Time.deltaTime > 0.1f * height;
-        if (!followBehind || !walking || Time.time - lastLookTime < followDelay) return;
-
-        float diff = Mathf.DeltaAngle(yaw, target.eulerAngles.y);
-        if (Mathf.Abs(diff) < 135f) yaw += diff * (1f - Mathf.Exp(-followSharpness * Time.deltaTime));
     }
 
     float ClearDistance(Vector3 origin, Vector3 dir, float maxDist)
@@ -150,10 +133,10 @@ public class ThirdPersonCamera : MonoBehaviour
         var kb = Keyboard.current;
         var mouse = Mouse.current;
         if (kb != null && kb.escapeKey.wasPressedThisFrame) userFreedCursor = true;
-        if (userFreedCursor && !uiNeedsCursor && mouse != null && mouse.leftButton.wasPressedThisFrame && !PointerOverUi())
+        if (userFreedCursor && !uiNeedsCursor && !panelOpen && mouse != null && mouse.leftButton.wasPressedThisFrame && !PointerOverUi())
             userFreedCursor = false;
 
-        bool free = userFreedCursor || uiNeedsCursor;
+        bool free = userFreedCursor || uiNeedsCursor || panelOpen;
         var mode = free ? CursorLockMode.None : CursorLockMode.Locked;
         if (Cursor.lockState != mode) Cursor.lockState = mode;
         Cursor.visible = free;

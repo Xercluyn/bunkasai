@@ -532,7 +532,12 @@
     }
     $("#progress-label").textContent = text("progressLabel");
 
-    let deck = shuffle(foods);
+    let pool = foods;
+    if (SETTINGS.onlyFeatured) {
+      const picked = foods.filter((f) => f.featured);
+      if (picked.length) pool = picked;
+    }
+    let deck = shuffle(pool);
     const n = SETTINGS.cardsPerGame;
     if (Number.isInteger(n) && n > 0 && n < deck.length) deck = deck.slice(0, n);
 

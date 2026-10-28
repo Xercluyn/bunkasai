@@ -29,7 +29,7 @@ public static class WallGapCloser
         float height = character != null ? CharacterAnimationSetup.Height(character) : 0f;
         if (height <= 0f)
         {
-            EditorUtility.DisplayDialog(Title, "Couldn't find chara01 in the open scene; it sets how far walls may be stretched.", "OK");
+            EditorUtility.DisplayDialog(Title, "Couldn't find onigiri in the open scene; it sets how far walls may be stretched.", "OK");
             return;
         }
         float reach = ReachOfHeight * height;

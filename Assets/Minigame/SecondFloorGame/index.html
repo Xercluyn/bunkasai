@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2階ゲーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&family=DotGothic16&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>2階<span>ゲーム</span></h1>
+  </header>
+  <div class="hud">
+    <div class="stat money"><b>所持金</b><output id="score">¥0</output><div class="bar"><i id="prog"></i></div></div>
+    <div class="stat goal"><b>目標金額</b><output id="goal">¥0</output></div>
+    <div class="stat time" id="timeBox"><b>残り時間</b><output id="time">50</output></div>
+    <div class="stat best"><b>ベストタイム</b><div class="row"><output id="bestStat">—</output><button class="mini" id="resetBest" type="button">リセット</button></div></div>
+  </div>
+  <div class="stage">
+    <canvas id="c" width="800" height="520" aria-label="ゲーム画面"></canvas>
+    <div class="overlay" id="ov" hidden>
+      <div class="card">
+        <h2 id="ovTitle">2階ゲーム</h2>
+        <p id="ovText">揺れるフックでお金を釣り上げよう。50秒以内に ¥3,000 集めたらクリア！</p>
+        <div class="legend" id="legend">
+          <span>硬貨（1〜500円）</span><span>軽くてすぐ戻る</span>
+          <span>千円札</span><span>そこそこ軽い</span>
+          <span>一万円札</span><span>深いところに少しだけ</span>
+          <span>石・子ども銀行券</span><span>重くて価値なし</span>
+          <span>がま口</span><span>中身はお楽しみ</span>
+        </div>
+        <button id="ovBtn">スタート</button>
+      </div>
+    </div>
+  </div>
+  <div class="controls">
+    <p class="hint">発射：<kbd>↓</kbd> <kbd>Space</kbd> または画面タップ　／　キャンセル（引き戻し）：<kbd>↑</kbd>　／　一時停止：<kbd>P</kbd>　／　リスタート：<kbd>R</kbd></p>
+    <div class="btns">
+      <button class="alt" id="restartBtn" type="button">リスタート</button>
+      <button class="alt" id="pauseBtn" type="button" disabled>一時停止</button>
+      <button id="fireBtn">発射</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

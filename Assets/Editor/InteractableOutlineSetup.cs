@@ -86,11 +86,14 @@ public static class InteractableOutlineSetup
             if (mf.sharedMesh == null || !mf.sharedMesh.isReadable) continue;
             var pieces = Pieces(mf.sharedMesh);
             if (pieces.Count < 2) continue;
-            // The biggest piece is the elevator itself; the button is one of the small ones
-            var body = pieces.OrderByDescending(p => p.size.x * p.size.y * p.size.z).First();
+            // The biggest piece is the elevator itself. The call button is among the smallest of the rest: the
+            // elevator also has bigger fittings above its doors that may be nearer the zone, so skip those.
+            static float Volume(Bounds p) => p.size.x * p.size.y * p.size.z;
+            var body = pieces.OrderByDescending(Volume).First();
+            float smallest = pieces.Where(p => p != body).Select(Volume).DefaultIfEmpty(0f).Min();
             foreach (var p in pieces)
             {
-                if (p == body) continue;
+                if (p == body || Volume(p) > smallest * 1.5f + 1e-12f) continue;
                 float d = Vector3.Distance(at, mf.transform.TransformPoint(p.center));
                 if (d < bestDistance) { bestDistance = d; bestMesh = mf; bestPart = p; }
             }
@@ -113,13 +116,12 @@ public static class InteractableOutlineSetup
         if (zone.buttonTarget == null || zone.buttonTarget == anchor)
         {
             zone.buttonTarget = anchor;
-            zone.screenOffset = new Vector2(0f, 60f);
         }
         return true;
     }
 
     // Local bounds of each separate piece of a mesh (triangles joined through shared corner positions)
-    static List<Bounds> Pieces(Mesh mesh)
+    internal static List<Bounds> Pieces(Mesh mesh)
     {
         var verts = mesh.vertices;
         var ids = new Dictionary<Vector3, int>();

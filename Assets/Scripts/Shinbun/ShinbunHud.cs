@@ -48,14 +48,14 @@ public class ShinbunHud
         v.childForceExpandWidth = true;
         v.childForceExpandHeight = false;
         panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        UiKit.Label(panel.transform, "スコア", 12, UiKit.Muted, TextAnchor.MiddleLeft);
+        UiKit.Label(panel.transform, L.T("スコア", "SCORE"), 12, UiKit.Muted, TextAnchor.MiddleLeft);
         score = UiKit.Label(panel.transform, "0", 30, UiKit.Fg, TextAnchor.MiddleLeft);
         delivered = UiKit.Label(panel.transform, "", 15, UiKit.Good, TextAnchor.MiddleLeft);
         combo = UiKit.Label(panel.transform, "", 15, UiKit.Accent, TextAnchor.MiddleLeft);
         hud.alpha = 0f;
 
         // Quit, upper right (always clickable)
-        var quit = UiKit.SubButton(canvas, "やめる", out _);
+        var quit = UiKit.SubButton(canvas, L.T("やめる", "Quit"), out _);
         var qr = (RectTransform)quit.transform;
         qr.anchorMin = qr.anchorMax = qr.pivot = new Vector2(1f, 1f);
         qr.anchoredPosition = new Vector2(-16f, -16f);
@@ -86,8 +86,8 @@ public class ShinbunHud
     public void SetScore(int value, int comboCount, int done, int total)
     {
         score.text = value.ToString();
-        delivered.text = $"配達　{done} / {total}";
-        combo.text = comboCount > 1 ? $"{comboCount} コンボ！" : "";
+        delivered.text = L.T($"配達　{done} / {total}", $"DELIVERED　{done} / {total}");
+        combo.text = comboCount > 1 ? L.T($"{comboCount} コンボ！", $"{comboCount} combo!") : "";
     }
 
     public void Caption(string text) => caption.text = text;
@@ -150,9 +150,9 @@ public class ShinbunHud
         card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         UiKit.Headline(card.transform, 34,
-            ("新聞", UiKit.Accent, UiKit.Hex("#b3560b")),
-            ("配達ミッション", UiKit.Fg, UiKit.Hex("#0c0a24")));
-        UiKit.Label(card.transform, "エージェントはアパートの廊下を自動で走ります。ドアの色を見て新聞を届けよう！",
+            (L.T("新聞", "Newspaper"), UiKit.Accent, UiKit.Hex("#b3560b")),
+            (L.T("配達ミッション", " Delivery Mission"), UiKit.Fg, UiKit.Hex("#0c0a24")));
+        UiKit.Label(card.transform, L.T("エージェントはアパートの廊下を自動で走ります。ドアの色を見て新聞を届けよう！", "The agent runs down the apartment hallway by itself. Watch the door colours and deliver the papers!"),
             17, UiKit.Muted, TextAnchor.MiddleCenter, false);
 
         var row = UiKit.Rect("Doors", card.transform);
@@ -161,14 +161,15 @@ public class ShinbunHud
         h.childControlWidth = h.childControlHeight = true;
         h.childForceExpandWidth = true;
         h.childForceExpandHeight = false;
-        DoorCard(row, Green, "緑のドア", "リングが重なった瞬間に\n新聞を投げ入れよう！");
-        DoorCard(row, Red, "赤のドア", "トラップ！\n投げずにスルーしよう");
-        DoorCard(row, Yellow, "黄色のドア", "ふつうの部屋。\nなにも起きない");
+        DoorCard(row, Green, L.T("緑のドア", "Green door"), L.T("リングが重なった瞬間に\n新聞を投げ入れよう！", "Throw the paper in\nwhen the rings meet!"));
+        DoorCard(row, Red, L.T("赤のドア", "Red door"), L.T("トラップ！\n投げずにスルーしよう", "Trap!\nRun past, don't throw"));
+        DoorCard(row, Yellow, L.T("黄色のドア", "Yellow door"), L.T("ふつうの部屋。\nなにも起きない", "An ordinary room.\nNothing happens"));
 
-        UiKit.Label(card.transform, "<color=#ffb526>スペース</color> または <color=#ffb526>クリック</color> で投げる　/　PERFECT・GOOD で得点、緑を逃すと MISS",
+        UiKit.Label(card.transform, L.T("<color=#ffb526>スペース</color> または <color=#ffb526>クリック</color> で投げる　/　PERFECT・GOOD で得点、緑を逃すと MISS",
+            "<color=#ffb526>Space</color> or <color=#ffb526>click</color> to throw　/　PERFECT・GOOD score, missing a green door is a MISS"),
             16, UiKit.Fg, TextAnchor.MiddleCenter, false);
 
-        var start = UiKit.MainButton(card.transform, "▶ スタート", out _);
+        var start = UiKit.MainButton(card.transform, L.T("▶ スタート", "▶ Start"), out _);
         start.onClick.AddListener(() => onStart());
         return dim.gameObject;
     }
@@ -225,15 +226,16 @@ public class ShinbunHud
         v.childForceExpandHeight = false;
         card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        UiKit.Headline(card.transform, 38, ("ミッションコンプリート！", UiKit.Good, UiKit.Hex("#13703c")));
-        UiKit.Label(card.transform, "スコア", 14, UiKit.Muted);
+        UiKit.Headline(card.transform, 38, (L.T("ミッションコンプリート！", "Mission Complete!"), UiKit.Good, UiKit.Hex("#13703c")));
+        UiKit.Label(card.transform, L.T("スコア", "SCORE"), 14, UiKit.Muted);
         var s = UiKit.Label(card.transform, finalScore.ToString(), 56, UiKit.Accent);
         UiKit.HardShadow(s, UiKit.Hex("#b3560b"), 4f);
-        UiKit.Label(card.transform, $"配達成功　{done} / {total}　　PERFECT　{perfects}　　トラップ　{traps}", 18, UiKit.Fg);
+        UiKit.Label(card.transform, L.T($"配達成功　{done} / {total}　　PERFECT　{perfects}　　トラップ　{traps}",
+            $"Delivered　{done} / {total}　　PERFECT　{perfects}　　Traps　{traps}"), 18, UiKit.Fg);
 
-        var back = UiKit.MainButton(card.transform, "5階に戻る", out _);
+        var back = UiKit.MainButton(card.transform, L.T("5階に戻る", "Back to 5F"), out _);
         back.onClick.AddListener(() => onReturn());
-        var retry = UiKit.SubButton(card.transform, "もう一度", out _);
+        var retry = UiKit.SubButton(card.transform, L.T("もう一度", "Try Again"), out _);
         retry.onClick.AddListener(() => onRetry());
     }
 }

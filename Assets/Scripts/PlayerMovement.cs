@@ -1,8 +1,10 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 /// <summary>
-/// WASD movement, Shift to run and Space to jump (new Input System), camera-relative, with a raycast ground check.
+/// WASD / arrow-key movement (new Input System), camera-relative, always at running pace with the Run animation,
+/// with a raycast ground check. Shows a small controls guide in the upper-right corner.
 /// Attach to the character. A CharacterController is added automatically.
 /// </summary>
 [RequireComponent(typeof(CharacterController))]
@@ -24,7 +26,16 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Fastest the walk clip may play (1.5 = brisk walk). Movement speed is capped to match, so feet never slide.")]
     public float maxWalkRate = 1.8f;
 
-    [Tooltip("Holding Shift moves at this multiple of the walking speed.")]
+    [Tooltip("Show the 操作方法 (controls) guide in the upper-right corner.")]
+    public bool showControls = true;
+
+    [Tooltip("Show where to go next (marker over the arcade box / ticket machine / elevator, edge arrow, next-step line).")]
+    public bool showGuide = true;
+
+    [Tooltip("Overall speed boost on top of everything else; the run clip plays faster to match. 1.5 = 50% faster.")]
+    public float speedBoost = 1.5f;
+
+    [Tooltip("Moving runs at this multiple of Speed (capped so the run clip's feet don't slide).")]
     public float runMultiplier = 2f;
 
     [Tooltip("Ground speed at which the run clip plays at its normal rate. 0 = estimate from the character's height.")]
@@ -33,23 +44,14 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Fastest the run clip may play. Running speed is capped to match, so feet never slide.")]
     public float maxRunRate = 1.56f;
 
-    [Tooltip("Jump height in multiples of the character's height, used only when there is no jump animation.")]
-    public float jumpHeight = 0.35f;
-
-    enum JumpPhase { None, Animated, Air }
-
     CharacterController controller;
     Animator animator;   // optional: "Speed" switches Idle/Walk/Run, "WalkRate"/"RunRate" set their playback rates
-    bool hasWalkRate, hasRunRate, hasRunState, hasJumpState;
+    bool hasWalkRate, hasRunRate, hasRunState;
     Transform cam;
     float verticalVelocity;
     float naturalWalkSpeed, naturalRunSpeed, worldHeight;
-    bool grounded, running;
-    JumpPhase jump;
-    float jumpTimer;
-    bool jumpLanded;
+    bool running;
 
-    static readonly int JumpState = Animator.StringToHash("Jump");
     static readonly int RunState = Animator.StringToHash("Run");
 
     void Awake()
@@ -76,6 +78,16 @@ public class PlayerMovement : MonoBehaviour
 
     void Start()
     {
+        if (showControls) BuildControlsGuide();
+        if (showGuide) new GameObject("QuestGuide").AddComponent<QuestGuide>().player = this;
+        new GameObject("FloorMenu").AddComponent<FloorMenuButton>();   // back to the main menu
+        // the game's ending (全フロアクリア, 最初から) on the top floor, unless the scene already has one
+        if (FindAnyObjectByType<GameEnding>(FindObjectsInactive.Include) == null)
+        {
+            var ending = new GameObject("GameEnding").AddComponent<GameEnding>();
+            ending.automatic = true;
+            ending.floor = gameObject.scene.name;
+        }
         if (animator == null) return;
         foreach (var p in animator.parameters)
         {
@@ -83,8 +95,52 @@ public class PlayerMovement : MonoBehaviour
             if (p.name == "RunRate") hasRunRate = true;
         }
         hasRunState = animator.HasState(0, RunState);
-        hasJumpState = animator.HasState(0, JumpState);
     }
+
+    // 操作方法 panel in the upper-right corner: how to move, look and free the mouse
+    Text guideTitle;
+    Text[] guideLines;
+
+    void BuildControlsGuide()
+    {
+        var canvas = UiKit.MakeCanvas("ControlsCanvas", 19, new Vector2(1280f, 720f));
+        var panel = UiKit.Box("Controls", canvas.transform, UiKit.Hex("#241e57", 0.85f), 12f, UiKit.Line, 2f);
+        var rt = panel.rectTransform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 1f);
+        rt.anchoredPosition = new Vector2(-16f, -16f);
+        rt.sizeDelta = new Vector2(250f, 0f);
+        var v = panel.gameObject.AddComponent<VerticalLayoutGroup>();
+        v.padding = new RectOffset(16, 16, 10, 12);
+        v.spacing = 3f;
+        v.childControlWidth = v.childControlHeight = true;
+        v.childForceExpandWidth = true;
+        v.childForceExpandHeight = false;
+        panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        panel.raycastTarget = false;
+
+        guideTitle = UiKit.Label(panel.transform, "", 14, UiKit.Accent, TextAnchor.MiddleLeft);
+        guideLines = new Text[4];
+        for (int i = 0; i < guideLines.Length; i++)
+            guideLines[i] = UiKit.Label(panel.transform, "", 16, UiKit.Fg, TextAnchor.MiddleLeft);
+        WriteGuide();
+        L.Changed += WriteGuide;
+    }
+
+    void WriteGuide()
+    {
+        guideTitle.text = L.T("操作方法", "CONTROLS");
+        var lines = new[]
+        {
+            ("WASD / ↑↓←→", L.T("移動", "Move")),
+            (L.T("マウス", "Mouse"), L.T("視点を回す", "Look around")),
+            ("E / Enter", L.T("決定", "Interact")),
+            ("Esc", L.T("マウスカーソルを出す", "Show the mouse cursor")),
+        };
+        for (int i = 0; i < lines.Length; i++)
+            guideLines[i].text = $"<color=#ffffff>{lines[i].Item1}</color>　<color=#a9a2d9>{lines[i].Item2}</color>";
+    }
+
+    void OnDestroy() => L.Changed -= WriteGuide;
 
     void FitCapsule()
     {
@@ -122,8 +178,9 @@ public class PlayerMovement : MonoBehaviour
         float h = 0f, v = 0f;
         if (kb != null)
         {
-            h = (kb.dKey.isPressed ? 1f : 0f) - (kb.aKey.isPressed ? 1f : 0f);
-            v = (kb.wKey.isPressed ? 1f : 0f) - (kb.sKey.isPressed ? 1f : 0f);
+            // WASD or the arrow keys
+            h = (kb.dKey.isPressed || kb.rightArrowKey.isPressed ? 1f : 0f) - (kb.aKey.isPressed || kb.leftArrowKey.isPressed ? 1f : 0f);
+            v = (kb.wKey.isPressed || kb.upArrowKey.isPressed ? 1f : 0f) - (kb.sKey.isPressed || kb.downArrowKey.isPressed ? 1f : 0f);
         }
 
         // Camera-relative directions (flattened onto the ground plane)
@@ -135,8 +192,9 @@ public class PlayerMovement : MonoBehaviour
         Vector3 dir = fwd * v + right * h;
         if (dir.sqrMagnitude > 1f) dir.Normalize();
 
-        // Shift runs; with an animator but no Run state it would slide the walk, so it walks instead
-        running = kb != null && kb.shiftKey.isPressed && dir.sqrMagnitude > 0.01f && (animator == null || hasRunState);
+        // Moving always runs (no Shift, no walk); only an animator without a Run state falls back to walking,
+        // since running speed would slide its walk clip
+        running = dir.sqrMagnitude > 0.01f && (animator == null || hasRunState);
 
         float moveSpeed = running ? speed * runMultiplier : speed;
         if (animator != null)
@@ -144,7 +202,7 @@ public class PlayerMovement : MonoBehaviour
             // Cap ground speed to what the walk/run cycle can match, then play it at that rate so the feet don't slide
             if (running)
             {
-                moveSpeed = Mathf.Min(moveSpeed, naturalRunSpeed * maxRunRate);
+                moveSpeed = Mathf.Min(moveSpeed, naturalRunSpeed * maxRunRate) * speedBoost;
                 if (hasRunRate) animator.SetFloat("RunRate", moveSpeed / naturalRunSpeed);
             }
             else
@@ -155,11 +213,8 @@ public class PlayerMovement : MonoBehaviour
             animator.SetFloat("Speed", dir.magnitude * (running ? 2f : 1f));
         }
 
-        UpdateJump(kb != null && kb.spaceKey.wasPressedThisFrame, dir);
-
         // Vertical: raycast ground check (works regardless of model scale)
         float dy = GroundDelta();
-        if (jump == JumpPhase.Air && grounded) EndJump(dir);
 
         controller.Move(dir * moveSpeed * Time.deltaTime + Vector3.up * dy);
 
@@ -171,48 +226,6 @@ public class PlayerMovement : MonoBehaviour
                 Quaternion.LookRotation(dir),
                 turnSpeed * Time.deltaTime);
         }
-    }
-
-    // Space plays the jump clip. The clip itself carries the jump's height, so the body rises and
-    // lands exactly as animated; without a Jump state, a plain physics jump is used instead.
-    void UpdateJump(bool pressed, Vector3 dir)
-    {
-        if (pressed && grounded && jump == JumpPhase.None)
-        {
-            if (hasJumpState)
-            {
-                jump = JumpPhase.Animated;
-                jumpLanded = false;
-                jumpTimer = 0f;
-                animator.CrossFadeInFixedTime(JumpState, 0.1f);
-            }
-            else
-            {
-                verticalVelocity = Mathf.Sqrt(2f * -gravity * jumpHeight * worldHeight);
-                jump = JumpPhase.Air;
-            }
-        }
-
-        if (jump == JumpPhase.Animated)
-        {
-            jumpTimer += Time.deltaTime;
-            var state = animator.GetCurrentAnimatorStateInfo(0);
-            bool inJump = state.shortNameHash == JumpState && !animator.IsInTransition(0);
-            bool ending = inJump && state.normalizedTime >= 1f - 0.15f / Mathf.Max(state.length, 0.01f);
-            // Walking cuts the landing recovery short; standing still lets it play out
-            if ((jumpLanded && dir.sqrMagnitude > 0.01f) || ending || jumpTimer > 5f) EndJump(dir);
-        }
-    }
-
-    // Animation event on the jump clip at the frame its feet touch down
-    // (added by Tools > Elevator Game > Rebuild Character Animator).
-    public void OnJumpLand() => jumpLanded = true;
-
-    void EndJump(Vector3 dir)
-    {
-        jump = JumpPhase.None;
-        if (hasJumpState)
-            animator.CrossFadeInFixedTime(dir.sqrMagnitude <= 0.01f ? "Idle" : running ? "Run" : "Walk", 0.15f);
     }
 
     // Returns how far to move vertically this frame so the character rests on the ground below it.
@@ -232,12 +245,10 @@ public class PlayerMovement : MonoBehaviour
 
         if (found && y <= groundY + 0.03f && verticalVelocity <= 0f)
         {
-            grounded = true;
             verticalVelocity = 0f;
             return groundY - y;                      // snap onto the ground
         }
 
-        grounded = false;
         verticalVelocity += gravity * Time.deltaTime; // falling (or walking off an edge)
         float dy = verticalVelocity * Time.deltaTime;
         if (found) dy = Mathf.Max(dy, groundY - y);   // never fall below the ground

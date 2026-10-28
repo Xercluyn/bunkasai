@@ -8,17 +8,17 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Tools > Elevator Game > Setup Player On This Floor.
-/// Gives the open floor scene the player: building colliders, the rigged chara01 with the Idle/Walk/Run/Jump
-/// animator, PlayerMovement (WASD, Shift, jump, collision) and the third-person camera. The character is
+/// Gives the open floor scene the player: building colliders, the rigged onigiri with the Idle/Walk/Run
+/// animator, PlayerMovement (WASD running, collision) and the third-person camera. The character is
 /// sized to the building: CharacterToCeiling of the ceiling height above it, or FloorHeight on a floor
-/// with no ceiling (the first floor, modelled in real-world metres). Without a chara01 in the scene one is
+/// with no ceiling (the first floor, modelled in real-world metres). Without a player in the scene onigiri is
 /// placed on the floor in the middle of the building.
 /// Tools > Elevator Game > Set Up This Floor (All) also adds the elevator / arcade play zones and outlines.
 /// </summary>
 public static class FloorPlayerSetup
 {
-    const string ModelPath = "Assets/Animations/chara01_idle.fbx";
-    const string UnriggedModelPath = "Assets/chara01.fbx";
+    const string ModelPath = "Assets/Animations/onigiri_idle.fbx";
+    const string UnriggedModelPath = "Assets/onigiri.fbx";
     const string ControllerPath = "Assets/Animations/Player.controller";
     const string Title = "Setup Player On This Floor";
 
@@ -35,6 +35,7 @@ public static class FloorPlayerSetup
         if (!Setup(true)) return;
         MinigameSetup.AddElevatorPlayZoneIfElevator();
         ShinbunSetup.AddArcadeZoneIfArcade();
+        ShinbunSetup.AddEndingIfFifthFloor();
         InteractableOutlineSetup.OutlineAllZones(false);
         Debug.Log($"{SceneManager.GetActiveScene().name}: floor set up. Save the scene.");
     }
@@ -54,7 +55,7 @@ public static class FloorPlayerSetup
         // 1. Collision: two-sided colliders on every part of the building
         EnsureColliders(scene, character.transform);
 
-        // 2. Swap in the rigged, animated chara01 and size it to the building
+        // 2. Swap in the rigged, animated onigiri and size it to the building
         character = PrepareCharacter(character);
         Vector3 feet = character.transform.position;
         float buildingHeight = TryGetBounds(building, character.transform, out Bounds bb) ? bb.size.y : 0f;
@@ -75,24 +76,24 @@ public static class FloorPlayerSetup
 
         EditorSceneManager.MarkSceneDirty(scene);
         Selection.activeGameObject = character;
-        Debug.Log($"{scene.name}: chara01 is now {targetHeight:0.###} tall " +
+        Debug.Log($"{scene.name}: onigiri is now {targetHeight:0.###} tall " +
                   (ceiling > 0f ? $"under a {ceiling:0.###} ceiling. " : "(no ceiling found, real-world size). ") +
-                  "WASD, Shift, jump, animations, collision and the camera are set up. Save the scene.");
+                  "WASD running, animations, collision and the camera are set up. Save the scene.");
         return true;
     }
 
-    // A new chara01 standing on the floor in the middle of the building
+    // A new onigiri standing on the floor in the middle of the building
     static GameObject PlaceCharacter(Scene scene, GameObject building)
     {
         TryGetBounds(building, null, out Bounds b);
         EnsureColliders(scene, null);   // the floor needs its colliders to be found
         Physics.SyncTransforms();
         var go = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath), scene);
-        go.name = "chara01";
+        go.name = "onigiri";
         Undo.RegisterCreatedObjectUndo(go, Title);
         float y = FloorBelow(b.center, go.transform, b.size.y * 2f) ?? b.min.y;
         go.transform.position = new Vector3(b.center.x, y, b.center.z);
-        Debug.Log($"{scene.name}: placed chara01 in the middle of {building.name}. Move it to where the player should start.", go);
+        Debug.Log($"{scene.name}: placed onigiri in the middle of {building.name}. Move it to where the player should start.", go);
         return go;
     }
 
@@ -109,7 +110,7 @@ public static class FloorPlayerSetup
         var move = all.FirstOrDefault(g => g.GetComponent<PlayerMovement>() != null);
         if (move != null) return move;
         return all.FirstOrDefault(g => PrefabUtility.IsAnyPrefabInstanceRoot(g) && IsCharacterModel(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(g)))
-            ?? all.FirstOrDefault(g => g.name.ToLowerInvariant().StartsWith("chara01"));
+            ?? all.FirstOrDefault(g => g.name.ToLowerInvariant().StartsWith("onigiri"));
     }
 
     static bool IsCharacterModel(string path) => path == ModelPath || path == UnriggedModelPath;
@@ -178,6 +179,9 @@ public static class FloorPlayerSetup
             go.transform.SetPositionAndRotation(old.transform.position, old.transform.rotation);
             go.transform.SetSiblingIndex(old.transform.GetSiblingIndex());
             CharacterAnimationSetup.CopyMaterials(old, go);
+            // Mixamo can drop the colours, so restore them from the unrigged model
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>(UnriggedModelPath);
+            if (source != null) CharacterAnimationSetup.CopyMaterials(source, go);
             Undo.RegisterCreatedObjectUndo(go, Title);
             Undo.DestroyObjectImmediate(old);
         }

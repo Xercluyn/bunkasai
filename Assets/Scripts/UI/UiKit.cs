@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Helpers for building uGUI from code: the minigame palette (Assets/Minigame/style.css),
-/// an OS font with Japanese glyphs, runtime-generated sprites and element factories.
+/// the game fonts (with an OS font fallback), easing curves, runtime-generated sprites and element factories.
 /// </summary>
 public static class UiKit
 {
@@ -33,8 +33,11 @@ public static class UiKit
         return c;
     }
 
-    // ---------- font ----------
-    static Font jpFont;
+    // ---------- fonts ----------
+    // The menu's type pair (Resources/Fonts, SIL Open Font License): Zen Maru Gothic for text, Dela Gothic One
+    // for titles, big numbers and main buttons. Their importer falls back to OS fonts for missing glyphs
+    // (GameFontImport). Without the files, everything uses the OS font as before.
+    static Font jpFont, bodyFont, bodyMediumFont, displayFont;
 
     /// <summary>Dynamic OS font with Japanese glyphs; the later names act as fallbacks for missing characters.</summary>
     public static Font JpFont
@@ -53,6 +56,31 @@ public static class UiKit
             }
             return jpFont;
         }
+    }
+
+    /// <summary>Zen Maru Gothic Bold: labels and body text.</summary>
+    public static Font BodyFont => bodyFont ? bodyFont : (bodyFont = Resources.Load<Font>("Fonts/ZenMaruGothic-Bold"));
+    /// <summary>Zen Maru Gothic Medium: the lighter text weight.</summary>
+    public static Font BodyMediumFont => bodyMediumFont ? bodyMediumFont : (bodyMediumFont = Resources.Load<Font>("Fonts/ZenMaruGothic-Medium"));
+    /// <summary>Dela Gothic One: titles, floor names, stamps and main buttons.</summary>
+    public static Font DisplayFont => displayFont ? displayFont : (displayFont = Resources.Load<Font>("Fonts/DelaGothicOne-Regular"));
+
+    /// <summary>Switch a label to the display face (the fonts carry their own weight, so no faux bold).</summary>
+    public static Text Display(Text t)
+    {
+        if (DisplayFont != null) { t.font = DisplayFont; t.fontStyle = FontStyle.Normal; }
+        return t;
+    }
+
+    // ---------- easing (t in 0..1) ----------
+    public static float EaseOut(float t) { t = Mathf.Clamp01(t); return 1f - (1f - t) * (1f - t) * (1f - t); }
+    public static float EaseIn(float t) { t = Mathf.Clamp01(t); return t * t * t; }
+    public static float EaseInOut(float t) { t = Mathf.Clamp01(t); return t < 0.5f ? 4f * t * t * t : 1f - Mathf.Pow(-2f * t + 2f, 3f) * 0.5f; }
+    /// <summary>Ease out with an overshoot past 1 before settling.</summary>
+    public static float EaseOutBack(float t, float overshoot = 1.7f)
+    {
+        t = Mathf.Clamp01(t) - 1f;
+        return 1f + (overshoot + 1f) * t * t * t + overshoot * t * t;
     }
 
     // ---------- sprites ----------
@@ -147,7 +175,7 @@ public static class UiKit
         return Mathf.Clamp01(radius - d + 0.5f);
     }
 
-    static bool InPolygon(Vector2[] poly, Vector2 p)
+    public static bool InPolygon(Vector2[] poly, Vector2 p)
     {
         bool inside = false;
         for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
@@ -159,8 +187,8 @@ public static class UiKit
         return inside;
     }
 
-    // pixel(x, y, size) gets pixel-centre coordinates, y-up
-    static Sprite MakeSprite(int size, Func<float, float, int, Color> pixel, Vector4 border = default)
+    /// <summary>Square sprite from a per-pixel function; pixel(x, y, size) gets pixel-centre coordinates, y-up.</summary>
+    public static Sprite MakeSprite(int size, Func<float, float, int, Color> pixel, Vector4 border = default)
     {
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
         {
@@ -272,9 +300,10 @@ public static class UiKit
         TextAnchor anchor = TextAnchor.MiddleCenter, bool bold = true)
     {
         var t = Rect("Text", parent).gameObject.AddComponent<Text>();
-        t.font = JpFont;
+        var face = bold ? BodyFont : BodyMediumFont;
+        t.font = face != null ? face : JpFont;
         t.fontSize = size;
-        t.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal;
+        t.fontStyle = bold && face == null ? FontStyle.Bold : FontStyle.Normal;
         t.color = color;
         t.alignment = anchor;
         t.supportRichText = true;
@@ -303,7 +332,7 @@ public static class UiKit
         fx.shadow = HardShadow(bg, Hex("#b3560b"), 6f);
         fx.shadowDepth = 6f;
         fx.depth = 4f;
-        text = Label(face, label, 20, Hex("#3a1a00"));
+        text = Display(Label(face, label, 20, Hex("#3a1a00")));
         Stretch(text.rectTransform);
         return button;
     }
@@ -321,6 +350,21 @@ public static class UiKit
         fx.borderNormal = Line;
         fx.borderHover = Accent;
         text = Label(face, label, 18, Fg);
+        Stretch(text.rectTransform);
+        return button;
+    }
+
+    /// <summary>Pill button in any colour with a hard shadow underneath (the 2nd-floor game's buttons).</summary>
+    public static Button ColorButton(Transform parent, string label, Color fill, Color ink, Color shadow,
+        float height, int fontSize, out Text text)
+    {
+        var button = ButtonRoot(parent, height, out RectTransform face, out UiPressFeedback fx);
+        var bg = Box("Bg", face, fill, height * 0.5f);
+        Stretch(bg.rectTransform);
+        fx.shadow = HardShadow(bg, shadow, 4f);
+        fx.shadowDepth = 4f;
+        fx.depth = 2f;
+        text = Label(face, label, fontSize, ink);
         Stretch(text.rectTransform);
         return button;
     }

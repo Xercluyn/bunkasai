@@ -43,3 +43,6 @@ crashlytics-build.properties
 # OS
 .DS_Store
 Thumbs.db
+
+# backup of the original Game3dku project (kept locally, too big for the repo)
+/bunkasai_asset/

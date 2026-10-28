@@ -1,0 +1,77 @@
+/* Layout: one-screen mine under a coin shop — HUD strip, game canvas, control row. Single dark look by choice. */
+:root{
+  --ink:#1d1026;
+  --cream:#f4e6c4;
+  --gold:#f2c14e;
+  --mint:#7fd3b5;
+  --red:#d94a3d;
+  --muted:#b9a3bd;
+  --display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --dot:"DotGothic16",ui-monospace,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--ink);color:var(--cream);font-family:var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px;box-sizing:border-box}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(22px,4vw,32px);margin:0;letter-spacing:.02em;color:var(--gold);text-wrap:balance}
+h1 span{color:var(--cream)}
+.best{font-family:var(--dot);color:var(--muted);font-size:14px}
+.hud{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.stat{background:#ffffff0d;border:1px solid #ffffff1a;border-radius:6px;padding:6px 10px;min-width:0}
+.stat b{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
+.stat output{font-family:var(--dot);font-size:clamp(15px,2.8vw,22px);font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat.goal output{color:var(--mint)}
+.stat.time.low output{color:var(--red)}
+.bar{height:6px;border-radius:3px;background:#ffffff14;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;width:0;background:var(--mint);transition:width .2s}
+.stage{position:relative;border-radius:10px;overflow:hidden;box-shadow:0 0 0 3px #ffffff14,0 18px 40px #0008}
+canvas{display:block;width:100%;aspect-ratio:800/520;max-width:100%;touch-action:manipulation;cursor:pointer}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#1d1026d9;padding:16px;text-align:center;overflow:auto}
+.card{max-width:440px;display:flex;flex-direction:column;gap:12px;align-items:center}
+.card h2{font-family:var(--display);font-weight:400;font-size:clamp(24px,5vw,38px);margin:0;color:var(--gold);text-wrap:balance}
+.card p{margin:0;line-height:1.7;color:var(--cream)}
+.legend{display:grid;grid-template-columns:auto auto;gap:2px 14px;font-size:13px;text-align:left;color:var(--muted)}
+.legend span:nth-child(odd){color:var(--cream)}
+button{font-family:var(--display);font-size:18px;border:0;border-radius:999px;padding:12px 26px;background:var(--gold);color:#3a1d10;cursor:pointer;box-shadow:0 4px 0 #a9771f}
+button:active{transform:translateY(2px);box-shadow:0 2px 0 #a9771f}
+button:focus-visible{outline:3px solid var(--mint);outline-offset:3px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.controls .btns{display:flex;gap:10px}
+button.alt{background:var(--mint);color:#123a2e;box-shadow:0 4px 0 #3f8f74}
+button.alt:disabled{opacity:.4;cursor:default}
+.hint{font-size:13px;color:var(--muted);margin:0}
+kbd{font-family:var(--dot);background:#ffffff14;border-radius:4px;padding:1px 6px;color:var(--cream)}
+.hud{grid-template-columns:repeat(4,minmax(0,1fr))}
+.goalForm{display:flex;flex-direction:column;gap:8px;align-items:center;width:100%}
+.goalForm label{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
+.inrow{display:flex;align-items:center;gap:6px;background:#ffffff10;border:2px solid var(--gold);border-radius:10px;padding:4px 12px}
+.inrow span{font-family:var(--display);font-size:24px;color:var(--gold)}
+.inrow input{width:8ch;background:transparent;border:0;color:var(--cream);font-family:var(--dot);font-size:30px;font-variant-numeric:tabular-nums;text-align:right}
+.inrow input:focus{outline:none}
+.inrow:focus-within{box-shadow:0 0 0 3px #7fd3b566}
+.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.chip{font-family:var(--dot);font-size:14px;padding:5px 10px;border-radius:999px;background:#ffffff12;color:var(--cream);box-shadow:none;border:1px solid #ffffff2a}
+.chip:active{transform:none;box-shadow:none}
+.chip.on{background:var(--gold);color:#3a1d10;border-color:var(--gold)}
+.err{color:#ff8a7d!important;font-size:13px}
+.overlay{background:#140a1bf0}
+.overlay .card{background:#2b1832;border:2px solid #ffffff1f;border-radius:16px;padding:20px 24px;box-shadow:0 10px 40px #000a}
+.overlay.win{background:radial-gradient(ellipse at center,#5a2f52cc 0%,#1d102699 70%)}
+.overlay.win .card{background:#1d1026e6;border:2px solid var(--gold);border-radius:16px;padding:22px 26px;box-shadow:0 0 0 6px #f2c14e22,0 0 60px #f2c14e55}
+.overlay.win h2{font-size:clamp(26px,6vw,44px);text-shadow:0 3px 0 #a9771f,0 0 24px #f2c14e88;animation:pop .6s cubic-bezier(.2,1.6,.4,1) both}
+.overlay.win p{font-size:16px}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.overlay.win h2{animation:none}}
+.ovBtns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+@media (max-width:520px){.hud{grid-template-columns:repeat(3,minmax(0,1fr))}.stat.money{grid-column:span 3}.card .legend{display:none}}
+[hidden]{display:none!important}
+
+.stat.best .row{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.stat.best output{font-size:clamp(14px,2.4vw,20px)}
+button.mini{font-family:var(--body);font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:#ffffff14;color:var(--muted);border:1px solid #ffffff2a;box-shadow:none;white-space:nowrap}
+button.mini:active{transform:none;box-shadow:none}
+button.mini.sure{background:var(--red);color:var(--cream);border-color:var(--red)}
+button.alt:disabled{opacity:.4;cursor:default}
+.controls .btns{margin-left:auto;flex-wrap:wrap;justify-content:flex-end}

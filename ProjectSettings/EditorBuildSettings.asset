@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/FirstFloorScene.unity
+    path: Assets/Scenes/FirstScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1
     path: Assets/Scenes/ElevatorButtonGame.unity
@@ -15,7 +15,25 @@ EditorBuildSettings:
     path: Assets/Scenes/ShinbunArcade.unity
     guid: 61f09f8976ba92742bd15f632466ab0e
   - enabled: 1
-    path: Assets/Scenes/FifthFloorScene.unity
+    path: Assets/Scenes/FifthScene.unity
     guid: b82bc47e763a68a4e95c1c74e917520e
+  - enabled: 1
+    path: Assets/Scenes/SecondFloorGame.unity
+    guid: 50555f3c505f06943b68e69507a05e62
+  - enabled: 1
+    path: Assets/Scenes/SecondScene.unity
+    guid: f17762ce360a1bc43997559743d9db38
+  - enabled: 1
+    path: Assets/Scenes/ThirdFloorGame.unity
+    guid: 3199b8bcc497a00409e6d129470ec45e
+  - enabled: 1
+    path: Assets/Scenes/ThirdScene.unity
+    guid: 9f765e58049eb7c4ebc3796713c96cbb
+  - enabled: 1
+    path: Assets/Scenes/FourthFloorGame.unity
+    guid: bcad0d2488c6a154499f4cc20ff3dd8a
+  - enabled: 1
+    path: Assets/Scenes/FourthScene.unity
+    guid: e490e8f17060158419ac3818b71bba92
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
