@@ -97,10 +97,12 @@ public static class FloorPlayerSetup
         return go;
     }
 
-    // Every visible root except the character, camera and lights: the building and anything placed with it
+    // Every visible root except the character, camera, lights and the school props: the building and anything
+    // placed with it
     internal static IEnumerable<GameObject> BuildingRoots(Scene scene, Transform character) =>
         scene.GetRootGameObjects().Where(root =>
-            root.transform != character && root.GetComponentInChildren<Camera>(true) == null &&
+            root.transform != character && root.GetComponent<SchoolDressing>() == null &&
+            root.GetComponentInChildren<Camera>(true) == null &&
             root.GetComponent<Light>() == null && root.GetComponentInChildren<PlayerMovement>(true) == null &&
             TryGetBounds(root, character, out _));
 
