@@ -61,8 +61,9 @@ public static class SchoolPalette
             wall = new Surface("#5E6268", TexKind.SlatePanel, 1.2f, 0.2f),
             ceiling = new Surface("#F2F2F2", TexKind.CeilingGrid, 0.6f, 0.1f),
             pillar = new Surface("#E8E8E6", TexKind.Plaster, 2f, 0.15f),
-            accents = Accents(("runner", "#6C8CC0"), ("counter", "#F4F4F4"), ("counterBase", "#3E4044"),
-                              ("shelf", "#C8CACC"), ("oak", "#D8C8A8"), ("chair", "#2A5CC8"), ("glass", "#BFD8E8")),
+            accents = Accents(("runner", "#6C8CC0"), ("counter", "#F4F4F4"), ("counterBase", "#5E6268"),
+                              ("signBoard", "#3E4044"), ("shelf", "#C8CACC"), ("oak", "#D8C8A8"), ("chair", "#7A5A3C"),
+                              ("chairSeat", "#6A4C30"), ("glass", "#BFD8E8")),
         },
         [3] = new FloorLook   // drafting + PC rooms: grey tile carpet, white walls, white grid ceiling with LED strips
         {
@@ -84,10 +85,10 @@ public static class SchoolPalette
                               ("fader", "#6A6C70"), ("crimson", "#A8203A"), ("rack", "#D8D0B8"), ("control", "#2C2E32"),
                               ("galv", "#A8ACB0"), ("meterPanel", "#E6DAB8"), ("copper", "#B87333"), ("porcelain", "#EDEDE8")),
         },
-        [5] = new FloorLook   // care / clinical / IT: off-white vinyl, white walls, bright cool light
+        [5] = new FloorLook   // care / clinical / IT: finished like 3F (grey tile carpet, white walls, grid ceiling)
         {
-            floor = new Surface("#E6E6E0", TexKind.MarbleVinyl, 1.5f, 0.35f),
-            wall = new Surface("#F2F2F0", TexKind.Plaster, 2f, 0.15f),
+            floor = new Surface("#7A7E82", TexKind.Carpet, 0.5f, 0.05f),
+            wall = new Surface("#EEEEEC", TexKind.Plaster, 2f, 0.15f),
             ceiling = new Surface("#F4F4F2", TexKind.CeilingGridLight, 1.2f, 0.1f),
             pillar = new Surface("#E6E6E4", TexKind.Plaster, 2f, 0.15f),
             accents = Accents(("lavender", "#9A88C8"), ("bedWood", "#D8A070"), ("bedGold", "#C8A858"), ("sage", "#9EB0AA"),

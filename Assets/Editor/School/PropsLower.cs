@@ -328,7 +328,10 @@ public static class PropsLower
     static GameObject Counter(float width)
     {
         var p = NewProp($"f2_counter_{width:0}m");
-        Box(p, "Base", V(0f, 0.53f, 0f), V(width, 1.06f, 0.55f), Accent(2, "counterBase", 0.3f));
+        // The slate wall's colour and texture, tiled like the wall (1.2 m repeats) on the front face
+        var slate = Mat($"F2_counterBase_{width:0}m", SchoolPalette.Accent(2, "counterBase"), TexKind.SlatePanel, 0.2f, 0f,
+                        new Vector2(width / 1.2f, 1.06f / 1.2f));
+        Box(p, "Base", V(0f, 0.53f, 0f), V(width, 1.06f, 0.55f), slate);
         Box(p, "Top", V(0f, 1.08f, 0.02f), V(width + 0.04f, 0.04f, 0.62f), Accent(2, "counter", 0.5f));
         CounterWindow(p, width);
         return SavePrefab(p);
@@ -347,7 +350,7 @@ public static class PropsLower
             Box(p, $"Mullion{i}", V(-width * 0.5f + i * pane, bottom + h * 0.5f, z), V(0.04f, h, 0.05f), frame);
         for (int i = 0; i < 6; i++)
             Box(p, $"Pane{i}", V(-width * 0.5f + (i + 0.5f) * pane, bottom + h * 0.5f, z), V(pane - 0.04f, h - 0.08f, 0.01f), glass);
-        Box(p, "SignBoard", V(0f, top + 0.18f, z), V(1.6f, 0.32f, 0.04f), Accent(2, "counterBase", 0.3f));
+        Box(p, "SignBoard", V(0f, top + 0.18f, z), V(1.6f, 0.32f, 0.04f), Accent(2, "signBoard", 0.3f));
         FrontLabel(p, "Sign", "受付  RECEPTION", V(0f, top + 0.18f, z + 0.025f), 0.12f, SchoolPalette.Accent(2, "counter"));
     }
 

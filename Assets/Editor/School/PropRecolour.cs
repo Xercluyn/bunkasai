@@ -10,7 +10,8 @@ using UnityEngine.SceneManagement;
 /// The floor models' furniture uses the colours it was exported with. This swaps those embedded materials (matched
 /// by name, ignoring ".001"-style suffixes and "pasted__" prefixes) for school materials in the real campus colours,
 /// one set per floor (F{floor}_furn_key). The shell (floor, walls, ceiling), outline hulls, the elevator, doors and the
-/// vending machines are left alone, and materials that are already school ones are skipped, so it is safe to re-run.
+/// vending machines are left alone, and materials that are already school ones are skipped, so it is safe to re-run
+/// (each run first rewrites the floor's existing F{floor}_furn_* materials, so colour changes reach swapped slots too).
 /// </summary>
 public static class PropRecolour
 {
@@ -44,23 +45,21 @@ public static class PropRecolour
     }
 
     // First match wins: floor-specific rules come before the shared furniture pack (mat_*; the books mat_b_* keep their colours)
-    static readonly Rule[] Rules =
+    static readonly Rule[] Rules = Join(new[]
     {
         // 1F lobby
         new Rule("black table", 1, "charcoal", "#2C2C2E"),
         new Rule(@"Material\.002", 1, "tableWhite", "#F0F0EE", objectPrefix: "square-table"),
         new Rule("M_binSteel|M_steel", 1, "steel", "#B8B8B4", TexKind.Plain, 0.6f, 0.8f),
         new Rule(".*", 1, "mat", "#4A4440", TexKind.Plain, 0.05f, 0f, "headShadow"),
-        // 2F reception + library
+        // 2F reception + library: brown library chairs, darker than the beige tables (the ticket machine's mat_blue stays)
         new Rule("M_cabinet", 2, "cabinet", "#F4F4F4"),
-        // 3F architecture
-        new Rule("meshSeat_mat", 3, "chair", "#2A5CC8", TexKind.Plain, 0.15f),
-        new Rule("mapleTop_mat|dt_wood_mat|oak_mat|chair_wood_mat|mat_oak|mat_wood", 3, "oak", "#D9C3A0", TexKind.Oak),
-        new Rule("dt_wood_dark_mat|oak_dark_mat", 3, "oakDark", "#B89A70", TexKind.Oak),
-        new Rule("pedestalGrey_mat|silverRod_mat", 3, "chrome", "#C8CCD0", TexKind.Plain, 0.7f, 0.9f),
-        new Rule("blackPlastic_mat", 3, "monitor", "#111214", TexKind.Plain, 0.4f),
-        new Rule("tableWhite_mat", 3, "drafting", "#F4F4F4"),
-        new Rule("M_plywood", 3, "plywood", "#D8C49C", TexKind.Oak, 0.2f),
+        new Rule("mat_chair", 2, "chair", AccentHex(2, "chair"), TexKind.Plain, 0.2f),
+        new Rule("mat_blue", 2, "chairSeat", AccentHex(2, "chairSeat"), TexKind.Plain, 0.15f, 0f, "library"),
+    },
+    Architecture(3),
+    new[]
+    {
         // 4F studio / sub-control / power lab
         new Rule("fabric_mat", 4, "crimson", "#A8203A", TexKind.Plain, 0.1f),
         new Rule("walnut_mat", 4, "walnut", "#5A3E2C", TexKind.Oak),
@@ -80,13 +79,33 @@ public static class PropRecolour
         new Rule("M_tableTop", 5, "tableTop", "#E4D6B8", TexKind.Oak),
         new Rule("M_seat(Green|Brown|Grey)", 5, Cycle, null, TexKind.Plain, 0.15f),
         new Rule("steelBeige_mat", 5, "meterPanel", "#E6DAB8", TexKind.Plain, 0.4f, 0.3f),
+    },
+    Architecture(5),   // the rest of 5F's furniture is finished like 3F
+    new[]
+    {
         // The shared classroom furniture pack, on every floor that has it
         new Rule("mat_oak|mat_wood", 0, "oak", "#D8C8A8", TexKind.Oak),
         new Rule("mat_chair", 0, "chair", "#2A5CC8", TexKind.Plain, 0.2f),
         new Rule("mat_steel", 0, "shelf", "#C8CACC", TexKind.Plain, 0.4f, 0.3f),
         new Rule("mat_chrome", 0, "chrome", "#C8CCD0", TexKind.Plain, 0.7f, 0.9f),
         new Rule("mat_stool", 0, "stool", "#222222"),
+    });
+
+    // The 3F architecture rooms' furniture colours, for the given floor
+    static Rule[] Architecture(int floor) => new[]
+    {
+        new Rule("meshSeat_mat", floor, "chair", "#2A5CC8", TexKind.Plain, 0.15f),
+        new Rule("mapleTop_mat|dt_wood_mat|oak_mat|chair_wood_mat|mat_oak|mat_wood", floor, "oak", "#D9C3A0", TexKind.Oak),
+        new Rule("dt_wood_dark_mat|oak_dark_mat", floor, "oakDark", "#B89A70", TexKind.Oak),
+        new Rule("pedestalGrey_mat|silverRod_mat", floor, "chrome", "#C8CCD0", TexKind.Plain, 0.7f, 0.9f),
+        new Rule("blackPlastic_mat", floor, "monitor", "#111214", TexKind.Plain, 0.4f),
+        new Rule("tableWhite_mat", floor, "drafting", "#F4F4F4"),
+        new Rule("M_plywood", floor, "plywood", "#D8C49C", TexKind.Oak, 0.2f),
     };
+
+    static Rule[] Join(params Rule[][] groups) => groups.SelectMany(g => g).ToArray();
+
+    static string AccentHex(int floor, string key) => "#" + ColorUtility.ToHtmlStringRGB(SchoolPalette.Accent(floor, key));
 
     [MenuItem("Tools/Elevator Game/School/Recolour Furniture")]
     static void RecolourOpen() => SchoolKit.OnOpenFloor(Title, Apply);
@@ -109,7 +128,8 @@ public static class PropRecolour
     /// <summary>Swaps the floor's furniture materials for school ones and logs how many slots each key took.</summary>
     internal static void Apply(Scene scene, int floor)
     {
-        var made = new Dictionary<string, Material>();
+        var made = Refreshed(floor);
+        int refreshed = made.Count;
         var counts = new Dictionary<string, int>();
         int renderersChanged = 0, seat = 0;
 
@@ -145,7 +165,27 @@ public static class PropRecolour
         string detail = string.Join(", ", counts.OrderBy(p => p.Key).Select(p => $"{p.Key} x{p.Value}"));
         Debug.Log($"{scene.name}: recoloured {slots} material slot(s) on {renderersChanged} renderer(s)" +
                   (slots > 0 ? $": {detail}." : " (nothing new to change).") +
-                  " Use List Floor Materials to see what's left. Save the scene.");
+                  $" Refreshed {refreshed} existing F{floor}_furn_* material(s) to the current colours. Use List Floor Materials to see what's left. Save the scene.");
+    }
+
+    // Slots already swapped are skipped, so a changed colour reaches them only by updating their material: every
+    // existing F{floor}_furn_* asset is rewritten from the first rule (in rule order) that uses its key on this floor
+    static Dictionary<string, Material> Refreshed(int floor)
+    {
+        var made = new Dictionary<string, Material>();
+        foreach (var rule in Rules.Where(r => r.floor == 0 || r.floor == floor))
+        {
+            if (rule.key != Cycle) { RefreshOne(made, floor, rule.key, rule.hex, rule); continue; }
+            for (int i = 0; i < CycleKeys.Length; i++) RefreshOne(made, floor, CycleKeys[i], CycleHex[i], rule);
+        }
+        return made;
+    }
+
+    static void RefreshOne(Dictionary<string, Material> made, int floor, string key, string hex, Rule rule)
+    {
+        if (made.ContainsKey(key)) return;
+        if (AssetDatabase.LoadAssetAtPath<Material>($"{SchoolKit.MaterialFolder}/{MatKey(floor, key)}.mat") == null) return;
+        MatFor(made, floor, key, hex, rule);
     }
 
     // Every mesh renderer of the building, without outline hulls or anything belonging to the elevator
@@ -199,10 +239,12 @@ public static class PropRecolour
     {
         if (made.TryGetValue(key, out var mat)) return mat;
         // "furn_" keeps these apart from the props' accent materials (F3_oak etc.), which use other settings
-        mat = SchoolKit.Mat($"F{floor}_furn_{key}",UiKit.Hex(hex), rule.tex, rule.smoothness, rule.metallic);
+        mat = SchoolKit.Mat(MatKey(floor, key), UiKit.Hex(hex), rule.tex, rule.smoothness, rule.metallic);
         made[key] = mat;
         return mat;
     }
+
+    static string MatKey(int floor, string key) => $"F{floor}_furn_{key}";
 
     static string PathOf(Transform t) => t.parent == null ? t.name : PathOf(t.parent) + "/" + t.name;
 }
