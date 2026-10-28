@@ -205,6 +205,7 @@ public static class SchoolKit
         var root = scene.GetRootGameObjects().FirstOrDefault(r => r.GetComponent<SchoolDressing>() != null);
         if (root != null) return root.transform;
         root = new GameObject(PropsRootName, typeof(SchoolDressing));
+        root.GetComponent<SchoolDressing>().adopted = true;   // a new root records from the start: nothing to adopt
         SceneManager.MoveGameObjectToScene(root, scene);
         Undo.RegisterCreatedObjectUndo(root, "School props");
         return root.transform;
@@ -228,7 +229,8 @@ public static class SchoolKit
         "loungeChair5", "loungeChair6", "loungeChair7", "loungeChair8",
     };
 
-    // The props root's record of placed ids, adopting a pre-record scene's props the first time
+    // The props root's record of placed ids, adopting a pre-record scene's props the first time (a root made
+    // before ids were recorded: every legacy id counts as placed, even if all of them were deleted since)
     static SchoolDressing Record(Scene scene)
     {
         var root = PropsRoot(scene);
@@ -236,7 +238,7 @@ public static class SchoolKit
         if (dressing.adopted) return dressing;
         Undo.RecordObject(dressing, "School props");
         dressing.adopted = true;
-        if (root.childCount > 0) dressing.placed.AddRange(LegacyIds.Where(id => !dressing.placed.Contains(id)));
+        dressing.placed.AddRange(LegacyIds.Where(id => !dressing.placed.Contains(id)));
         foreach (Transform child in root)
             if (!dressing.placed.Contains(child.name)) dressing.placed.Add(child.name);
         EditorUtility.SetDirty(dressing);

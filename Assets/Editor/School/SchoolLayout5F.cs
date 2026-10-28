@@ -33,15 +33,22 @@ public static class SchoolLayout5F
         Physics.SyncTransforms();
         PlaceLaptops(scene, "IT room 1", Laptop("F5_LaptopSilver", H("F5_laptopSilver", "#C8CCD0", 0.6f, 0.7f), true), ItRoom1Seats());
         PlaceLaptops(scene, "IT room 2", Laptop("F5_LaptopBlack", H("F5_laptopBlack", "#151515", 0.5f, 0.3f), false), ItRoom2Seats());
-        var root = PropsRoot(scene);
-        bool any = CareSpots.Concat(CeSpots).Any(s => root.Find(s.id) != null);
-        if (any && Once(scene, "layout5F_v1"))
-        {
-            ArrangeRoom(scene, "care room", CareSpots);   // first, so its old spots in the CE half are free
-            ArrangeRoom(scene, "clinical engineering", CeSpots);
-        }
-        else if (!any) Debug.Log($"{Title}: no care / CE props yet (run Place School Props first); layout pass left for later.");
+        // care first, so its old spots in the CE half are free; each room's one-off pass waits for its props
+        ArrangeOnce(scene, "care room", "layout5F_care_v1", CareSpots);
+        ArrangeOnce(scene, "clinical engineering", "layout5F_ce_v1", CeSpots);
         AssetDatabase.SaveAssets();
+    }
+
+    // Lays out one room the first time any of its props exists; later runs keep hand-moved props where they are
+    static void ArrangeOnce(Scene scene, string room, string step, Spot[] spots)
+    {
+        var root = PropsRoot(scene);
+        if (!spots.Any(s => root.Find(s.id) != null))
+        {
+            Debug.Log($"{Title}: no {room} props yet (run Place School Props first); its layout pass is left for later.");
+            return;
+        }
+        if (Once(scene, step)) ArrangeRoom(scene, room, spots);
     }
 
     // ---------- laptop ----------

@@ -100,6 +100,18 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
   - tile scale.
 - Compile without Unity with `Tools/compile.ps1`.
 
+## Done 2026-10-29: layout pass
+- **2F:** library chairs are brown (frames #7A5A3C, seats #6A4C30), darker than the #D8C8A8 tables. The reception counter's base takes the wall's slate colour.
+- **3F** (`SchoolLayout3F`):
+  - In the room in front of the architecture class, the merged FBX desks are hidden and replaced by 17 `f3_pcdesk_NN` at the same spots.
+  - In the architecture class, `paper` and `leg2` are hidden. They are replaced by 7 rows of 3 joined drafting sets (`f3_draft_R_C`), running along X and facing north.
+  - The model and cabinet are moved in, once.
+- **5F:** floor, walls and furniture colours match 3F. `SchoolLayout5F` adds:
+  - a silver laptop per seat in the itSign room (40) and a black one per seat in the ArcadeBox room (54);
+  - care moved to the left (north) and CE to the right (south) of the shared room, each moved once.
+- **Deleted props stay deleted:** `SchoolDressing.placed` records every id ever placed. Ids missing from `SchoolProps` were deleted by hand and are never placed again. To bring one back, remove its id from the list. One-off moves are recorded as `#step` entries, so re-runs keep your hand nudges.
+- **Run:** Dress School (All Floors), or Recolour Furniture plus **Arrange Rooms (3F, 5F)**.
+
 ## Not done yet / next steps
 1. **Play-test everything.** None of today's polish pass has run in Unity yet; it was only compile-checked. Watch for:
    - footsteps in time on 1F and 5F (tune `Footsteps.strideBodyHeights`, `volume`);
