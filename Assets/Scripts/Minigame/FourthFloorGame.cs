@@ -99,9 +99,9 @@ public class FourthFloorGame : MonoBehaviour
     static string MsgCongratsHint => L.T("もうすぐフロアに戻るよ", "Heading back to the floor…");
     static string MsgAllDone => L.T("ぜんぶ せいかい！ おめでとう！", "All correct! Congratulations!");   // shown between two 🎉
 
-    // style.css :root
-    static readonly Color Night = UiKit.Hex("#14204A"), NightDeep = UiKit.Hex("#0A1030"), Lantern = UiKit.Hex("#E4392B"),
-        LanternDeep = UiKit.Hex("#B1241A"), Gold = UiKit.Hex("#FFC83D"), Paper = UiKit.Hex("#FFF8E8"), Ink = UiKit.Hex("#2B1A12"),
+    // style.css :root, recoloured to the IT department's navy / white / cyan (UiKit); the greens stay for "correct"
+    static readonly Color Night = UiKit.Bg2, NightDeep = UiKit.Bg, Brand = UiKit.CardBackA, BrandDeep = UiKit.Accent2Shadow,
+        Accent = UiKit.Accent, Paper = UiKit.Fg, Ink = UiKit.CardInk,
         OkC = UiKit.Hex("#2E9E5B"), Mint = UiKit.Hex("#7CFFB2"), Done = UiKit.Hex("#3DDC84");
 
     /* ---------- the page at 1920 px wide (CSS px = canvas units), enlarged to fill a 1080 p screen ---------- */
@@ -229,7 +229,7 @@ public class FourthFloorGame : MonoBehaviour
         // body: night gradient, a soft glow at the top, a few stars
         var sky = UiKit.Img("Sky", canvasRoot, UiKit.MakeSprite(64, (x, y, s) => Color.Lerp(NightDeep, Night, y / s)), Color.white);
         UiKit.Stretch(sky.rectTransform);
-        var haze = UiKit.Img("Haze", canvasRoot, UiKit.Glow, UiKit.Hex("#3A4FA0", 0.9f)).rectTransform;
+        var haze = UiKit.Img("Haze", canvasRoot, UiKit.Glow, new Color(UiKit.Line.r, UiKit.Line.g, UiKit.Line.b, 0.9f)).rectTransform;
         haze.anchorMin = haze.anchorMax = new Vector2(0.5f, 1f);
         haze.sizeDelta = new Vector2(1500f, 650f);
         haze.anchoredPosition = new Vector2(0f, 0.08f * ScreenH);
@@ -339,19 +339,19 @@ public class FourthFloorGame : MonoBehaviour
             pivot.anchorMin = pivot.anchorMax = new Vector2(0f, 1f);
             pivot.sizeDelta = Vector2.zero;
             pivot.anchoredPosition = new Vector2(pad + (i + 0.5f) * slot, 0f);
-            var glow = UiKit.Img("Glow", pivot, UiKit.Glow, UiKit.Hex("#FF6A3D", 0.33f)).rectTransform;
+            var glow = UiKit.Img("Glow", pivot, UiKit.Glow, new Color(Accent.r, Accent.g, Accent.b, 0.33f)).rectTransform;
             glow.anchoredPosition = new Vector2(0f, -12f - h * 0.5f);
             glow.sizeDelta = new Vector2(w + 58f, h + 58f);
-            var body = UiKit.Img("Body", pivot, UiKit.Circle, Lantern).rectTransform;
+            var body = UiKit.Img("Body", pivot, UiKit.Circle, Brand).rectTransform;
             body.anchoredPosition = new Vector2(0f, -12f - h * 0.5f);
             body.sizeDelta = new Vector2(w, h);
-            var core = UiKit.Img("Core", body, UiKit.Glow, UiKit.Hex("#FF7B5C")).rectTransform;
+            var core = UiKit.Img("Core", body, UiKit.Glow, UiKit.Accent2).rectTransform;
             UiKit.Center(core, w * 0.7f, h * 0.6f).anchoredPosition = new Vector2(0f, h * 0.1f);
             for (int r = 1; r < 6; r++)   // paper ribs
                 UiKit.Center(UiKit.Img("Rib", body, null, new Color(0f, 0f, 0f, 0.16f)).rectTransform, w * 0.9f, 1f)
                     .anchoredPosition = new Vector2(0f, h * (0.5f - r / 6f));
             foreach (float cy in new[] { h * 0.5f, -h * 0.5f })
-                UiKit.Center(UiKit.Box("Cap", body, UiKit.Hex("#1c1210"), 3f).rectTransform, w * 0.56f, 6f).anchoredPosition = new Vector2(0f, cy);
+                UiKit.Center(UiKit.Box("Cap", body, UiKit.Dim, 3f).rectTransform, w * 0.56f, 6f).anchoredPosition = new Vector2(0f, cy);
             lanterns.Add(pivot);
         }
     }
@@ -359,10 +359,10 @@ public class FourthFloorGame : MonoBehaviour
     // .topbar: the title sign on the left, the progress on the right
     void BuildTopbar()
     {
-        var title = UiKit.Box("Title", game, Lantern, 12f, Gold, 4f);
+        var title = UiKit.Box("Title", game, Brand, 12f, Accent, 4f);
         var tt = UiKit.Label(title.transform, Title, 52, Paper);
         tt.horizontalOverflow = HorizontalWrapMode.Overflow;
-        UiKit.HardShadow(tt, UiKit.Hex("#7d140c"), 2f).effectDistance = new Vector2(2f, -2f);
+        UiKit.HardShadow(tt, BrandDeep, 2f).effectDistance = new Vector2(2f, -2f);
         UiKit.Stretch(tt.rectTransform);
         UiKit.Place(title.rectTransform, 0f, GameTop, tt.preferredWidth + 44f + 8f, TopbarH);
         title.rectTransform.localEulerAngles = new Vector3(0f, 0f, 1.2f);
@@ -373,14 +373,14 @@ public class FourthFloorGame : MonoBehaviour
         var plabel = UiKit.Label(game, MsgProgressLabel, S(22), Paper, TextAnchor.LowerLeft);
         plabel.horizontalOverflow = HorizontalWrapMode.Overflow;
         UiKit.Place(plabel.rectTransform, x, y, progW - 150f, 50f);
-        progressText = UiKit.Label(game, "0 / 0", S(40), Gold, TextAnchor.LowerRight);
+        progressText = UiKit.Label(game, "0 / 0", S(40), Accent, TextAnchor.LowerRight);
         progressText.horizontalOverflow = HorizontalWrapMode.Overflow;
         UiKit.Place(progressText.rectTransform, GameW - 150f, y, 150f, 52f);
         progressText.rectTransform.pivot = new Vector2(0.8f, 0.5f);
         progressText.rectTransform.anchoredPosition += new Vector2(0.8f * 150f, -26f);
         var bar = UiKit.Box("Bar", game, new Color(0f, 0f, 0f, 0.53f), 11f, new Color(1f, 1f, 1f, 0.27f), 2f);
         UiKit.Place(bar.rectTransform, x, y + 56f, progW, 22f);
-        var fill = UiKit.Img("Fill", bar.transform, UiKit.MakeSprite(32, (px, py, s) => Color.Lerp(Gold, UiKit.Hex("#FF8A3D"), px / s)), Color.white);
+        var fill = UiKit.Img("Fill", bar.transform, UiKit.MakeSprite(32, (px, py, s) => Color.Lerp(Accent, UiKit.Accent2, px / s)), Color.white);
         progressFill = UiKit.Stretch(fill.rectTransform, 2f);
         progressFill.pivot = new Vector2(0f, 0.5f);
     }
@@ -394,7 +394,7 @@ public class FourthFloorGame : MonoBehaviour
         congrats = dim.gameObject;
 
         const float w = 600f, h = 300f;
-        var panel = UiKit.Box("Panel", dim.transform, Paper, 28f, Gold, 5f);
+        var panel = UiKit.Box("Panel", dim.transform, Paper, 28f, Accent, 5f);
         UiKit.Center(panel.rectTransform, w, h);
         panel.rectTransform.localScale = Vector3.one * 1.35f;   // enlarged with the rest
         UiKit.HardShadow(panel, new Color(0f, 0f, 0f, 0.53f), 10f).useGraphicAlpha = false;
@@ -416,13 +416,16 @@ public class FourthFloorGame : MonoBehaviour
             ert.anchorMin = ert.anchorMax = ert.pivot = new Vector2(0.5f, 1f);
             ert.anchoredPosition = new Vector2(0f, -78f);
         }
-        var t = UiKit.Label(p, MsgCongratsTitle, S(30), Lantern);
+        var t = UiKit.Label(p, MsgCongratsTitle, S(30), Brand);
         t.resizeTextForBestFit = true;
         t.resizeTextMinSize = 28;
         t.resizeTextMaxSize = S(30);
         Top(t.rectTransform, 134f, 56f, w - 48f);
         var body = UiKit.Label(p, MsgCongratsText, S(16), Ink);
         body.lineSpacing = 1.15f;
+        body.resizeTextForBestFit = true;   // stays inside its 56 px, clear of the hint below
+        body.resizeTextMinSize = 14;
+        body.resizeTextMaxSize = S(16);
         Top(body.rectTransform, 194f, 56f, w - 48f);
         var hint = UiKit.Label(p, MsgCongratsHint, S(13), new Color(Ink.r, Ink.g, Ink.b, 0.6f), TextAnchor.MiddleCenter, false);
         Top(hint.rectTransform, 256f, 28f, w - 48f);
@@ -463,7 +466,7 @@ public class FourthFloorGame : MonoBehaviour
         var sprite = Art(dept.id);
         if (sprite != null)
         {
-            // drop-shadow glow: a gold / green copy of the picture just behind it
+            // drop-shadow glow: a cyan / green copy of the picture just behind it
             b.glow = UiKit.Img("Glow", b.body, sprite, Color.clear);
             b.glow.preserveAspect = true;
             UiKit.Stretch(b.glow.rectTransform);
@@ -483,6 +486,9 @@ public class FourthFloorGame : MonoBehaviour
             var board = UiKit.Box("Board", b.body, UiKit.Hex(dept.color), 16f, Ink, 3f);
             UiKit.Stretch(board.rectTransform);
             var name = UiKit.Label(board.transform, dept.Name, S(22), Color.white);
+            name.resizeTextForBestFit = true;   // the long department names (English especially)
+            name.resizeTextMinSize = 14;
+            name.resizeTextMaxSize = S(22);
             name.rectTransform.anchorMin = new Vector2(0f, 0.75f);
             name.rectTransform.anchorMax = Vector2.one;
             name.rectTransform.offsetMin = new Vector2(8f, 0f);
@@ -516,13 +522,13 @@ public class FourthFloorGame : MonoBehaviour
 
         c.face = UiKit.Stretch(UiKit.Rect("Face", c.root));
         c.glow = BuildCardLook(c.face, f, 5f);
-        // .card.selected::after: gold ✓ badge over the top-right corner
+        // .card.selected::after: cyan ✓ badge over the top-right corner
         var badge = UiKit.Img("Check", c.face, UiKit.Circle, Ink);
         var brt = badge.rectTransform;
         brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 1f);
         brt.anchoredPosition = new Vector2(12f, 12f);
         brt.sizeDelta = new Vector2(30f, 30f);
-        UiKit.Stretch(UiKit.Img("Fill", brt, UiKit.Circle, Gold).rectTransform, 3f);
+        UiKit.Stretch(UiKit.Img("Fill", brt, UiKit.Circle, Accent).rectTransform, 3f);
         UiKit.Stretch(UiKit.Label(brt, "✓", S(16), Ink).rectTransform);
         c.check = badge.gameObject;
         c.check.SetActive(false);
@@ -530,7 +536,7 @@ public class FourthFloorGame : MonoBehaviour
     }
 
     // The card image (it has the name drawn on it), or a paper card with the name if the image is missing.
-    // Returns the glow behind it (gold while selected).
+    // Returns the glow behind it (cyan while selected).
     Image BuildCardLook(RectTransform parent, Food f, float shadowDrop)
     {
         var sprite = Art(f.id);
@@ -794,8 +800,8 @@ public class FourthFloorGame : MonoBehaviour
     void SetMessage(string msg, string kind, bool withParty = false)
     {
         message.text = msg;
-        messageBg.color = kind == "ok" ? OkC : kind == "ng" ? UiKit.Hex("#FFE3DF") : new Color(1f, 1f, 1f, 0.12f);
-        message.color = kind == "ok" ? Color.white : kind == "ng" ? UiKit.Hex("#8A1C12") : Paper;
+        messageBg.color = kind == "ok" ? OkC : kind == "ng" ? UiKit.Hex("#ffe1e7") : new Color(1f, 1f, 1f, 0.12f);
+        message.color = kind == "ok" ? Color.white : kind == "ng" ? UiKit.BadShadow : Paper;
         // 🎉 on both sides of the text
         float half = Mathf.Min(message.preferredWidth, GameW - 120f) * 0.5f + 24f;
         for (int i = 0; i < messageParty.Count; i++)
@@ -835,10 +841,10 @@ public class FourthFloorGame : MonoBehaviour
     /* ---------- effects ---------- */
     void Confetti(int count)
     {
-        string[] colors = { "#E4392B", "#FFC83D", "#2F6FDE", "#2E9E5B", "#D63C86", "#FFF8E8", "#7B4FD0" };
+        Color[] colors = { Accent, UiKit.Accent2, Brand, UiKit.Good, UiKit.Fg, UiKit.Light, UiKit.MainFill };
         for (int i = 0; i < count; i++)
         {
-            var piece = UiKit.Box("Confetti", fx, UiKit.Hex(colors[i % colors.Length]), 2f).rectTransform;
+            var piece = UiKit.Box("Confetti", fx, colors[i % colors.Length], 2f).rectTransform;
             piece.anchorMin = piece.anchorMax = new Vector2(UnityEngine.Random.value, 1f);
             piece.sizeDelta = new Vector2(10f, 16f);
             piece.anchoredPosition = new Vector2(0f, 24f);
@@ -867,7 +873,7 @@ public class FourthFloorGame : MonoBehaviour
         Vector2 centre = fx.InverseTransformPoint(around.TransformPoint(around.rect.center));
         for (int i = 0; i < 12; i++)
         {
-            var s = UiKit.Label(fx, "✦", 28, Gold);
+            var s = UiKit.Label(fx, "✦", 28, Accent);
             s.horizontalOverflow = HorizontalWrapMode.Overflow;
             var rt = s.rectTransform;
             rt.sizeDelta = new Vector2(30f, 30f);
@@ -1020,10 +1026,10 @@ public class FourthFloorGame : MonoBehaviour
                 float p = Mathf.Clamp01((0.7f - (b.okUntil - Time.time)) / 0.7f);   // artOk: strongest at 40%
                 glow = new Color(Mint.r, Mint.g, Mint.b, p < 0.4f ? p / 0.4f : 1f - (p - 0.4f) / 0.6f);
             }
-            else if (hint) glow = Gold;
-            else if (ready) glow = Gold;
+            else if (hint) glow = Accent;
+            else if (ready) glow = Accent;
             else if (b.complete) glow = new Color(Done.r, Done.g, Done.b, 0.67f);
-            else if (hasSelection) glow = new Color(Gold.r, Gold.g, Gold.b, 0.6f);
+            else if (hasSelection) glow = new Color(Accent.r, Accent.g, Accent.b, 0.6f);
             b.glow.color = Color.Lerp(b.glow.color, glow, k);
         }
 
@@ -1033,7 +1039,7 @@ public class FourthFloorGame : MonoBehaviour
             if (c.placed) continue;
             c.root.anchoredPosition = Vector2.Lerp(c.root.anchoredPosition, c.target, m);
             bool sel = c == selected && dragging != c;
-            // .card:hover lifts 4 px; .card.selected lifts 10 px and grows to 1.07 with a gold glow
+            // .card:hover lifts 4 px; .card.selected lifts 10 px and grows to 1.07 with a cyan glow
             float lift = sel ? 10f : c.pointer.hovered && dragging == null ? 4f : 0f;
             c.face.anchoredPosition = new Vector2(Shake(c.shakeUntil), Mathf.Lerp(c.face.anchoredPosition.y, lift, k));
             // pointed at: zoomed up to read, drawn over its neighbours
@@ -1041,7 +1047,7 @@ public class FourthFloorGame : MonoBehaviour
             if (hover && c.root.GetSiblingIndex() != c.root.parent.childCount - 1) c.root.SetAsLastSibling();
             float zoom = hover ? CardHoverZoom : sel ? 1.07f : 1f;
             c.face.localScale = Vector3.Lerp(c.face.localScale, Vector3.one * zoom, k);
-            c.glow.color = sel ? Gold : Color.clear;
+            c.glow.color = sel ? Accent : Color.clear;
         }
     }
 }

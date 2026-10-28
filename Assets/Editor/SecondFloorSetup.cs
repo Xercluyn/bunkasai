@@ -40,7 +40,7 @@ public static class SecondFloorSetup
         var cam = camGo.GetComponent<Camera>();
         cam.orthographic = true;
         cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = UiKit.Hex("#1d1026");
+        cam.backgroundColor = UiKit.Bg;
         camGo.transform.position = new Vector3(0f, 0f, -10f);
 
         var es = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));

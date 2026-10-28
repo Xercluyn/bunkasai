@@ -13,7 +13,7 @@ using UnityEngine.SceneManagement;
 /// (port of Assets/Minigame/FourthFloorGame) and its art, both it and FourthFloorScene in Build Settings.
 /// Tools > Elevator Game > Set Up Fourth Floor Quest: on the open FourthFloorScene, the quest banner and ▶ プレイ at
 /// the fader console by the studio door. The studio (purple monitor wall) is one merged mesh, swBtn22 in fourth.fbx, so the console
-/// is found as a separate piece of that mesh and only it gets the orange outline, like the elevator's button.
+/// is found as a separate piece of that mesh and only it gets the cyan outline, like the elevator's button.
 /// </summary>
 public static class FourthFloorSetup
 {
@@ -51,7 +51,7 @@ public static class FourthFloorSetup
         var cam = camGo.GetComponent<Camera>();
         cam.orthographic = true;
         cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = UiKit.Hex("#14204A");
+        cam.backgroundColor = UiKit.Bg;
         camGo.transform.position = new Vector3(0f, 0f, -10f);
 
         var es = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
@@ -169,7 +169,7 @@ public static class FourthFloorSetup
             return;
         }
         if (score > 0.08f)
-            Debug.LogWarning($"The fader console match in {studio.name} is loose (score {score:0.000}); check the orange outline lands on the right console.");
+            Debug.LogWarning($"The fader console match in {studio.name} is loose (score {score:0.000}); check the cyan outline lands on the right console.");
 
         // the console's box in world space
         var t = studio.transform;

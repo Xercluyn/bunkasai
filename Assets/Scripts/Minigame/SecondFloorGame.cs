@@ -116,6 +116,20 @@ public class SecondFloorGame : MonoBehaviour
     AudioSource audioSource;
     AudioClip sfxFanfare, sfxJackpot;
 
+    // ---------- palette: the IT department's navy / white / cyan (UiKit); gold stays only on money ----------
+    static readonly Color Bg = UiKit.Bg;                  // page
+    static readonly Color Card = UiKit.Bg2;               // signs, machine, overlay card
+    static readonly Color Deep = UiKit.Dim;               // overlay dim
+    static readonly Color Accent = UiKit.Accent;          // titles, machine trim, claw
+    static readonly Color AccentShadow = UiKit.AccentShadow;
+    static readonly Color Paper = UiKit.Fg;               // values, body text
+    static readonly Color Muted = UiKit.Muted;            // labels, hints
+    static readonly Color Sub = UiKit.Accent2;            // goal, secondary buttons
+    static readonly Color SubInk = UiKit.Bg, SubShadow = UiKit.Accent2Shadow;
+    static readonly Color Red = UiKit.Bad;                // time running out, armed reset
+    static readonly Color Gold = UiKit.Hex("#f2c14e"), GoldShadow = UiKit.Hex("#a9771f");   // money: jackpot, coin pops
+    static readonly string PaperHex = ColorUtility.ToHtmlStringRGB(Paper);
+
     static readonly CultureInfo Ja = CultureInfo.InvariantCulture;
     static string Yen(float n) => "¥" + Mathf.Floor(n).ToString("#,0", Ja);
 
@@ -148,13 +162,13 @@ public class SecondFloorGame : MonoBehaviour
         var canvas = UiKit.MakeCanvas("SecondFloorGameCanvas", 0, new Vector2(880f, 760f));
         var root = (RectTransform)canvas.transform;
         canvasRoot = root;
-        UiKit.Stretch(UiKit.Img("Background", root, null, UiKit.Hex("#1d1026")).rectTransform);
+        UiKit.Stretch(UiKit.Img("Background", root, null, Bg).rectTransform);
 
         var wrap = UiKit.Rect("Wrap", root);
         UiKit.Center(wrap, W, 716f);
 
         // header
-        var h1 = UiKit.Label(wrap, L.T("2階<color=#f4e6c4>ゲーム</color>", "2F <color=#f4e6c4>Game</color>"), 30, UiKit.Hex("#f2c14e"), TextAnchor.MiddleLeft);
+        var h1 = UiKit.Label(wrap, L.T("2階<color=#" + PaperHex + ">ゲーム</color>", "2F <color=#" + PaperHex + ">Game</color>"), 30, Accent, TextAnchor.MiddleLeft);
         UiKit.Place(h1.rectTransform, 0f, 0f, 400f, 36f);
 
         // HUD
@@ -163,24 +177,31 @@ public class SecondFloorGame : MonoBehaviour
         var money = Stat(wrap, 0f, hudY, sw, statH, L.T("所持金", "MONEY"), out scoreVal);
         var barBg = UiKit.Box("Bar", money, UiKit.Hex("#ffffff", 0.08f), 3f);
         UiKit.Place(barBg.rectTransform, 10f, 64f, sw - 20f, 6f);
-        progFill = UiKit.Stretch(UiKit.Box("Fill", barBg.transform, UiKit.Hex("#7fd3b5"), 3f).rectTransform);
+        progFill = UiKit.Stretch(UiKit.Box("Fill", barBg.transform, Accent, 3f).rectTransform);
         progFill.pivot = new Vector2(0f, 0.5f);
         Stat(wrap, sw + gap, hudY, sw, statH, L.T("目標金額", "GOAL"), out goalVal);
-        goalVal.color = UiKit.Hex("#7fd3b5");
+        goalVal.color = Sub;
         Stat(wrap, 2f * (sw + gap), hudY, sw, statH, L.T("残り時間", "TIME LEFT"), out timeVal);
         var best = Stat(wrap, 3f * (sw + gap), hudY, sw, statH, L.T("ベストタイム", "BEST TIME"), out bestVal);
+        // value on the left, Reset on the right: the value's rect stops short of the button and shrinks to fit
+        const float resetW = 74f;
         bestVal.fontSize = 20;
+        bestVal.horizontalOverflow = HorizontalWrapMode.Wrap;
+        bestVal.resizeTextForBestFit = true;
+        bestVal.resizeTextMinSize = 14;
+        bestVal.resizeTextMaxSize = 20;
+        UiKit.Place(bestVal.rectTransform, 10f, 30f, sw - 20f - resetW - 6f, 32f);
         resetBg = UiKit.Box("Reset", best, UiKit.Hex("#ffffff", 0.08f), 6f);
         resetBg.raycastTarget = true;
-        UiKit.Place(resetBg.rectTransform, sw - 122f, 34f, 112f, 32f);
+        UiKit.Place(resetBg.rectTransform, sw - 10f - resetW, 34f, resetW, 30f);
         resetBtn = resetBg.gameObject.AddComponent<Button>();
         resetBtn.transition = Selectable.Transition.None;
         resetBtn.targetGraphic = resetBg;
         resetBtn.onClick.AddListener(ResetBest);
-        resetText = UiKit.Label(resetBg.transform, L.T("リセット", "Reset"), 18, UiKit.Hex("#b9a3bd"));
-        resetText.resizeTextForBestFit = true;   // 「もう一度押す」 / "Press again" just fit
+        resetText = UiKit.Label(resetBg.transform, L.T("リセット", "Reset"), 18, Muted);
+        resetText.resizeTextForBestFit = true;   // 「本当に？」 / "Sure?" fit the narrow button
         resetText.resizeTextMinSize = 14;
-        resetText.resizeTextMaxSize = 18;
+        resetText.resizeTextMaxSize = 16;
         UiKit.Stretch(resetText.rectTransform, 2f);
 
         // stage
@@ -195,12 +216,14 @@ public class SecondFloorGame : MonoBehaviour
         float cy = stageY + H + 12f;
         var hint = UiKit.Label(wrap, L.T("発射：↓ / Space / タップ　はなす：↑\n一時停止：P　リスタート：R",
             "Drop: ↓ / Space / tap   Let go: ↑\nPause: P   Restart: R"), 18,
-            UiKit.Hex("#b9a3bd"), TextAnchor.MiddleLeft, false);
+            Muted, TextAnchor.MiddleLeft, false);
         hint.lineSpacing = 1.05f;
-        Color mint = UiKit.Hex("#7fd3b5"), mintInk = UiKit.Hex("#123a2e"), mintShadow = UiKit.Hex("#3f8f74");
-        var fire = UiKit.ColorButton(wrap, L.T("発射", "Drop"), UiKit.Hex("#f2c14e"), UiKit.Hex("#3a1d10"), UiKit.Hex("#a9771f"), 44f, 18, out var fireText);
-        pauseBtn = UiKit.ColorButton(wrap, L.T("一時停止", "Pause"), mint, mintInk, mintShadow, 44f, 18, out pauseText);
-        var restart = UiKit.ColorButton(wrap, L.T("リスタート", "Restart"), mint, mintInk, mintShadow, 44f, 18, out var restartText);
+        hint.resizeTextForBestFit = true;   // two lines in 48 px; the English lines are the longer ones
+        hint.resizeTextMinSize = 14;
+        hint.resizeTextMaxSize = 18;
+        var fire = UiKit.ColorButton(wrap, L.T("発射", "Drop"), UiKit.MainFill, UiKit.Ink, UiKit.MainShadow, 44f, 18, out var fireText);
+        pauseBtn = UiKit.ColorButton(wrap, L.T("一時停止", "Pause"), Sub, SubInk, SubShadow, 44f, 18, out pauseText);
+        var restart = UiKit.ColorButton(wrap, L.T("リスタート", "Restart"), Sub, SubInk, SubShadow, 44f, 18, out var restartText);
         float x = W;
         foreach (var (b, t) in new[] { (fire, fireText), (pauseBtn, pauseText), (restart, restartText) })
         {
@@ -225,10 +248,10 @@ public class SecondFloorGame : MonoBehaviour
     {
         var box = UiKit.Box("Stat", parent, UiKit.Hex("#ffffff", 0.05f), 6f, UiKit.Hex("#ffffff", 0.1f), 1f).rectTransform;
         UiKit.Place(box, x, y, w, h);
-        var l = UiKit.Label(box, label, 18, UiKit.Hex("#b9a3bd"), TextAnchor.MiddleLeft);
+        var l = UiKit.Label(box, label, 18, Muted, TextAnchor.MiddleLeft);
         l.horizontalOverflow = HorizontalWrapMode.Overflow;
         UiKit.Place(l.rectTransform, 10f, 5f, w - 20f, 24f);
-        val = UiKit.Label(box, "", 24, UiKit.Hex("#f4e6c4"), TextAnchor.MiddleLeft);
+        val = UiKit.Label(box, "", 24, Paper, TextAnchor.MiddleLeft);
         val.horizontalOverflow = HorizontalWrapMode.Overflow;
         UiKit.Place(val.rectTransform, 10f, 30f, w - 20f, 32f);
         return box;
@@ -242,20 +265,20 @@ public class SecondFloorGame : MonoBehaviour
         bg.raycastTarget = true;   // clicking the stage fires the hook
         stagePointer = bg.gameObject.AddComponent<UiPointerState>();
 
-        Sign(30f, 56f, 170f, "#f2c14e", L.T("お金を掘ろう", "Dig for money"), 18);
-        goalSign = Sign(W - 210f, 56f, 180f, "#7fd3b5", "", 18);
+        Sign(30f, 56f, 170f, Accent, L.T("お金を掘ろう", "Dig for money"), 18);
+        goalSign = Sign(W - 210f, 56f, 180f, Sub, "", 18);
 
         itemsLayer = Layer("Items");
 
         // machine: box, spinning wheel, pivot
-        var box = UiKit.Box("Machine", stage, UiKit.Hex("#2b1832"), 8f, UiKit.Hex("#f2c14e"), 2f);
+        var box = UiKit.Box("Machine", stage, Card, 8f, Accent, 2f);
         UiKit.Place(box.rectTransform, PX - 36f, PY - 46f, 72f, 40f);
         wheel = Piece(stage, "Wheel", WheelSprite, Color.white, 0f, 0f, 28f, 28f).rectTransform;
         At(wheel, PX, PY - 26f);
-        At(Piece(stage, "Pivot", UiKit.Circle, UiKit.Hex("#f2c14e"), 0f, 0f, 10f, 10f).rectTransform, PX, PY);
+        At(Piece(stage, "Pivot", UiKit.Circle, Accent, 0f, 0f, 10f, 10f).rectTransform, PX, PY);
 
         // hook: rope pointing down from the pivot, claw at its tip
-        hookLine = UiKit.Img("Rope", stage, null, UiKit.Hex("#f4e6c4")).rectTransform;
+        hookLine = UiKit.Img("Rope", stage, null, UiKit.Light).rectTransform;
         hookLine.anchorMin = hookLine.anchorMax = new Vector2(0f, 1f);
         hookLine.pivot = new Vector2(0.5f, 1f);
         hookLine.anchoredPosition = new Vector2(PX, -PY);
@@ -275,10 +298,10 @@ public class SecondFloorGame : MonoBehaviour
         UiKit.Stretch(jackpotFlash.rectTransform);
         jackpotText = UiKit.Rect("Text", jackpotLayer);
         At(jackpotText, W / 2f, 235f);
-        var jp = Txt(jackpotText, "JACKPOT!", 0f, 0f, 92, UiKit.Hex("#f2c14e"));
-        Outline(jp, UiKit.Hex("#a9771f"), 5f);
-        var jy = Txt(jackpotText, "¥10,000", 0f, 86f, 46, UiKit.Hex("#f4e6c4"));
-        Outline(jy, UiKit.Hex("#2b1832"), 4f);
+        var jp = Txt(jackpotText, "JACKPOT!", 0f, 0f, 92, Gold);
+        Outline(jp, GoldShadow, 5f);
+        var jy = Txt(jackpotText, "¥10,000", 0f, 86f, 46, Paper);
+        Outline(jy, Card, 4f);
         jackpotLayer.gameObject.SetActive(false);
 
         partyLayer = Layer("Party");
@@ -287,14 +310,16 @@ public class SecondFloorGame : MonoBehaviour
 
     RectTransform Layer(string name) => UiKit.Stretch(UiKit.Rect(name, stage));
 
-    Text Sign(float x, float y, float w, string color, string text, int size)
+    Text Sign(float x, float y, float w, Color color, string text, int size)
     {
-        var box = UiKit.Box("Sign", stage, UiKit.Hex("#2b1832"), 6f, UiKit.Hex(color), 2f);
+        var box = UiKit.Box("Sign", stage, Card, 6f, color, 2f);
         UiKit.Place(box.rectTransform, x, y, w, 40f);
-        var t = UiKit.Label(box.transform, text, size, UiKit.Hex(color));
+        var t = UiKit.Label(box.transform, text, size, color);
         UiKit.Stretch(t.rectTransform);
         return t;
     }
+
+    static Color WithAlpha(Color c, float a) => new Color(c.r, c.g, c.b, a);
 
     static void Outline(Text t, Color color, float width)
     {
@@ -305,15 +330,15 @@ public class SecondFloorGame : MonoBehaviour
 
     void BuildOverlay()
     {
-        overlayDim = UiKit.Img("Overlay", stage, null, UiKit.Hex("#140a1b", 0.94f));
+        overlayDim = UiKit.Img("Overlay", stage, null, WithAlpha(Deep, 0.94f));
         overlayDim.raycastTarget = true;   // blocks clicks to the stage underneath
         UiKit.Stretch(overlayDim.rectTransform);
         overlay = overlayDim.gameObject;
 
-        winGlow = UiKit.Img("WinGlow", overlay.transform, UiKit.Glow, UiKit.Hex("#5a2f52", 0.8f)).gameObject;
+        winGlow = UiKit.Img("WinGlow", overlay.transform, UiKit.Glow, WithAlpha(UiKit.Line, 0.8f)).gameObject;
         UiKit.Center((RectTransform)winGlow.transform, 900f, 640f);
 
-        cardBorder = UiKit.Box("Card", overlay.transform, UiKit.Hex("#2b1832"), 16f, UiKit.Hex("#ffffff", 0.12f), 2f);
+        cardBorder = UiKit.Box("Card", overlay.transform, Card, 16f, UiKit.Hex("#ffffff", 0.12f), 2f);
         cardFill = cardBorder.transform.GetChild(0).GetComponent<Image>();
         var card = cardBorder.rectTransform;
         card.anchorMin = card.anchorMax = card.pivot = new Vector2(0.5f, 0.5f);
@@ -326,17 +351,17 @@ public class SecondFloorGame : MonoBehaviour
         var fit = card.gameObject.AddComponent<ContentSizeFitter>();
         fit.horizontalFit = fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        ovTitle = UiKit.Label(card, "", 34, UiKit.Hex("#f2c14e"));
+        ovTitle = UiKit.Label(card, "", 34, Accent);
         ovTitle.horizontalOverflow = HorizontalWrapMode.Overflow;
-        ovTitleShadow = UiKit.HardShadow(ovTitle, UiKit.Hex("#a9771f"), 3f);
+        ovTitleShadow = UiKit.HardShadow(ovTitle, AccentShadow, 3f);
 
-        ovText = UiKit.Label(card, "", 20, UiKit.Hex("#f4e6c4"), TextAnchor.UpperCenter, false);
+        ovText = UiKit.Label(card, "", 20, Paper, TextAnchor.UpperCenter, false);
         ovText.lineSpacing = 1.2f;
         ovText.gameObject.AddComponent<LayoutElement>().preferredWidth = 520f;
 
         var lg = UiKit.Rect("Legend", card);
         var lv = lg.gameObject.AddComponent<VerticalLayoutGroup>();
-        lv.spacing = 4f;
+        lv.spacing = 2f;
         lv.childControlWidth = lv.childControlHeight = true;
         lv.childForceExpandWidth = lv.childForceExpandHeight = false;
         foreach (var (what, how) in new[]
@@ -352,23 +377,26 @@ public class SecondFloorGame : MonoBehaviour
             h.childAlignment = TextAnchor.UpperLeft;
             h.childControlWidth = h.childControlHeight = true;
             h.childForceExpandWidth = h.childForceExpandHeight = false;
-            LegendCell(row, what, UiKit.Hex("#f4e6c4"), 190f);
-            LegendCell(row, how, UiKit.Hex("#b9a3bd"), 316f);
+            LegendCell(row, what, Paper, 190f);
+            LegendCell(row, how, Muted, 316f);
         }
         legend = lg.gameObject;
 
-        var btn = UiKit.ColorButton(card, "", UiKit.Hex("#f2c14e"), UiKit.Hex("#3a1d10"), UiKit.Hex("#a9771f"), 46f, 18, out ovBtnText);
+        var btn = UiKit.ColorButton(card, "", UiKit.MainFill, UiKit.Ink, UiKit.MainShadow, 46f, 18, out ovBtnText);
         ovBtnLayout = btn.GetComponent<LayoutElement>();
         btn.onClick.AddListener(() => ovAction?.Invoke());
     }
 
-    // fixed width, wraps onto a second line rather than clipping (the row takes the taller cell's height)
+    // fixed cell, one line: longer (English) entries shrink instead of wrapping and pushing the card past the stage
     static void LegendCell(RectTransform row, string text, Color color, float width)
     {
-        var t = UiKit.Label(row, text, 18, color, TextAnchor.UpperLeft, false);
+        var t = UiKit.Label(row, text, 18, color, TextAnchor.MiddleLeft, false);
+        t.resizeTextForBestFit = true;
+        t.resizeTextMinSize = 14;
+        t.resizeTextMaxSize = 18;
         var le = t.gameObject.AddComponent<LayoutElement>();
         le.preferredWidth = le.minWidth = width;
-        le.minHeight = 24f;
+        le.preferredHeight = le.minHeight = 28f;
     }
 
     void SetOverlay(string title, string text, string button, Action action, bool showLegend, bool win)
@@ -381,10 +409,10 @@ public class SecondFloorGame : MonoBehaviour
         legend.SetActive(showLegend);
 
         // .overlay.win: warm glow, gold-bordered card, bigger popping title
-        overlayDim.color = win ? UiKit.Hex("#1d1026", 0.6f) : UiKit.Hex("#140a1b", 0.94f);
+        overlayDim.color = win ? WithAlpha(Bg, 0.6f) : WithAlpha(Deep, 0.94f);
         winGlow.SetActive(win);
-        cardBorder.color = win ? UiKit.Hex("#f2c14e") : UiKit.Hex("#ffffff", 0.12f);
-        cardFill.color = win ? UiKit.Hex("#1d1026", 0.9f) : UiKit.Hex("#2b1832");
+        cardBorder.color = win ? Accent : UiKit.Hex("#ffffff", 0.12f);
+        cardFill.color = win ? WithAlpha(Bg, 0.9f) : Card;
         ovTitle.fontSize = win ? 42 : 34;
         ovTitleShadow.enabled = win;
         overlay.SetActive(true);
@@ -500,7 +528,7 @@ public class SecondFloorGame : MonoBehaviour
         goalSign.text = L.T("目標 ", "GOAL ") + Yen(goal);
         progFill.localScale = new Vector3(Mathf.Min(1f, (float)money / goal), 1f, 1f);
         timeVal.text = Mathf.CeilToInt(time).ToString(Ja);
-        timeVal.color = time <= 10f ? UiKit.Hex("#d94a3d") : UiKit.Hex("#f4e6c4");
+        timeVal.color = time <= 10f ? Red : Paper;
         pauseBtn.interactable = running;
     }
 
@@ -521,7 +549,7 @@ public class SecondFloorGame : MonoBehaviour
             if (JUNK.Contains(o.t))
             {
                 Destroy(o.rt.gameObject);
-                PopText(L.T("ポイ！", "Tossed!"), UiKit.Hex("#8d8292"));
+                PopText(L.T("ポイ！", "Tossed!"), Muted);
                 audioSource.PlayOneShot(Sfx.Whoosh());
             }
             else
@@ -666,10 +694,10 @@ public class SecondFloorGame : MonoBehaviour
     {
         int v;
         string txt = null;
-        Color c = UiKit.Hex("#f2c14e");
+        Color c = Gold;
         if (o.t == "purse")
         {
-            if (Rand() < 0.2f) { time += 10f; txt = L.T("時間 +10秒", "Time +10s"); c = UiKit.Hex("#9fb4f2"); v = 0; }
+            if (Rand() < 0.2f) { time += 10f; txt = L.T("時間 +10秒", "Time +10s"); c = Accent; v = 0; }
             else v = new[] { 200, 300, 500, 1000, 2000 }[UnityEngine.Random.Range(0, 5)];
         }
         else v = TYPES[o.t].val;
@@ -680,7 +708,7 @@ public class SecondFloorGame : MonoBehaviour
             if (v < 100) c = UiKit.Hex("#dfe3e8");
             if (sound) audioSource.PlayOneShot(Sfx.Coin());
         }
-        else if (txt == null) { txt = "¥0"; c = UiKit.Hex("#8d8292"); }
+        else if (txt == null) { txt = "¥0"; c = Muted; }
         else if (sound) audioSource.PlayOneShot(Sfx.Good());   // the purse's extra time
         PopText(txt, c);
     }
@@ -787,7 +815,7 @@ public class SecondFloorGame : MonoBehaviour
 
     void ShowBest() => bestVal.text = bestTime > 0f ? bestTime.ToString("0.0", Ja) + L.T("秒", "s") : "—";
 
-    // first press arms it (もう一度押す), a second press within 3 seconds clears the best time
+    // first press arms it (本当に？), a second press within 3 seconds clears the best time
     void ResetBest()
     {
         if (resetTimer == null)
@@ -813,9 +841,9 @@ public class SecondFloorGame : MonoBehaviour
 
     void ResetLook(bool sure)
     {
-        resetText.text = sure ? L.T("もう一度押す", "Press again") : L.T("リセット", "Reset");
-        resetText.color = sure ? UiKit.Hex("#f4e6c4") : UiKit.Hex("#b9a3bd");
-        resetBg.color = sure ? UiKit.Hex("#d94a3d") : UiKit.Hex("#ffffff", 0.08f);
+        resetText.text = sure ? L.T("本当に？", "Sure?") : L.T("リセット", "Reset");
+        resetText.color = sure ? Paper : Muted;
+        resetBg.color = sure ? Red : UiKit.Hex("#ffffff", 0.08f);
     }
 
     // once: the win card's button and the result hold can both ask
@@ -937,7 +965,7 @@ public class SecondFloorGame : MonoBehaviour
         jackpotLayer.gameObject.SetActive(on);
         if (!on) return;
         float jt = jackpotT, k = Mathf.Min(1f, jt / 0.25f);
-        jackpotDim.color = UiKit.Hex("#140a1b", 0.6f * k);
+        jackpotDim.color = WithAlpha(Deep, 0.6f * k);
         jackpotRays.localEulerAngles = new Vector3(0f, 0f, -jt * 0.8f * Mathf.Rad2Deg);
         jackpotFlash.color = new Color(1f, 1f, 1f, jt < 0.25f ? 0.8f * (1f - jt / 0.25f) : 0f);
         float pop = Mathf.Min(1f, jt / 0.3f), ease = 1f + Mathf.Sin(pop * Mathf.PI) * 0.25f * (1f - pop + 0.2f);
@@ -950,7 +978,7 @@ public class SecondFloorGame : MonoBehaviour
     {
         ClearParty();
         string[] kinds = { "c500", "c100", "c10", "c5", "b1k", "b10k" };
-        string[] cols = { "#f2c14e", "#d94a3d", "#7fd3b5", "#9fb4f2", "#f4e6c4", "#f2a0b5" };
+        Color[] cols = { Accent, Sub, Paper, UiKit.Good, UiKit.Light, Gold };
         for (int i = 0; i < 110; i++)
         {
             var p = new Bit
@@ -967,7 +995,7 @@ public class SecondFloorGame : MonoBehaviour
             }
             else
             {
-                var img = UiKit.Img("Confetti", partyLayer, null, UiKit.Hex(cols[i % cols.Length]));
+                var img = UiKit.Img("Confetti", partyLayer, null, cols[i % cols.Length]);
                 p.rt = img.rectTransform;
                 p.rt.anchorMin = p.rt.anchorMax = new Vector2(0f, 1f);
                 p.rt.sizeDelta = new Vector2(p.w, p.h);
@@ -1075,7 +1103,7 @@ public class SecondFloorGame : MonoBehaviour
                 Piece(root, "Rim", UiKit.Ring, UiKit.Hex(T.edge), 0f, 0f, 2f * r - 9f, 2f * r - 9f);
                 if (T.hole)
                 {
-                    Piece(root, "Hole", UiKit.Circle, UiKit.Hex("#2b1832"), 0f, 0f, r * 0.56f, r * 0.56f);
+                    Piece(root, "Hole", UiKit.Circle, Card, 0f, 0f, r * 0.56f, r * 0.56f);
                     Txt(root, T.txt, 0f, r * 0.6f, Mathf.RoundToInt(r * 0.55f), UiKit.Hex(T.ink));
                 }
                 else Txt(root, T.txt, 0f, 1f, Mathf.RoundToInt(r * (T.txt.Length > 2 ? 0.62f : 0.85f)), UiKit.Hex(T.ink));
@@ -1109,8 +1137,8 @@ public class SecondFloorGame : MonoBehaviour
                     BoxAt(root, UiKit.Hex(i % 2 == 1 ? "#cbb682" : "#e3d2a6"), 3f, UiKit.Hex("#5d4620", 0.38f), 1f, 0f, i * 2.2f, w, h);
                 BillBody(root, T, w, h);
                 Txt(root, "10000", -w * 0.08f, -h * 0.12f, Mathf.RoundToInt(h * 0.32f), UiKit.Hex(T.ink));
-                BoxAt(root, UiKit.Hex("#f4e6c4"), 0f, UiKit.Hex("#d94a3d"), 1.5f, 0f, 5f, 14f, h + 12f);
-                Txt(root, "¥30,000", 0f, 4f, 10, UiKit.Hex("#d94a3d"), false).rectTransform.localEulerAngles = new Vector3(0f, 0f, -90f);
+                BoxAt(root, Paper, 0f, UiKit.CardBackA, 1.5f, 0f, 5f, 14f, h + 12f);
+                Txt(root, "¥30,000", 0f, 4f, 10, UiKit.CardBackA, false).rectTransform.localEulerAngles = new Vector3(0f, 0f, -90f);
                 o.star1 = Piece(root, "Star", StarSprite, Color.clear, 0f, 0f, 1f, 1f);
                 break;
 
@@ -1126,7 +1154,7 @@ public class SecondFloorGame : MonoBehaviour
             case "purse":
                 Piece(root, "Shadow", UiKit.Circle, shadow, 2f, 8f, 2f * r, 1.6f * r);
                 Piece(root, "Purse", PurseSprite, Color.white, 0f, 0f, 2f * r * PurseExtent, 2f * r * PurseExtent);
-                Txt(root, "?", 0f, r * 0.42f, 18, UiKit.Hex("#f4e6c4"));
+                Txt(root, "?", 0f, r * 0.42f, 18, Paper);
                 break;
         }
         At(o.rt, o.x, o.y);
@@ -1225,7 +1253,7 @@ public class SecondFloorGame : MonoBehaviour
             pts[i] = new Vector2(Mathf.Cos(a) * k, Mathf.Sin(a) * k * 0.85f);
         }
         var crack = new[] { new Vector2(-0.4f, -0.3f), new Vector2(-0.05f, -0.05f), new Vector2(0.2f, -0.35f) };
-        Color light = UiKit.Hex("#8a7f8f"), dark = UiKit.Hex("#4b4250"), line = UiKit.Hex("#2b1832");
+        Color light = UiKit.Hex("#8794b0"), dark = UiKit.Hex("#46516e"), line = UiKit.Bg;
         s = Shape(128, RockExtent, p =>
         {
             float edge = PolyDist(p, pts, true);
@@ -1240,7 +1268,7 @@ public class SecondFloorGame : MonoBehaviour
         return s;
     }
 
-    // がま口: red pouch, lighter flap with a gold frame and two clasp balls (units of the radius)
+    // がま口: blue pouch, lighter flap with a gold frame and two clasp balls (units of the radius)
     static Sprite PurseSprite
     {
         get
@@ -1251,13 +1279,13 @@ public class SecondFloorGame : MonoBehaviour
             var flap = Quad(new Vector2(-1f, 0f), new Vector2(0f, -0.55f), new Vector2(1f, 0f));
             var bodyPts = body.ToArray();
             var flapPts = flap.ToArray();
-            Color red = UiKit.Hex("#c0503f"), pink = UiKit.Hex("#d8685a"), gold = UiKit.Hex("#e0c46c");
+            Color pouch = UiKit.CardBackA, lid = UiKit.Accent2, gold = UiKit.Hex("#e0c46c");
             const float u = 1f / 24f;
             purse = Shape(128, PurseExtent, p =>
             {
                 Color c = Color.clear;
-                if (UiKit.InPolygon(bodyPts, p)) c = red;
-                if (UiKit.InPolygon(flapPts, p)) c = pink;
+                if (UiKit.InPolygon(bodyPts, p)) c = pouch;
+                if (UiKit.InPolygon(flapPts, p)) c = lid;
                 if (PolyDist(p, flap, false) < 1.5f * u) c = gold;
                 if (Vector2.Distance(p, new Vector2(-4f * u, -0.32f)) < 4f * u ||
                     Vector2.Distance(p, new Vector2(4f * u, -0.32f)) < 4f * u) c = gold;
@@ -1271,7 +1299,7 @@ public class SecondFloorGame : MonoBehaviour
     {
         bool ring = Mathf.Abs(p.magnitude - 12f) < 1f;
         bool spoke = (Mathf.Abs(p.y) < 1f && Mathf.Abs(p.x) < 12f) || (Mathf.Abs(p.x) < 1f && Mathf.Abs(p.y) < 12f);
-        return ring || spoke ? UiKit.Hex("#f4e6c4") : Color.clear;
+        return ring || spoke ? UiKit.Light : Color.clear;
     }));
 
     static Sprite ClawSprite(float open)
@@ -1279,11 +1307,11 @@ public class SecondFloorGame : MonoBehaviour
         if (claws.TryGetValue(open, out var s) && s) return s;
         var left = Quad(Vector2.zero, new Vector2(-14f * open - 6f, 8f), new Vector2(-6f, 20f));
         var right = Quad(Vector2.zero, new Vector2(14f * open + 6f, 8f), new Vector2(6f, 20f));
-        Color gold = UiKit.Hex("#f2c14e");
+        Color metal = UiKit.Accent;
         s = Shape(96, 24f, p =>
         {
-            if (p.x >= -6f && p.x <= 6f && p.y >= -4f && p.y <= 2f) return gold;
-            return PolyDist(p, left, false) < 2f || PolyDist(p, right, false) < 2f ? gold : Color.clear;
+            if (p.x >= -6f && p.x <= 6f && p.y >= -4f && p.y <= 2f) return metal;
+            return PolyDist(p, left, false) < 2f || PolyDist(p, right, false) < 2f ? metal : Color.clear;
         });
         claws[open] = s;
         return s;
@@ -1310,8 +1338,8 @@ public class SecondFloorGame : MonoBehaviour
         const int k = 2;   // texels per canvas px
         int tw = (int)W * k, th = (int)H * k;
         var px = new Color[tw * th];
-        Color sky0 = UiKit.Hex("#3a2147"), sky1 = UiKit.Hex("#5a2f52"), dirt0 = UiKit.Hex("#3b2140"), dirt1 = UiKit.Hex("#1f1026");
-        Color cream = UiKit.Hex("#f4e6c4"), red = UiKit.Hex("#d94a3d"), strata = new Color(1f, 1f, 1f, 0.05f);
+        Color sky0 = UiKit.Bg2, sky1 = UiKit.Panel, dirt0 = UiKit.Hex("#12285e"), dirt1 = UiKit.Hex("#07122b");
+        Color cream = UiKit.Fg, blue = UiKit.CardBackA, strata = new Color(1f, 1f, 1f, 0.05f);
         for (int ty = 0; ty < th; ty++)
             for (int tx = 0; tx < tw; tx++)
             {
@@ -1320,9 +1348,9 @@ public class SecondFloorGame : MonoBehaviour
                 if (y >= GROUND)
                     for (float yy = GROUND + 60f; yy < H; yy += 90f)
                         if (Mathf.Abs(y - (yy + Mathf.Sin(x * 0.03f + yy) * 4f)) < 0.5f) c = Over(c, strata);
-                if (y >= GROUND - 4f && y < GROUND) c = x % 24f < 12f ? red : cream;
+                if (y >= GROUND - 4f && y < GROUND) c = x % 24f < 12f ? blue : cream;
                 int i = Mathf.FloorToInt(x / 40f);
-                Color awning = i % 2 == 1 ? cream : red;
+                Color awning = i % 2 == 1 ? cream : blue;
                 if (y < 26f || Vector2.Distance(new Vector2(x, y), new Vector2(i * 40f + 20f, 26f)) < 20f) c = awning;
                 px[ty * tw + tx] = c;
             }
@@ -1333,7 +1361,7 @@ public class SecondFloorGame : MonoBehaviour
         {
             float sx = (float)rng.NextDouble() * W, sy = GROUND + (float)rng.NextDouble() * (H - GROUND);
             float size = (float)rng.NextDouble() * 2f + 0.5f;
-            Color sc = rng.NextDouble() > 0.8 ? new Color(0.949f, 0.757f, 0.306f, 0.19f) : new Color(1f, 1f, 1f, 0.06f);
+            Color sc = rng.NextDouble() > 0.8 ? WithAlpha(UiKit.Accent, 0.19f) : new Color(1f, 1f, 1f, 0.06f);
             for (int ty = Mathf.FloorToInt((H - sy - size) * k); ty < Mathf.CeilToInt((H - sy) * k); ty++)
                 for (int tx = Mathf.FloorToInt(sx * k); tx < Mathf.CeilToInt((sx + size) * k); tx++)
                     if (tx >= 0 && tx < tw && ty >= 0 && ty < th) px[ty * tw + tx] = Over(px[ty * tw + tx], sc);

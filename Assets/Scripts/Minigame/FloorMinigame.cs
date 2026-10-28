@@ -131,7 +131,7 @@ public class FloorMinigame : MonoBehaviour
         // body background
         var bg = UiKit.Img("Background", root, null, UiKit.Bg);
         UiKit.Stretch(bg.rectTransform);
-        var haze = UiKit.Img("Haze", bg.transform, UiKit.Glow, UiKit.Hex("#33287a", 0.9f));
+        var haze = UiKit.Img("Haze", bg.transform, UiKit.Glow, new Color(UiKit.Panel.r, UiKit.Panel.g, UiKit.Panel.b, 0.9f));
         haze.rectTransform.anchorMin = haze.rectTransform.anchorMax = new Vector2(0.5f, 1f);
         haze.rectTransform.sizeDelta = new Vector2(1500f, 700f);
         haze.rectTransform.anchoredPosition = new Vector2(0f, -40f);
@@ -143,9 +143,9 @@ public class FloorMinigame : MonoBehaviour
 
         // header
         var header = UiKit.Headline(wrap, 34,
-            (L.T("ようこそ！", "Welcome to"), UiKit.Accent, UiKit.Hex("#b3560b")),
-            (L.T("1階ゲーム", " the 1F Game"), UiKit.Accent2, UiKit.Hex("#8e1f58")),
-            (L.T("へ〜", "!"), UiKit.Accent, UiKit.Hex("#b3560b")));
+            (L.T("ようこそ！", "Welcome to"), UiKit.Accent, UiKit.AccentShadow),
+            (L.T("1階ゲーム", " the 1F Game"), UiKit.Accent2, UiKit.Accent2Shadow),
+            (L.T("へ〜", "!"), UiKit.Accent, UiKit.AccentShadow));
         UiKit.Place(header, 0f, 0f, W, 40f);
 
         // HUD
@@ -232,10 +232,10 @@ public class FloorMinigame : MonoBehaviour
     {
         // Start screen
         var start = Overlay(root, "StartScreen", out startScreen);
-        UiKit.Headline(start, 38, (L.T("ようこそ！", "Welcome to"), UiKit.Accent, UiKit.Hex("#b3560b")));
+        UiKit.Headline(start, 38, (L.T("ようこそ！", "Welcome to"), UiKit.Accent, UiKit.AccentShadow));
         UiKit.Headline(start, 38,
-            (L.T("1階ゲーム", " the 1F Game"), UiKit.Accent2, UiKit.Hex("#8e1f58")),
-            (L.T("へ〜", "!"), UiKit.Accent, UiKit.Hex("#b3560b")));
+            (L.T("1階ゲーム", " the 1F Game"), UiKit.Accent2, UiKit.Accent2Shadow),
+            (L.T("へ〜", "!"), UiKit.Accent, UiKit.AccentShadow));
         var rules = Column(start, "Rules", 8f);
         Rule(rules, "↑", UiKit.Good, L.T("「↑」のカードを3枚見つけよう！", "Find the three \"↑\" cards!"));
         Rule(rules, "✕", UiKit.Bad, L.T("違うカードは「?」に戻ります。場所を覚えよう！", "Wrong cards turn back to \"?\". Remember where they are!"));
@@ -246,7 +246,7 @@ public class FloorMinigame : MonoBehaviour
 
         // Win screen
         var win = Overlay(root, "WinScreen", out winScreen);
-        UiKit.Headline(win, 38, (L.T("おめでとう！", "Congratulations!"), UiKit.Good, UiKit.Hex("#13703c")));
+        UiKit.Headline(win, 38, (L.T("おめでとう！", "Congratulations!"), UiKit.Good, UiKit.GoodShadow));
         var winStats = StatRow(win);
         winTime = Stat(winStats, L.T("クリアタイム", "CLEAR TIME"), L.T("0.0秒", "0.0s"));
         Stat(winStats, L.T("発見数", "FOUND"), "3/3");
@@ -254,7 +254,7 @@ public class FloorMinigame : MonoBehaviour
 
         // Game over screen
         var lose = Overlay(root, "LoseScreen", out loseScreen);
-        UiKit.Headline(lose, 38, (L.T("ゲームオーバー！", "Game Over!"), UiKit.Bad, UiKit.Hex("#7d1520")));
+        UiKit.Headline(lose, 38, (L.T("ゲームオーバー！", "Game Over!"), UiKit.Bad, UiKit.BadShadow));
         var loseStats = StatRow(lose);
         loseReason = Stat(loseStats, L.T("理由", "REASON"), L.T("時間切れ", "Time's up"));
         loseReason.fontSize = 20;
@@ -264,7 +264,7 @@ public class FloorMinigame : MonoBehaviour
 
         // Pass screen
         var pass = Overlay(root, "PassScreen", out passScreen);
-        UiKit.Headline(pass, 38, (L.T("一時停止中", "Paused"), UiKit.Accent, UiKit.Hex("#b3560b")));
+        UiKit.Headline(pass, 38, (L.T("一時停止中", "Paused"), UiKit.Accent, UiKit.AccentShadow));
         var passStats = StatRow(pass);
         passTime = Stat(passStats, L.T("残り時間", "TIME LEFT"), L.T("0.0秒", "0.0s"));
         passScore = Stat(passStats, L.T("発見数", "FOUND"), "0/3");
@@ -282,7 +282,7 @@ public class FloorMinigame : MonoBehaviour
     // full-screen dim + centred .panel with a vertical stack
     RectTransform Overlay(RectTransform root, string name, out GameObject overlay)
     {
-        var dim = UiKit.Img(name, root, null, UiKit.Hex("#0a081e", 0.78f));
+        var dim = UiKit.Img(name, root, null, new Color(UiKit.Dim.r, UiKit.Dim.g, UiKit.Dim.b, 0.78f));
         dim.raycastTarget = true;   // blocks clicks to the board underneath
         UiKit.Stretch(dim.rectTransform);
         overlay = dim.gameObject;
@@ -422,7 +422,7 @@ public class FloorMinigame : MonoBehaviour
             c.coverSide = UiKit.Stretch(UiKit.Rect("Cover", c.inner));
             var soft = UiKit.Img("SoftShadow", c.coverSide, UiKit.Glow, new Color(0f, 0f, 0f, 0.4f));
             UiKit.Center(soft.rectTransform, s * 1.3f, s * 1.3f).anchoredPosition = new Vector2(0f, -10f);
-            c.coverShadow = UiKit.Img("Shadow", c.coverSide, UiKit.Circle, UiKit.Hex("#170f5c"));
+            c.coverShadow = UiKit.Img("Shadow", c.coverSide, UiKit.Circle, UiKit.PanelShadow);
             UiKit.Center(c.coverShadow.rectTransform, s, s);
             c.coverRing = UiKit.Img("Ring", c.coverSide, UiKit.Circle, UiKit.Accent);
             UiKit.Center(c.coverRing.rectTransform, s + 6f, s + 6f);
@@ -430,7 +430,7 @@ public class FloorMinigame : MonoBehaviour
             var q = UiKit.Label(c.coverSide, "?", 42, UiKit.Accent);
             q.alignByGeometry = true;   // centre the glyph itself, not the font's line box
             UiKit.Stretch(q.rectTransform);
-            UiKit.HardShadow(q, UiKit.Hex("#b3560b"), 3f);
+            UiKit.HardShadow(q, UiKit.AccentShadow, 3f);
 
             // face
             c.faceSide = UiKit.Stretch(UiKit.Rect("Face", c.inner));
@@ -439,11 +439,11 @@ public class FloorMinigame : MonoBehaviour
             UiKit.Center(c.faceGlow.rectTransform, s * 1.6f, s * 1.6f);
             var fsoft = UiKit.Img("SoftShadow", c.faceSide, UiKit.Glow, new Color(0f, 0f, 0f, 0.4f));
             UiKit.Center(fsoft.rectTransform, s * 1.3f, s * 1.3f).anchoredPosition = new Vector2(0f, -10f);
-            c.faceShadow = UiKit.Img("Shadow", c.faceSide, UiKit.Circle, UiKit.Hex("#9c93cf"));
+            c.faceShadow = UiKit.Img("Shadow", c.faceSide, UiKit.Circle, UiKit.Muted);
             UiKit.Center(c.faceShadow.rectTransform, s, s).anchoredPosition = new Vector2(0f, -6f);
             c.faceRing = UiKit.Img("Ring", c.faceSide, UiKit.Circle, Color.clear);
             UiKit.Center(c.faceRing.rectTransform, s + 6f, s + 6f);
-            c.faceBorder = UiKit.Img("Border", c.faceSide, UiKit.Circle, UiKit.Hex("#d9d3f5"));
+            c.faceBorder = UiKit.Img("Border", c.faceSide, UiKit.Circle, UiKit.Light);
             UiKit.Center(c.faceBorder.rectTransform, s, s);
             UiKit.Center(UiKit.Img("Fill", c.faceSide, UiKit.Circle, UiKit.CardFace).rectTransform, s - 6f, s - 6f);
             c.arrowImg = UiKit.Img("Arrow", c.faceSide, UiKit.Arrow, UiKit.CardInk);
@@ -535,7 +535,8 @@ public class FloorMinigame : MonoBehaviour
         timeDanger = t < 10f;
     }
 
-    static string Small(string s) => "<size=20><color=#a9a2d9>" + s + "</color></size>";
+    static readonly string MutedHex = ColorUtility.ToHtmlStringRGB(UiKit.Muted);
+    static string Small(string s) => "<size=20><color=#" + MutedHex + ">" + s + "</color></size>";
 
     static void SetPip(Image pip, bool on, Color onColor)
     {
@@ -600,10 +601,10 @@ public class FloorMinigame : MonoBehaviour
         bool lit = c.good || c.bad;
         c.faceGlow.color = lit ? new Color(glowColor.r, glowColor.g, glowColor.b, c.good ? 0.55f : 0.6f) : Color.clear;
         c.faceRing.color = lit ? glowColor : Color.clear;
-        c.faceBorder.color = lit ? glowColor : UiKit.Hex("#d9d3f5");
-        c.faceShadow.color = c.good ? UiKit.Hex("#1d9a52") : c.bad ? UiKit.Hex("#a3202d") : UiKit.Hex("#9c93cf");
+        c.faceBorder.color = lit ? glowColor : UiKit.Light;
+        c.faceShadow.color = c.good ? UiKit.GoodShadow : c.bad ? UiKit.BadShadow : UiKit.Muted;
         c.arrowImg.enabled = c.hasArrow;
-        c.arrowImg.color = c.good ? UiKit.Hex("#12a352") : c.bad ? UiKit.Bad : UiKit.CardInk;
+        c.arrowImg.color = c.good ? UiKit.GoodShadow : c.bad ? UiKit.Bad : UiKit.CardInk;
         c.faceGroup.alpha = c.ghost ? 0.55f : 1f;
     }
 
@@ -807,8 +808,8 @@ public class FloorMinigame : MonoBehaviour
     {
         static readonly Color[] Colors =
         {
-            UiKit.Hex("#ffb526"), UiKit.Hex("#ff5fa2"), UiKit.Hex("#3ef08a"),
-            UiKit.Hex("#5ec8ff"), UiKit.Hex("#ffffff"), UiKit.Hex("#a98bff")
+            UiKit.Accent, UiKit.Fg, UiKit.Accent2,
+            UiKit.CardBackA, UiKit.Light, UiKit.Good
         };
 
         class Bit { public RectTransform rt; public float x, y, vx, vy, w, h, r, vr; public int life; }

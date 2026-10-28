@@ -37,14 +37,14 @@ public class ThirdFloorGame : MonoBehaviour
         ("Pig", E.Pig), ("Horse", E.Horse), ("Sheep", E.Sheep), ("Duck", E.Duck), ("Rabbit", E.Rabbit)
     };
 
-    // style.css palette
-    static readonly Color Bg1 = UiKit.Hex("#c9e7ff"), Bg2 = UiKit.Hex("#eaf6ff"), Ink = UiKit.Hex("#24456e"),
+    // style.css palette, pulled toward the IT department's navy / white / cyan (UiKit): navy ink, cyan accent
+    static readonly Color Bg1 = UiKit.Hex("#c9e7ff"), Bg2 = UiKit.Hex("#eaf6ff"), Ink = UiKit.Panel,
         Ink2 = UiKit.Hex("#5b82ad"), LineC = UiKit.Hex("#a9d3f3"), Ok = UiKit.Hex("#5fd39b"), BadC = UiKit.Hex("#ff8a8a"),
-        Gold = UiKit.Hex("#ffd36b"), Sun = UiKit.Hex("#fff1b8"), Ledge = UiKit.Hex("#b3d9f5");
+        Accent = UiKit.Accent, Sun = UiKit.Light, Ledge = UiKit.Hex("#b3d9f5");
     static readonly (Color c, Color cd)[] OptColors =
     {
-        (UiKit.Hex("#c6f2e1"), UiKit.Hex("#85d8b8")), (UiKit.Hex("#ffd9e0"), UiKit.Hex("#f4a6b7")),
-        (UiKit.Hex("#fff1b8"), UiKit.Hex("#f0d070"))
+        (UiKit.Hex("#d3f6fc"), UiKit.Hex("#7fd7e8")), (UiKit.Hex("#dce9ff"), UiKit.Hex("#9dbaf0")),
+        (UiKit.Hex("#ffffff"), UiKit.Hex("#b9cbe6"))
     };
 
     class Question { public string w; public E e; public string res = ""; }
@@ -193,7 +193,7 @@ public class ThirdFloorGame : MonoBehaviour
         picBtn.transition = Selectable.Transition.None;
         picBtn.targetGraphic = picHit;
         picBtn.onClick.AddListener(PlaySound);
-        UiKit.Center(UiKit.Img("SunHalo", pic, UiKit.Circle, UiKit.Hex("#fff7d6")).rectTransform, 240f, 240f);
+        UiKit.Center(UiKit.Img("SunHalo", pic, UiKit.Circle, UiKit.Hex("#f4fcff")).rectTransform, 240f, 240f);
         UiKit.Center(UiKit.Img("Sun", pic, UiKit.Circle, Sun).rectTransform, 134f, 134f);
         emoji = UiKit.Img("Animal", pic, null, Color.white);
         emoji.preserveAspect = true;
@@ -224,8 +224,11 @@ public class ThirdFloorGame : MonoBehaviour
         Top(endTitle.rectTransform, 230f, 56f, W - 40f);
         endMsg = UiKit.Label(endCard, "", 19, Ink2);
         endMsg.lineSpacing = 1.3f;
+        endMsg.resizeTextForBestFit = true;   // two lines fit; a third (long English) shrinks instead of running into the button
+        endMsg.resizeTextMinSize = 15;
+        endMsg.resizeTextMaxSize = 19;
         Top(endMsg.rectTransform, 296f, 90f, W - 60f);
-        var again = Pressable(endCard, 0f, 0f, 260f, 56f, Gold, UiKit.Hex("#e0a93a"), 28f, 6f, L.T("もう一度あそぶ", "Play again"), 22, UiKit.Hex("#6a4400"), out _, out _, out _);
+        var again = Pressable(endCard, 0f, 0f, 260f, 56f, Accent, UiKit.AccentShadow, 28f, 6f, L.T("もう一度あそぶ", "Play again"), 22, UiKit.Ink, out _, out _, out _);
         Top((RectTransform)again.transform, 400f, 50f, 260f);
         again.onClick.AddListener(Begin);
         againBtn = again.gameObject;
