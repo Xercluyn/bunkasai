@@ -6,11 +6,11 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
-/// The title menu, the first scene of the game ("Lantern Night"). On the right a 3D school building with five
+/// The title menu, the first scene of the game. On the right a 3D school building with five
 /// floors stands in the night, gently turning with the mouse; pointing at a floor lights its windows, slides it
 /// out and sends the elevator car to it, and clicking it rides the elevator to that floor on its own (clearing its
 /// quest wins the game, see GameEnding). On the left: the title, 「1階から5階まで遊ぶ」 for the full run, and a card
-/// describing the floor under the pointer. A string of paper lanterns swings across the top. Everything plays in
+/// describing the floor under the pointer. A string of cyan and white lights swings across the top. Everything plays in
 /// on opening: the title drops in line by line and the building rises. English / 日本語 in the corner switches
 /// the language. Every visit starts a fresh session. Pointing at a floor blips (each floor a little higher) and
 /// choosing one whooshes.
@@ -34,9 +34,14 @@ public class MainMenu : MonoBehaviour
 
     // the building: five floors of FloorH, the facade facing the camera (−z)
     const float FloorW = 6f, FloorH = 1.5f, FloorD = 4f, SlideOut = 0.45f, RiseFrom = -9f;
-    static readonly Color Body = UiKit.Hex("#3a3288"), BodyLit = UiKit.Hex("#4c43a8"), Slab = UiKit.Hex("#5a51b8"),
-        WindowDark = UiKit.Hex("#232056"), WindowLit = UiKit.Hex("#ffd27a"), Shaft = UiKit.Hex("#15122f"),
-        Car = UiKit.Hex("#ffb526"), Ground = UiKit.Hex("#0c0a20");
+    // blue body and slabs, cool-white lit windows, a cyan elevator car in a navy shaft
+    static readonly Color Body = UiKit.Panel, BodyLit = UiKit.Line, Slab = UiKit.Hex("#3a6bc9"),
+        WindowDark = UiKit.Bg2, WindowLit = UiKit.Light, Shaft = UiKit.Dim,
+        Car = UiKit.Accent, Ground = UiKit.Hex("#07122c");
+    // floor labels: the game line wraps at LabelGameW, and labels keep ScreenMargin inside the screen edges
+    const float LabelW = 170f, LabelH = 84f, LabelGameW = 160f, ScreenMargin = 12f;
+    // the left column's width (full-run button and floor card); the language button, upper right
+    const float CardW = 480f, LangW = 150f, LangH = 44f, LangRight = 24f, LangTop = 84f;
 
     class Floor
     {
@@ -111,17 +116,17 @@ public class MainMenu : MonoBehaviour
         cam.orthographic = false;
         cam.fieldOfView = 34f;
         cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = UiKit.Hex("#16123a");
+        cam.backgroundColor = UiKit.Bg;
         cam.transform.position = new Vector3(-2f, 5.2f, -17f);
         cam.transform.LookAt(new Vector3(-2f, 4.3f, 0f));   // the building sits right of centre, clear of the left column
 
         var sun = new GameObject("Moonlight").AddComponent<Light>();
         sun.type = LightType.Directional;
-        sun.color = UiKit.Hex("#d9d4ff");
+        sun.color = UiKit.Hex("#e6f0ff");
         sun.intensity = 1.2f;
         sun.transform.rotation = Quaternion.Euler(35f, 25f, 0f);   // from the front, above, a little left
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = UiKit.Hex("#5b56a0");
+        RenderSettings.ambientLight = UiKit.Hex("#4a6699");
     }
 
     void BuildBuilding()
@@ -190,12 +195,14 @@ public class MainMenu : MonoBehaviour
             f.label = UiKit.Rect("Label" + f.n, labelLayer);
             f.label.anchorMin = f.label.anchorMax = Vector2.zero;
             f.label.pivot = new Vector2(0f, 0.5f);
-            f.label.sizeDelta = new Vector2(320f, 70f);
+            f.label.sizeDelta = new Vector2(LabelW, LabelH);
             f.name = UiKit.Display(UiKit.Label(f.label, "", 30, UiKit.Fg, TextAnchor.UpperLeft));
-            UiKit.HardShadow(f.name, new Color(0f, 0f, 0f, 0.5f), 3f);
-            UiKit.Place(f.name.rectTransform, 0f, 0f, 320f, 42f);
-            f.game = UiKit.Label(f.label, "", 15, UiKit.Muted, TextAnchor.UpperLeft);
-            UiKit.Place(f.game.rectTransform, 2f, 42f, 320f, 24f);
+            UiKit.HardShadow(f.name, UiKit.PanelShadow, 3f);
+            UiKit.Place(f.name.rectTransform, 0f, 0f, LabelW, 42f);
+            // up to two lines, so the label stays narrow enough to fit right of the building
+            f.game = UiKit.Label(f.label, "", 14, UiKit.Muted, TextAnchor.UpperLeft);
+            UiKit.Place(f.game.rectTransform, 2f, 42f, LabelGameW, 42f);
+            UiKit.Fit(f.game, 14, 10);
         }
 
         BuildLanterns(root);
@@ -212,10 +219,10 @@ public class MainMenu : MonoBehaviour
 
         for (int i = 0; i < titleLines.Length; i++)
         {
-            var line = UiKit.Display(UiKit.Label(root, "", 76, UiKit.Accent, TextAnchor.UpperLeft));
+            var line = UiKit.Display(UiKit.Label(root, "", 68, UiKit.Accent, TextAnchor.UpperLeft));
             line.horizontalOverflow = HorizontalWrapMode.Overflow;
-            UiKit.HardShadow(line, UiKit.Hex("#b3560b"), 6f);
-            Left(line.rectTransform, 140f + i * 78f, 560f, 90f);
+            UiKit.HardShadow(line, UiKit.AccentShadow, 6f);
+            Left(line.rectTransform, 138f + i * 74f, 560f, 84f);
             Enter(line.rectTransform, 0.25f + i * 0.15f, true);
             titleLines[i] = line;
         }
@@ -226,12 +233,12 @@ public class MainMenu : MonoBehaviour
 
         // the full-run button, with a ring that pulses out from it now and then
         var runHolder = UiKit.Rect("Run", root);
-        Left(runHolder, 438f, 440f, 76f);
+        Left(runHolder, 438f, CardW, 76f);
         pulse = UiKit.Box("Pulse", runHolder, UiKit.Accent, 18f);
         pulseRt = UiKit.Stretch(pulse.rectTransform);
         pulse.color = Color.clear;
         var run = UiKit.MainButton(runHolder, "", out runLabel);
-        runLabel.fontSize = 28;
+        UiKit.Fit(runLabel, 28, 18);
         UiKit.Stretch((RectTransform)run.transform);
         run.onClick.AddListener(PlayAll);
         Enter(runHolder, 1.0f, false);
@@ -239,7 +246,7 @@ public class MainMenu : MonoBehaviour
         // card: the floor under the pointer, or how to pick one
         var card = UiKit.Box("FloorCard", root, UiKit.Bg2, 18f, UiKit.Line, 2f);
         cardBorder = card;
-        Left(card.rectTransform, 548f, 440f, 108f);
+        Left(card.rectTransform, 548f, CardW, 112f);
         Enter(card.rectTransform, 1.15f, false);
         var c = card.rectTransform;
         info = UiKit.Rect("Info", c).gameObject;
@@ -248,29 +255,34 @@ public class MainMenu : MonoBehaviour
         UiKit.Place(tile.rectTransform, 24f, 22f, 64f, 64f);
         infoNumber = UiKit.Display(UiKit.Label(tile.transform, "", 30, UiKit.Accent));
         UiKit.Stretch(infoNumber.rectTransform);
-        infoFloor = UiKit.Label(info.transform, "", 15, UiKit.Accent, TextAnchor.UpperLeft);
-        UiKit.Place(infoFloor.rectTransform, 106f, 16f, 320f, 22f);
-        infoGame = UiKit.Label(info.transform, "", 24, UiKit.Fg, TextAnchor.UpperLeft);
-        UiKit.Place(infoGame.rectTransform, 106f, 38f, 320f, 34f);
-        infoNote = UiKit.Label(info.transform, "", 14, UiKit.Muted, TextAnchor.UpperLeft, false);
-        UiKit.Place(infoNote.rectTransform, 106f, 74f, 320f, 22f);
+        // one line each: a long game name or the note shrinks to fit instead of wrapping into the next line
+        const float textW = CardW - 106f - 18f;
+        infoFloor = UiKit.Label(info.transform, "", 15, UiKit.Accent, TextAnchor.MiddleLeft);
+        UiKit.Place(infoFloor.rectTransform, 106f, 16f, textW, 22f);
+        UiKit.Fit(infoFloor, 15, 11);
+        infoGame = UiKit.Label(info.transform, "", 24, UiKit.Fg, TextAnchor.MiddleLeft);
+        UiKit.Place(infoGame.rectTransform, 106f, 39f, textW, 37f);
+        UiKit.Fit(infoGame, 24, 15);
+        infoNote = UiKit.Label(info.transform, "", 14, UiKit.Muted, TextAnchor.MiddleLeft, false);
+        UiKit.Place(infoNote.rectTransform, 106f, 77f, textW, 22f);
+        UiKit.Fit(infoNote, 14, 11);
         hint = UiKit.Rect("Hint", c).gameObject;
         UiKit.Stretch((RectTransform)hint.transform);
         hintText = UiKit.Label(hint.transform, "", 19, UiKit.Fg);
         hintText.lineSpacing = 1.2f;
         UiKit.Stretch(hintText.rectTransform, 16f);
 
-        // language, upper right, under the lanterns
+        // language, upper right, under the lights
         var lang = UiKit.SubButton(root, "", out langText);
         var lrt = (RectTransform)lang.transform;
         lrt.anchorMin = lrt.anchorMax = lrt.pivot = new Vector2(1f, 1f);
-        lrt.anchoredPosition = new Vector2(-24f, -84f);
-        lrt.sizeDelta = new Vector2(150f, 44f);
+        lrt.anchoredPosition = new Vector2(-LangRight, -LangTop);
+        lrt.sizeDelta = new Vector2(LangW, LangH);
         langText.fontSize = 17;
         lang.onClick.AddListener(L.Toggle);
     }
 
-    // Twelve paper lanterns on a string across the top, each swinging from its cord and glowing
+    // Twelve cyan and white lights on a cable across the top, each swinging from its cord and glowing
     void BuildLanterns(RectTransform root)
     {
         var line = UiKit.Img("String", root, null, UiKit.Line).rectTransform;
@@ -321,7 +333,7 @@ public class MainMenu : MonoBehaviour
         for (int i = 0; i < titleLines.Length; i++)
         {
             titleLines[i].text = i < lines.Length ? lines[i] : "";
-            titleLines[i].fontSize = L.English ? 54 : 76;
+            titleLines[i].fontSize = L.English ? 48 : 68;
         }
         subtitle.text = L.T("ビルの階をクリックして遊ぶフロアを選ぼう", "Click a floor of the building to play it");
         runLabel.text = L.T("▶ 1階から5階まで遊ぶ", "▶ Play floors 1 to 5");
@@ -399,9 +411,10 @@ public class MainMenu : MonoBehaviour
             Vector3 edge = f.root.TransformPoint(new Vector3(FloorW * 0.5f + 0.4f, FloorH * 0.5f, -FloorD * 0.5f));
             Vector3 sp = cam.WorldToScreenPoint(edge);
             float scale = labelLayer.rect.width / Mathf.Max(1f, Screen.width);
-            f.label.anchoredPosition = new Vector2(sp.x, sp.y) * scale + new Vector2(16f * f.slide, 0f);
+            float grow = 1f + 0.2f * f.slide;
+            f.label.anchoredPosition = ClampLabel(new Vector2(sp.x, sp.y) * scale + new Vector2(16f * f.slide, 0f), grow);
             f.name.color = Color.Lerp(UiKit.Fg, UiKit.Accent, f.slide);
-            f.label.localScale = Vector3.one * (1f + 0.2f * f.slide);
+            f.label.localScale = Vector3.one * grow;
         }
         // the labels come in with the building
         labelGroup.alpha = rise;
@@ -413,7 +426,21 @@ public class MainMenu : MonoBehaviour
         car.localPosition = new Vector3(cp.x, carY, cp.z);
     }
 
-    // The opening entrances, the lanterns and the button's pulse
+    // Keep a floor label (pivot at its left middle, scaled by `grow`) on screen and clear of the language button
+    Vector2 ClampLabel(Vector2 pos, float grow)
+    {
+        Rect area = labelLayer.rect;
+        float w = LabelW * grow, half = LabelH * 0.5f * grow;
+        pos.y = Mathf.Clamp(pos.y, ScreenMargin + half, area.height - ScreenMargin - half);
+        float right = area.width - ScreenMargin;
+        // In the button's rows: stay left of it (moving left keeps the floors' vertical order, so labels never stack)
+        if (pos.y + half > area.height - LangTop - LangH - ScreenMargin)
+            right = area.width - LangRight - LangW - ScreenMargin;
+        pos.x = Mathf.Min(pos.x, right - w);
+        return pos;
+    }
+
+    // The opening entrances, the lights and the button's pulse
     void Animate(float t, float since)
     {
         foreach (var e in entrances)

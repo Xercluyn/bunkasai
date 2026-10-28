@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 /// The lights exported with the building are area lights, which URP only supports in a lightmap bake, so
 /// at runtime they give no light and the sun lights the inside instead. This turns them into realtime point
 /// lights spaced to overlap (Forward+ renders this many), switches the directional light off, and replaces
-/// the sky's blue ambient with a warm indoor one. Safe to run again after changing the values below.
+/// the sky's blue ambient with a cool neutral indoor one. Safe to run again after changing the values below.
 /// </summary>
 public static class IndoorLightingSetup
 {
@@ -73,18 +73,18 @@ public static class IndoorLightingSetup
             suns++;
         }
 
-        // Warm, even indoor fill instead of the blue sky; dim sky reflections on shiny surfaces
+        // Cool neutral, even indoor fill (the IT-department palette) instead of the blue sky; dim sky reflections on shiny surfaces
         // (Lighting window > Environment; not undoable)
         RenderSettings.ambientMode = AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = UiKit.Hex("#8a8378");
-        RenderSettings.ambientEquatorColor = UiKit.Hex("#5e5952");
-        RenderSettings.ambientGroundColor = UiKit.Hex("#332f2a");
+        RenderSettings.ambientSkyColor = UiKit.Hex("#8a96a8");
+        RenderSettings.ambientEquatorColor = UiKit.Hex("#5c6472");
+        RenderSettings.ambientGroundColor = UiKit.Hex("#2c323c");
         RenderSettings.reflectionIntensity = 0.3f;
 
         EditorSceneManager.MarkSceneDirty(scene);
         Debug.Log($"{scene.name}: set {lamps.Count} lamp(s) as realtime point lights about {typical:0.#} above the floor " +
                   $"(intensity {intensity:0.#}, floor brightness {FloorBrightness}), " +
-                  $"switched off {suns} directional light(s) and set a warm indoor ambient. Save the scene.");
+                  $"switched off {suns} directional light(s) and set a cool neutral indoor ambient. Save the scene.");
     }
 
     // Light reaching the floor under a typical lamp from all lamps at intensity 1, with URP's point light

@@ -63,17 +63,17 @@ public class FloorPauseMenu : MonoBehaviour
         UiKit.EnsureEventSystem();
 
         // dimmed screen that takes every click, the panel in the middle
-        var dim = UiKit.Img("Pause", canvas.transform, null, UiKit.Hex("#120f2b", 0.72f));
+        var dim = UiKit.Img("Pause", canvas.transform, null, UiKit.WithAlpha(UiKit.Dim, 0.72f));
         dim.raycastTarget = true;
         UiKit.Stretch(dim.rectTransform);
         root = dim.gameObject;
         group = root.AddComponent<CanvasGroup>();
         box = UiKit.Box("Panel", dim.transform, UiKit.Panel, 24f, UiKit.Accent, 3f).rectTransform;
         UiKit.Center(box, W, H);
-        UiKit.HardShadow(box.GetComponent<Image>(), new Color(0f, 0f, 0f, 0.45f), 6f).useGraphicAlpha = false;
+        UiKit.HardShadow(box.GetComponent<Image>(), UiKit.WithAlpha(UiKit.PanelShadow, 0.6f), 6f).useGraphicAlpha = false;
 
         title = UiKit.Display(UiKit.Label(box, "", 48, UiKit.Accent));
-        UiKit.HardShadow(title, UiKit.Hex("#b3560b"), 5f);
+        UiKit.HardShadow(title, UiKit.AccentShadow, 5f);
         UiKit.Place(title.rectTransform, 0f, 22f, W, 64f);
 
         var resume = UiKit.MainButton(box, "", out resumeText);

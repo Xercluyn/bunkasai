@@ -29,7 +29,7 @@ public class ElevatorRide : MonoBehaviour
     static void NewPlay() => Busy = false;
 
     const float DoorTime = 0.45f, CountTime = 1.2f;
-    static readonly Color Door = UiKit.Hex("#3a3288"), DoorEdge = UiKit.Accent, IndicatorBg = UiKit.Hex("#0c0a20");
+    static readonly Color Door = UiKit.Bg2, DoorEdge = UiKit.Accent, IndicatorBg = UiKit.Bg;
 
     string scene;
     int from, to;
@@ -83,7 +83,7 @@ public class ElevatorRide : MonoBehaviour
         lines.sizeDelta = new Vector2(0f, 720f + 240f);
         for (int i = 0; i < 4; i++)
         {
-            var bar = UiKit.Img("Bar", lines, null, UiKit.Hex("#f2efff", 0.08f)).rectTransform;
+            var bar = UiKit.Img("Bar", lines, null, new Color(UiKit.Light.r, UiKit.Light.g, UiKit.Light.b, 0.08f)).rectTransform;
             bar.anchorMin = new Vector2(0f, 0f);
             bar.anchorMax = new Vector2(1f, 0f);
             bar.pivot = new Vector2(0.5f, 0f);
@@ -96,7 +96,7 @@ public class ElevatorRide : MonoBehaviour
         content = UiKit.Stretch(UiKit.Rect("Content", root));
         contentGroup = content.gameObject.AddComponent<CanvasGroup>();
         contentGroup.alpha = 0f;
-        var display = UiKit.Box("Indicator", content, IndicatorBg, 16f, UiKit.Hex("#5a51b8"), 3f).rectTransform;
+        var display = UiKit.Box("Indicator", content, IndicatorBg, 16f, UiKit.Line, 3f).rectTransform;
         display.anchorMin = display.anchorMax = display.pivot = new Vector2(0.5f, 0.5f);
         display.anchoredPosition = new Vector2(0f, 110f);
         display.sizeDelta = new Vector2(240f, 110f);
@@ -112,9 +112,9 @@ public class ElevatorRide : MonoBehaviour
         stampGroup = stamp.gameObject.AddComponent<CanvasGroup>();
         stampGroup.alpha = 0f;
         stampFloor = UiKit.Display(UiKit.Label(stamp, "", 96, UiKit.Fg));
-        UiKit.HardShadow(stampFloor, UiKit.Hex("#15122f"), 6f);
+        UiKit.HardShadow(stampFloor, UiKit.PanelShadow, 6f);
         UiKit.Place(stampFloor.rectTransform, 0f, 0f, 900f, 112f);
-        stampGame = UiKit.Label(stamp, "", 26, UiKit.Hex("#ffd27a"));
+        stampGame = UiKit.Label(stamp, "", 26, UiKit.Accent);
         UiKit.Place(stampGame.rectTransform, 0f, 118f, 900f, 40f);
     }
 
@@ -189,7 +189,7 @@ public class ElevatorRide : MonoBehaviour
             for (float t = 0f; t < 0.9f; t += Time.unscaledDeltaTime)
             {
                 float flash = Mathf.Abs(Mathf.Sin(t / 0.3f * Mathf.PI));
-                number.color = Color.Lerp(UiKit.Accent, UiKit.Hex("#fff3d6"), flash);
+                number.color = Color.Lerp(UiKit.Accent, UiKit.Light, flash);
                 float s = Mathf.Clamp01(t / 0.35f);
                 stampGroup.alpha = Mathf.Clamp01(s * 1.7f);
                 stamp.localScale = Vector3.one * (s < 0.6f ? Mathf.Lerp(1.5f, 0.95f, UiKit.EaseOut(s / 0.6f))

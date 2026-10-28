@@ -44,6 +44,9 @@ public static class UiKit
         return c;
     }
 
+    /// <summary>A palette colour at another opacity, e.g. WithAlpha(Dim, 0.7f) for a modal overlay.</summary>
+    public static Color WithAlpha(Color c, float alpha) => new Color(c.r, c.g, c.b, alpha);
+
     // ---------- fonts ----------
     // The menu's type pair (Resources/Fonts, SIL Open Font License): Zen Maru Gothic for text, Dela Gothic One
     // for titles, big numbers and main buttons. Their importer falls back to OS fonts for missing glyphs
@@ -325,6 +328,18 @@ public static class UiKit
         return t;
     }
 
+    /// <summary>Shrink instead of wrapping past the rect or spilling out of it: best fit takes the largest size
+    /// in min..max that fits. Size the rect for the lines it may use (one line's height keeps it on one line).</summary>
+    public static Text Fit(Text t, int max, int min)
+    {
+        t.resizeTextForBestFit = true;
+        t.resizeTextMaxSize = max;
+        t.resizeTextMinSize = min;
+        t.fontSize = max;
+        t.verticalOverflow = VerticalWrapMode.Truncate;
+        return t;
+    }
+
     public static Shadow HardShadow(Graphic g, Color color, float down)
     {
         var s = g.gameObject.AddComponent<Shadow>();
@@ -348,7 +363,7 @@ public static class UiKit
         return button;
     }
 
-    /// <summary>Pill-shaped secondary button (style.css `.btn-sub`); the border turns amber on hover.</summary>
+    /// <summary>Pill-shaped secondary button (style.css `.btn-sub`); the border turns cyan on hover.</summary>
     public static Button SubButton(Transform parent, string label, out Text text)
     {
         var button = ButtonRoot(parent, 46f, out RectTransform face, out UiPressFeedback fx);

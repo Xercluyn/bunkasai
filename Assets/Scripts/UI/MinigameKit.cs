@@ -32,7 +32,7 @@ public static class MinigameKit
         (string ja, string en)[] rules, Action onStart, float scale = 1f,
         string buttonJa = "スタート！", string buttonEn = "Start!")
     {
-        var dim = UiKit.Img("HowToPlay", canvas, null, UiKit.Hex("#0a081e", 0.82f));
+        var dim = UiKit.Img("HowToPlay", canvas, null, UiKit.WithAlpha(UiKit.Dim, 0.82f));
         dim.raycastTarget = true;   // blocks the game underneath
         UiKit.Stretch(dim.rectTransform);
         dim.transform.SetAsLastSibling();
@@ -49,9 +49,9 @@ public static class MinigameKit
         v.childForceExpandHeight = false;
         panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        var kicker = UiKit.Label(panel, "", Mathf.RoundToInt(18 * scale), UiKit.Hex("#ffd27a"));
+        var kicker = UiKit.Label(panel, "", Mathf.RoundToInt(18 * scale), UiKit.Accent2);
         var title = UiKit.Display(UiKit.Label(panel, "", Mathf.RoundToInt(44 * scale), UiKit.Accent));
-        UiKit.HardShadow(title, UiKit.Hex("#b3560b"), 4f * scale);
+        UiKit.HardShadow(title, UiKit.AccentShadow, 4f * scale);
 
         var ruleTexts = new Text[rules.Length];
         for (int i = 0; i < rules.Length; i++)
@@ -132,13 +132,13 @@ public static class MinigameKit
 
     static IEnumerator CountdownRoutine(MonoBehaviour host, Transform canvas, Action onGo, float scale)
     {
-        var layer = UiKit.Img("Countdown", canvas, null, UiKit.Hex("#0a081e", 0.35f));
+        var layer = UiKit.Img("Countdown", canvas, null, UiKit.WithAlpha(UiKit.Dim, 0.35f));
         layer.raycastTarget = true;
         UiKit.Stretch(layer.rectTransform);
         layer.transform.SetAsLastSibling();
         var label = UiKit.Display(UiKit.Label(layer.transform, "", Mathf.RoundToInt(170 * scale), UiKit.Accent));
         label.horizontalOverflow = HorizontalWrapMode.Overflow;
-        UiKit.HardShadow(label, UiKit.Hex("#b3560b"), 8f * scale);
+        UiKit.HardShadow(label, UiKit.AccentShadow, 8f * scale);
         UiKit.Center(label.rectTransform, 900f * scale, 260f * scale);
         var audio = Audio(host.gameObject);
 
@@ -184,9 +184,9 @@ public static class MinigameKit
         holder.SetAsLastSibling();
         var label = UiKit.Label(holder, L.T("クリック / Space で次へ", "Click / Space to continue"),
             Mathf.RoundToInt(18 * scale), UiKit.Fg);
-        UiKit.HardShadow(label, new Color(0f, 0f, 0f, 0.6f), 2f * scale);
+        UiKit.HardShadow(label, UiKit.WithAlpha(UiKit.PanelShadow, 0.8f), 2f * scale);
         UiKit.Place(label.rectTransform, 0f, 0f, 420f * scale, 24f * scale);
-        var track = UiKit.Box("Track", holder, UiKit.Hex("#0a081e", 0.7f), 4f * scale);
+        var track = UiKit.Box("Track", holder, UiKit.WithAlpha(UiKit.Dim, 0.7f), 4f * scale);
         UiKit.Place(track.rectTransform, 0f, 30f * scale, 420f * scale, 8f * scale);
         var fill = UiKit.Box("Fill", track.transform, UiKit.Accent, 4f * scale).rectTransform;
         fill.anchorMin = Vector2.zero;

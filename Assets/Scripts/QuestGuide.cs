@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Shows the player where to go next on a floor: a bobbing amber marker with a label and distance over the
+/// Shows the player where to go next on a floor: a bobbing cyan marker with a label and distance over the
 /// place (arcade box, studio console, ticket machine or elevator), an arrow at the edge of the screen when it's
 /// out of view (with the same short label under it, kept clear of the quest panel and the controls guide), and a
 /// "next" line under the quest panel. All of it hides while the floor intro or the elevator ride has the screen.
@@ -34,7 +34,7 @@ public class QuestGuide : MonoBehaviour
         marker = UiKit.Rect("Marker", canvasRect);
         marker.anchorMin = marker.anchorMax = new Vector2(0.5f, 0.5f);
         markerBob = UiKit.Rect("Bob", marker);
-        var pill = UiKit.Box("Label", markerBob, UiKit.Hex("#241e57", 0.9f), 14f, UiKit.Accent, 2f);
+        var pill = UiKit.Box("Label", markerBob, UiKit.WithAlpha(UiKit.Bg2, 0.9f), 14f, UiKit.Accent, 2f);
         var prt = pill.rectTransform;
         prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0f);
         prt.pivot = new Vector2(0.5f, 0f);
@@ -48,15 +48,15 @@ public class QuestGuide : MonoBehaviour
         drt.anchoredPosition = new Vector2(0f, 14f);
         drt.sizeDelta = new Vector2(30f, 30f);
         drt.localEulerAngles = new Vector3(0f, 0f, 180f);
-        UiKit.HardShadow(down, UiKit.Hex("#b3560b"), 3f);
+        UiKit.HardShadow(down, UiKit.AccentShadow, 3f);
 
         // arrow on the screen edge when the target is out of view
         var e = UiKit.Img("EdgeArrow", canvasRect, UiKit.Arrow, UiKit.Accent);
         edge = e.rectTransform;
         edge.anchorMin = edge.anchorMax = new Vector2(0.5f, 0.5f);
         edge.sizeDelta = new Vector2(46f, 46f);
-        UiKit.HardShadow(e, UiKit.Hex("#b3560b"), 3f);
-        var el = UiKit.Box("EdgeLabel", canvasRect, UiKit.Hex("#241e57", 0.9f), 12f, UiKit.Accent, 2f);
+        UiKit.HardShadow(e, UiKit.AccentShadow, 3f);
+        var el = UiKit.Box("EdgeLabel", canvasRect, UiKit.WithAlpha(UiKit.Bg2, 0.9f), 12f, UiKit.Accent, 2f);
         edgeLabel = el.rectTransform;
         edgeLabel.anchorMin = edgeLabel.anchorMax = new Vector2(0.5f, 0.5f);
         edgeText = UiKit.Label(edgeLabel, "", 15, UiKit.Fg);
@@ -64,11 +64,11 @@ public class QuestGuide : MonoBehaviour
         UiKit.Stretch(edgeText.rectTransform, 2f);
 
         // "next" line under the quest panel (upper left)
-        var hb = UiKit.Box("Next", canvasRect, UiKit.Hex("#241e57", 0.85f), 12f, UiKit.Accent, 2f);
+        var hb = UiKit.Box("Next", canvasRect, UiKit.WithAlpha(UiKit.Bg2, 0.88f), 12f, UiKit.Accent, 2f);
         var hrt = hb.rectTransform;
         UiKit.Place(hrt, 16f, 118f, 500f, 42f);
         hintRect = hrt;
-        hintText = UiKit.Label(hrt, "", 20, UiKit.Accent, TextAnchor.MiddleLeft);
+        hintText = UiKit.Fit(UiKit.Label(hrt, "", 20, UiKit.Accent, TextAnchor.MiddleLeft), 20, 14);   // one line
         UiKit.Stretch(hintText.rectTransform, 4f);
         hintText.rectTransform.offsetMin = new Vector2(14f, 2f);
         hint = hb.gameObject;

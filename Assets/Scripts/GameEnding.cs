@@ -41,18 +41,19 @@ public class GameEnding : MonoBehaviour
         UiKit.EnsureEventSystem();
 
         // centred panel over a dimmed screen
-        var dim = UiKit.Img("Ending", canvas.transform, null, UiKit.Hex("#120f2b", 0.7f));
+        var dim = UiKit.Img("Ending", canvas.transform, null, UiKit.WithAlpha(UiKit.Dim, 0.7f));
         dim.raycastTarget = true;
         UiKit.Stretch(dim.rectTransform);
         panel = dim.gameObject;
         panelGroup = panel.AddComponent<CanvasGroup>();
         box = UiKit.Box("Panel", dim.transform, UiKit.Panel, 24f, UiKit.Accent, 3f).rectTransform;
         UiKit.Center(box, 640f, 330f);
-        title = UiKit.Display(UiKit.Label(box, "", 56, UiKit.Accent));
-        UiKit.HardShadow(title, UiKit.Hex("#b3560b"), 5f);
-        UiKit.Place(title.rectTransform, 0f, 30f, 640f, 76f);
-        text = UiKit.Label(box, "", 22, UiKit.Fg);
-        UiKit.Place(text.rectTransform, 40f, 118f, 560f, 70f);
+        // one line of title, up to two of text: both shrink rather than run into what's below
+        title = UiKit.Fit(UiKit.Display(UiKit.Label(box, "", 56, UiKit.Accent)), 56, 30);
+        UiKit.HardShadow(title, UiKit.AccentShadow, 5f);
+        UiKit.Place(title.rectTransform, 30f, 30f, 580f, 76f);
+        text = UiKit.Fit(UiKit.Label(box, "", 22, UiKit.Fg), 22, 16);
+        UiKit.Place(text.rectTransform, 40f, 116f, 560f, 76f);
         var again = UiKit.MainButton(box, L.T("メニューへ", "Back to menu"), out _);
         UiKit.Place((RectTransform)again.transform, 90f, 228f, 220f, 56f);
         again.onClick.AddListener(Restart);

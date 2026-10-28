@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Shows the floor and its quest each time the scene starts (after the elevator ride, if there is one): first
 /// the floor (1階 / 1F) pops in big in the centre and flies off, then the quest is revealed a few words at a time
-/// over an amber band, then both slide into a small panel in the upper-left corner for the rest of the level.
+/// over a cyan band, then both slide into a small panel in the upper-left corner for the rest of the level.
 /// Once the quest is cleared (GameProgress.ClearQuest with this scene's name), クエストクリア！ stamps in instead,
 /// with a ring burst, confetti and a 「3階のクエスト達成」 ribbon, and the corner panel turns green.
 /// The player stays still (PlayerLock) from the start of the intro or celebration until the corner panel slides in.
@@ -78,8 +78,8 @@ public class QuestBanner : MonoBehaviour
         // Intro: dimmed screen, a band across the middle, the big text (floor, quest or クエストクリア！) and
         // the clear effects: ring, confetti, ribbon
         intro = Layer("Intro", canvas.transform);
-        UiKit.Stretch(UiKit.Img("Dim", intro.transform, null, UiKit.Hex("#120f2b", 0.55f)).rectTransform);
-        bandImage = UiKit.Img("Band", intro.transform, null, UiKit.Hex("#ffb526", 0.12f));
+        UiKit.Stretch(UiKit.Img("Dim", intro.transform, null, UiKit.WithAlpha(UiKit.Dim, 0.55f)).rectTransform);
+        bandImage = UiKit.Img("Band", intro.transform, null, UiKit.WithAlpha(UiKit.Accent, 0.12f));
         band = bandImage.rectTransform;
         band.anchorMin = new Vector2(0f, 0.5f);
         band.anchorMax = new Vector2(1f, 0.5f);
@@ -92,13 +92,13 @@ public class QuestBanner : MonoBehaviour
             confetti[i] = UiKit.Img("Confetti", intro.transform, null, Color.clear);
             UiKit.Center(confetti[i].rectTransform, 16f, 16f);
         }
-        kicker = UiKit.Label(intro.transform, "", 22, UiKit.Hex("#ffd27a"));
+        kicker = UiKit.Label(intro.transform, "", 22, UiKit.Accent2);
         UiKit.Center(kicker.rectTransform, 600f, 34f).anchoredPosition = new Vector2(0f, 150f);
         kickerGroup = kicker.gameObject.AddComponent<CanvasGroup>();
         big = UiKit.Display(UiKit.Label(intro.transform, "", 220, UiKit.Accent));
         big.verticalOverflow = VerticalWrapMode.Truncate;
         big.resizeTextMinSize = 40;
-        bigShadow = UiKit.HardShadow(big, UiKit.Hex("#b3560b"), 6f);
+        bigShadow = UiKit.HardShadow(big, UiKit.AccentShadow, 6f);
         bigGroup = big.gameObject.AddComponent<CanvasGroup>();
         var rb = UiKit.Box("Ribbon", intro.transform, UiKit.Panel, 26f, UiKit.Good, 3f);
         ribbon = UiKit.Center(rb.rectTransform, 420f, 52f);
@@ -106,16 +106,16 @@ public class QuestBanner : MonoBehaviour
         UiKit.Stretch(ribbonText.rectTransform);
         ribbonGroup = rb.gameObject.AddComponent<CanvasGroup>();
 
-        // Corner: panel in the upper left that grows to fit the wrapped quest text: an amber frame and stripe,
+        // Corner: panel in the upper left that grows to fit the wrapped quest text: a cyan frame and stripe,
         // the floor badge and QUEST on top, the quest in large type. A soft glow behind it pulses now and then
         // so it isn't overlooked; it never takes clicks.
         corner = Layer("Quest", canvas.transform);
         attention = UiKit.Img("Attention", corner.transform, UiKit.Glow, Color.clear);
-        var panel = UiKit.Box("Panel", corner.transform, UiKit.Hex("#241e57", 0.94f), 14f, UiKit.Accent, 3f);
+        var panel = UiKit.Box("Panel", corner.transform, UiKit.WithAlpha(UiKit.Bg2, 0.94f), 14f, UiKit.Accent, 3f);
         cornerBorder = panel;
         cornerPanel = panel.rectTransform;
         UiKit.Place(cornerPanel, 16f, 16f, CornerW, 0f);
-        UiKit.HardShadow(panel, new Color(0f, 0f, 0f, 0.45f), 5f).useGraphicAlpha = false;
+        UiKit.HardShadow(panel, UiKit.WithAlpha(UiKit.PanelShadow, 0.6f), 5f).useGraphicAlpha = false;
         var v = panel.gameObject.AddComponent<VerticalLayoutGroup>();
         v.padding = new RectOffset(28, 20, 12, 16);
         v.spacing = 6f;
@@ -145,7 +145,7 @@ public class QuestBanner : MonoBehaviour
         badge = b.rectTransform;
         badgeSize = b.gameObject.AddComponent<LayoutElement>();
         badgeSize.preferredHeight = 30f;
-        badgeText = UiKit.Display(UiKit.Label(badge, "", 18, UiKit.Hex("#2a1600")));
+        badgeText = UiKit.Display(UiKit.Label(badge, "", 18, UiKit.Ink));
         badgeText.horizontalOverflow = HorizontalWrapMode.Overflow;
         UiKit.Stretch(badgeText.rectTransform);
         cornerTitle = UiKit.Label(header, "", 20, UiKit.Accent, TextAnchor.MiddleLeft);
@@ -154,7 +154,7 @@ public class QuestBanner : MonoBehaviour
 
         cornerText = UiKit.Label(cornerPanel, questText, 26, UiKit.Fg, TextAnchor.UpperLeft);
         cornerText.lineSpacing = 1.05f;
-        UiKit.HardShadow(cornerText, new Color(0f, 0f, 0f, 0.4f), 2f);
+        UiKit.HardShadow(cornerText, UiKit.WithAlpha(UiKit.PanelShadow, 0.6f), 2f);
 
         Apply(GameProgress.IsQuestCleared(Quest));
         intro.alpha = 0f;
@@ -235,7 +235,7 @@ public class QuestBanner : MonoBehaviour
         cleared = done;
         big.text = done ? L.T("クエストクリア！", "Quest Clear!") : L.Tr(questText);
         big.color = done ? UiKit.Good : UiKit.Accent;
-        bigShadow.effectColor = UiKit.Hex(done ? "#13703c" : "#b3560b");
+        bigShadow.effectColor = done ? UiKit.GoodShadow : UiKit.AccentShadow;
         ribbonText.text = floorNumber > 0 ? L.T(floorNumber + "階のクエスト達成", floorNumber + "F quest complete")
                                           : L.T("クエスト達成", "Quest complete");
         ribbon.sizeDelta = new Vector2(ribbonText.preferredWidth + 60f, 52f);
@@ -270,7 +270,7 @@ public class QuestBanner : MonoBehaviour
             BigMode(220, false, 0.04f, 0.96f, 0.04f, 0.96f);
             big.text = FloorName;
             big.color = UiKit.Accent;
-            bigShadow.effectColor = UiKit.Hex("#b3560b");
+            bigShadow.effectColor = UiKit.AccentShadow;
             for (float t = 0f; t < fadeIn; t += Time.unscaledDeltaTime)
             {
                 float k = t / fadeIn;
@@ -321,13 +321,13 @@ public class QuestBanner : MonoBehaviour
         nudge = StartCoroutine(Nudge());
     }
 
-    // The quest over an amber band: QUEST, then the text a few words at a time (each piece fades in where it
+    // The quest over a cyan band: QUEST, then the text a few words at a time (each piece fades in where it
     // will stay, so nothing reflows), then everything fades.
     IEnumerator RevealQuest()
     {
         BigMode(96, true, 0.06f, 0.94f, 0.33f, 0.67f);
         Apply(false);
-        bandImage.color = UiKit.Hex("#ffb526", 0.12f);
+        bandImage.color = UiKit.WithAlpha(UiKit.Accent, 0.12f);
         string quest = big.text;
         string rgb = ColorUtility.ToHtmlStringRGB(big.color);
         var chunks = Chunks(quest);
@@ -361,7 +361,7 @@ public class QuestBanner : MonoBehaviour
         Celebrating = true;
         BigMode(96, false, 0f, 1f, 0.38f, 0.62f);
         Apply(true);
-        bandImage.color = UiKit.Hex("#3ef08a", 0.16f);
+        bandImage.color = UiKit.WithAlpha(UiKit.Good, 0.16f);
         var stamp = big.rectTransform;
         bool played = false;
         Color[] palette = { UiKit.Accent, UiKit.Accent2, UiKit.Good, UiKit.Fg };

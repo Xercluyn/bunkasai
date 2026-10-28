@@ -18,8 +18,8 @@ public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnter
     public float depth = 4f;
 
     public Graphic border;
-    public Color borderNormal = Color.white;
-    public Color borderHover = Color.white;
+    public Color borderNormal = UiKit.Line;
+    public Color borderHover = UiKit.Accent;
 
     [Range(0f, 1f)] public float clickVolume = 0.8f;
     [Range(0f, 1f)] public float hoverVolume = 0.25f;

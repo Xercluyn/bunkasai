@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Tools > Elevator Game > Outline Interactables: gives the object behind every ElevatorPlayZone in the open
-/// scene (the elevator, the arcade box) an orange InteractableOutline, and links the zone to it so the outline
+/// scene (the elevator, the arcade box) a cyan InteractableOutline, and links the zone to it so the outline
 /// lights up while the Play button shows. A zone's object is its Interactable field, or else the nearest
 /// object with "elevator" or "arcade" in its name. On an elevator only its button is outlined: the small
 /// separate piece of the elevator mesh nearest the zone, which is also where the Play button floats.
@@ -50,10 +50,10 @@ public static class InteractableOutlineSetup
             done++;
         }
         EditorSceneManager.MarkSceneDirty(scene);
-        Debug.Log($"{scene.name}: {done} interactable object(s) outlined in orange. Save the scene.");
+        Debug.Log($"{scene.name}: {done} interactable object(s) outlined in cyan. Save the scene.");
     }
 
-    /// <summary>Adds (or refreshes) the orange outline on an object.</summary>
+    /// <summary>Adds (or refreshes) the cyan outline on an object.</summary>
     internal static void Apply(GameObject target)
     {
         // Read/Write lets the outline copy the meshes at runtime

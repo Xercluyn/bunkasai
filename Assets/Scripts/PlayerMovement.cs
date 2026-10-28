@@ -114,6 +114,8 @@ public class PlayerMovement : MonoBehaviour
     float movedFor;          // seconds spent moving; the guide folds down after CollapseAfter
     bool guideCollapsed;
     const float CollapseAfter = 10f, GuideWidth = 290f;
+    // rich-text colours for the guide: keys in white, what they do in the muted blue
+    static readonly string KeyInk = "#" + ColorUtility.ToHtmlStringRGB(UiKit.Fg), HelpInk = "#" + ColorUtility.ToHtmlStringRGB(UiKit.Muted);
 
     /// <summary>The controls guide's panel (upper right), or null without one; QuestGuide keeps its arrow off it.</summary>
     public RectTransform ControlsPanel => guidePanel;
@@ -121,7 +123,7 @@ public class PlayerMovement : MonoBehaviour
     void BuildControlsGuide()
     {
         var canvas = UiKit.MakeCanvas("ControlsCanvas", 19, new Vector2(1280f, 720f));
-        var panel = UiKit.Box("Controls", canvas.transform, UiKit.Hex("#241e57", 0.85f), 12f, UiKit.Line, 2f);
+        var panel = UiKit.Box("Controls", canvas.transform, UiKit.WithAlpha(UiKit.Bg2, 0.88f), 12f, UiKit.Line, 2f);
         var rt = guidePanel = panel.rectTransform;
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 1f);
         rt.anchoredPosition = new Vector2(-16f, -16f);
@@ -151,7 +153,7 @@ public class PlayerMovement : MonoBehaviour
             guideTitle.gameObject.SetActive(false);
             for (int i = 0; i < guideLines.Length - 1; i++) guideLines[i].gameObject.SetActive(false);
             var last = guideLines[guideLines.Length - 1];
-            last.text = $"<color=#ffffff>Esc</color><color=#a9a2d9>: {L.T("メニュー", "Menu")}</color>";
+            last.text = $"<color={KeyInk}>Esc</color><color={HelpInk}>: {L.T("メニュー", "Menu")}</color>";
             guidePanel.sizeDelta = new Vector2(last.preferredWidth + 34f, 0f);
             return;
         }
@@ -164,7 +166,7 @@ public class PlayerMovement : MonoBehaviour
             ("Esc", L.T("メニュー", "Menu")),
         };
         for (int i = 0; i < lines.Length; i++)
-            guideLines[i].text = $"<color=#ffffff>{lines[i].Item1}</color>　<color=#a9a2d9>{lines[i].Item2}</color>";
+            guideLines[i].text = $"<color={KeyInk}>{lines[i].Item1}</color>　<color={HelpInk}>{lines[i].Item2}</color>";
     }
 
     // after a while on the move the player knows the controls: fold the guide down to its Esc line

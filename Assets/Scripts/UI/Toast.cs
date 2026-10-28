@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// A one-line message strip in the lower middle of the screen that fades after a few seconds
+/// A short message strip in the lower middle of the screen that fades after a few seconds
 /// (the ticket machine's 「お金が足りません」, the elevator's 「クエストをクリアしてから」). Toast.Show from anywhere;
 /// it builds its own canvas the first time in each scene. It pops as it appears (a softer buzz for UiKit.Bad).
 /// </summary>
@@ -29,12 +29,15 @@ public class Toast : MonoBehaviour
         var rt = panel.rectTransform;
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0f);
         rt.anchoredPosition = new Vector2(0f, 150f);
-        rt.sizeDelta = new Vector2(760f, 64f);
+        rt.sizeDelta = new Vector2(760f, 76f);
         toast.group = panel.gameObject.AddComponent<CanvasGroup>();
         toast.group.blocksRaycasts = false;
         toast.group.alpha = 0f;
-        toast.text = UiKit.Label(panel.transform, "", 22, UiKit.Fg);
-        UiKit.Stretch(toast.text.rectTransform, 12f);
+        // up to two lines; a longer message shrinks to fit
+        toast.text = UiKit.Fit(UiKit.Label(panel.transform, "", 22, UiKit.Fg), 22, 15);
+        UiKit.Stretch(toast.text.rectTransform, 8f);
+        toast.text.rectTransform.offsetMin = new Vector2(18f, 8f);
+        toast.text.rectTransform.offsetMax = new Vector2(-18f, -8f);
         return toast;
     }
 

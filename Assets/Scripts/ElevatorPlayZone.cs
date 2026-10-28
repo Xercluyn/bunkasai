@@ -9,7 +9,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Trigger area in front of the elevator button (or any machine, like the fifth floor's arcade box).
 /// While the player stands inside it, a prompt like 「E　▶ プレイ」 appears at the bottom centre of the screen
-/// (with a blip) and the object's orange outline lights up; pressing E, Enter or the left mouse button (or clicking
+/// (with a blip) and the object's cyan outline lights up; pressing E, Enter or the left mouse button (or clicking
 /// the prompt) leaves for the minigame scene a moment later, with a click and a whoosh. Nothing happens while the
 /// player is locked (intro, pause menu, ending). An object that can't be used yet (the elevator before the quest
 /// is cleared) gets a dim grey outline instead.
@@ -76,9 +76,9 @@ public class ElevatorPlayZone : MonoBehaviour
 
             // key badge on the left of the label
             var face = labelText.transform.parent;
-            var badge = UiKit.Box("Key", face, UiKit.Hex("#3a1a00"), 8f);
+            var badge = UiKit.Box("Key", face, UiKit.Ink, 8f);
             UiKit.Place(badge.rectTransform, 12f, 10f, 34f, 34f);
-            var key = UiKit.Label(badge.transform, "E", 20, UiKit.Hex("#ffc340"));
+            var key = UiKit.Label(badge.transform, "E", 20, UiKit.MainFill);
             UiKit.Stretch(key.rectTransform);
             labelText.rectTransform.offsetMin = new Vector2(56f, 0f);
             labelText.rectTransform.offsetMax = new Vector2(-20f, 0f);
@@ -90,7 +90,7 @@ public class ElevatorPlayZone : MonoBehaviour
             krt.pivot = new Vector2(0.5f, 1f);
             krt.anchoredPosition = new Vector2(0f, -8f);
             krt.sizeDelta = new Vector2(300f, 20f);
-            UiKit.HardShadow(keysText, new Color(0f, 0f, 0f, 0.6f), 2f);
+            UiKit.HardShadow(keysText, UiKit.WithAlpha(UiKit.PanelShadow, 0.8f), 2f);
             Relabel();
         }
 
