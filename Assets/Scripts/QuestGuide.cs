@@ -18,6 +18,9 @@ public class QuestGuide : MonoBehaviour
 
     enum Kind { None, Game, Ticket, Elevator }
 
+    const float ArrowHalf = 26f;   // half the edge arrow (46) at the top of its pulse
+    const float LabelGap = 8f;     // space between the edge arrow and its label
+
     RectTransform canvasRect, marker, markerBob, edge, edgeLabel, hintRect;
     Text markerText, edgeText, hintText;
     GameObject hint;
@@ -136,12 +139,15 @@ public class QuestGuide : MonoBehaviour
             edgeText.text = MarkerLine(kind, zone);
             Vector2 size = new Vector2(edgeText.preferredWidth + 22f, 28f);
             edgeLabel.sizeDelta = size;
-            Vector2 lp = p - dir * 46f;
+            // far enough along -dir that the label's box clears the (pulsing) arrow, however wide the text is
+            float reach = Mathf.Abs(dir.x) * size.x * 0.5f + Mathf.Abs(dir.y) * size.y * 0.5f;
+            Vector2 lp = p - dir * (ArrowHalf + reach + LabelGap);
             if (Mathf.Abs(dir.y) >= Mathf.Abs(dir.x)) lp.x = p.x;   // top/bottom edge: straight above or below it
             lp.x = Mathf.Clamp(lp.x, -half.x + size.x * 0.5f + 8f, half.x - size.x * 0.5f - 8f);
             lp.y = Mathf.Clamp(lp.y, -half.y + 22f, half.y - 22f);
             lp = SlideOff(lp, size, quest, half);
             lp = SlideOff(lp, size, controls, half);
+            lp = ClearOfArrow(lp, size, p, half);
             edgeLabel.gameObject.SetActive(true);
             edgeLabel.anchoredPosition = lp;
         }
@@ -165,6 +171,17 @@ public class QuestGuide : MonoBehaviour
         panel.GetWorldCorners(corners);   // overlay canvases: screen pixels
         Vector2 a = canvasRect.InverseTransformPoint(corners[0]), b = canvasRect.InverseTransformPoint(corners[2]);
         return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+    }
+
+    // If clamping or sliding pushed the label back onto the arrow at `arrow`, moves it straight above or below
+    // the arrow (whichever side has room)
+    static Vector2 ClearOfArrow(Vector2 p, Vector2 size, Vector2 arrow, Vector2 half)
+    {
+        Vector2 h = size * 0.5f + new Vector2(ArrowHalf + LabelGap, ArrowHalf + LabelGap);
+        if (Mathf.Abs(p.x - arrow.x) >= h.x || Mathf.Abs(p.y - arrow.y) >= h.y) return p;
+        float below = arrow.y - h.y, above = arrow.y + h.y;
+        bool belowFits = below - size.y * 0.5f >= -half.y + 8f;
+        return new Vector2(p.x, belowFits && (arrow.y > 0f || above + size.y * 0.5f > half.y - 8f) ? below : above);
     }
 
     // Moves a label of `size` centred at p sideways (or else down/up) until it no longer overlaps `r`

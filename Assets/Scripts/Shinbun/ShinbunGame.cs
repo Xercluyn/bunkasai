@@ -129,9 +129,13 @@ public class ShinbunGame : MonoBehaviour
             () => Leave(true), () => SceneManager.LoadScene(gameObject.scene.name));
     }
 
-    // Plain first and last; in between mostly deliveries with some traps, never two traps in a row
+    const int MinDeliveries = 4;   // green doors in every run, however the dice fall
+
+    // Plain first and last; in between mostly deliveries with some traps, never two traps in a row,
+    // and always at least MinDeliveries deliveries
     static List<DoorKind> MakeLayout(int count)
     {
+        count = Mathf.Max(count, MinDeliveries + 2);
         for (int attempt = 0; ; attempt++)
         {
             var list = new List<DoorKind> { DoorKind.Plain };
@@ -144,8 +148,26 @@ public class ShinbunGame : MonoBehaviour
             }
             list.Add(DoorKind.Plain);
             int deliveries = list.Count(k => k == DoorKind.Deliver), traps = list.Count(k => k == DoorKind.Trap);
-            if ((deliveries >= count / 4 && traps >= count / 7) || attempt > 50) return list;
+            bool good = deliveries >= Mathf.Max(MinDeliveries, count / 4) && traps >= count / 7;
+            if (good) return list;
+            if (attempt > 50) return TopUpDeliveries(list);
         }
+    }
+
+    // Turns random middle doors (plain first, then traps) into deliveries until there are MinDeliveries
+    static List<DoorKind> TopUpDeliveries(List<DoorKind> layout)
+    {
+        var list = new List<DoorKind>(layout);
+        foreach (var from in new[] { DoorKind.Plain, DoorKind.Trap })
+        {
+            var spots = Enumerable.Range(1, list.Count - 2).Where(i => list[i] == from).OrderBy(_ => Random.value).ToList();
+            foreach (int i in spots)
+            {
+                if (list.Count(k => k == DoorKind.Deliver) >= MinDeliveries) return list;
+                list[i] = DoorKind.Deliver;
+            }
+        }
+        return list;
     }
 
     // ---------- setup ----------
