@@ -11,7 +11,9 @@ using UnityEngine.SceneManagement;
 /// The lights exported with the building are area lights, which URP only supports in a lightmap bake, so
 /// at runtime they give no light and the sun lights the inside instead. This turns them into realtime point
 /// lights spaced to overlap (Forward+ renders this many), switches the directional light off, and replaces
-/// the sky's blue ambient with a cool neutral indoor one. Safe to run again after changing the values below.
+/// the sky's blue ambient with an indoor one. On the floors the lamps and ambient take the floor's colour temperature
+/// (warm-ish lobby, neutral 2F/4F, cool 3F/5F) and 4F gets a blue wash in the studio. Safe to run again after
+/// changing the values below.
 /// </summary>
 public static class IndoorLightingSetup
 {
@@ -22,13 +24,47 @@ public static class IndoorLightingSetup
     const float FloorBrightness = 0.8f;
     const float RangeOfSpacing = 1.6f;   // light range in multiples of the distance to the nearest other light
 
+    // 4F studio: one blue wash over the cyclorama, like the real studio's blue lighting
+    const string WashName = "StudioBlueWash";
+    const string WashAnchor = "swBtn22";
+    const float WashHeightMetres = 2f;
+    const float WashRangeMetres = 12f;
+    const float WashOfLamp = 0.6f;       // wash intensity in multiples of a lamp's
+
+    /// <summary>A floor's light: lamp colour and the trilight ambient (sky, equator, ground).</summary>
+    readonly struct Mood
+    {
+        public readonly string name;
+        public readonly Color lamp, sky, equator, ground;
+
+        public Mood(string name, string lamp, string sky, string equator, string ground)
+        {
+            this.name = name;
+            this.lamp = UiKit.Hex(lamp);
+            this.sky = UiKit.Hex(sky);
+            this.equator = UiKit.Hex(equator);
+            this.ground = UiKit.Hex(ground);
+        }
+    }
+
+    // Cool neutral, even indoor fill (the IT-department palette); also used for scenes that aren't floors
+    static readonly Mood Cool = new Mood("cool", "#F4F8FF", "#8a96a8", "#5c6472", "#2c323c");
+    static readonly Mood Neutral = new Mood("neutral 4500K", "#FFF4E8", "#8e929a", "#5e626a", "#2e3036");
+    static readonly Mood WarmLobby = new Mood("slightly warm", "#FFF1DE", "#958f86", "#625c56", "#302c28");
+
+    // 1F lobby downlights on the bronze ceiling, 2F/4F neutral, 3F/5F cool bright classrooms
+    static Mood MoodOf(int floor) => floor == 1 ? WarmLobby : floor == 2 || floor == 4 ? Neutral : Cool;
+
     [MenuItem("Tools/Elevator Game/Fix Indoor Lighting")]
     static void Fix()
     {
         var scene = SceneManager.GetActiveScene();
+        int floor = SchoolKit.FloorOf(scene);
+        var mood = MoodOf(floor);
         var lights = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Light>(true)).ToList();
-        // The building's lamps: area lights still to convert, and point lights from an earlier run
-        var lamps = lights.Where(l => l.type == LightType.Rectangle || l.type == LightType.Disc || l.type == LightType.Point).ToList();
+        // The building's lamps: area lights still to convert, and point lights from an earlier run (not the studio wash)
+        var lamps = lights.Where(l => (l.type == LightType.Rectangle || l.type == LightType.Disc || l.type == LightType.Point) &&
+                                      l.name != WashName).ToList();
 
         var character = FloorPlayerSetup.FindCharacter(scene);
         var ignore = character != null ? character.transform : null;
@@ -61,6 +97,8 @@ public static class IndoorLightingSetup
             l.lightmapBakeType = LightmapBakeType.Realtime;
             l.range = ranges[i];
             l.intensity = intensity;
+            // Non-floor scenes keep their lamps' colour, as before
+            if (floor != 0) l.color = mood.lamp;
             l.shadows = LightShadows.None;   // hundreds of shadowed lights would be far too slow
             l.renderMode = LightRenderMode.Auto;
         }
@@ -73,18 +111,56 @@ public static class IndoorLightingSetup
             suns++;
         }
 
-        // Cool neutral, even indoor fill (the IT-department palette) instead of the blue sky; dim sky reflections on shiny surfaces
+        // Even indoor fill in the floor's mood instead of the blue sky; dim sky reflections on shiny surfaces
         // (Lighting window > Environment; not undoable)
         RenderSettings.ambientMode = AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = UiKit.Hex("#8a96a8");
-        RenderSettings.ambientEquatorColor = UiKit.Hex("#5c6472");
-        RenderSettings.ambientGroundColor = UiKit.Hex("#2c323c");
+        RenderSettings.ambientSkyColor = mood.sky;
+        RenderSettings.ambientEquatorColor = mood.equator;
+        RenderSettings.ambientGroundColor = mood.ground;
         RenderSettings.reflectionIntensity = 0.3f;
+
+        string wash = floor == 4 ? PlaceStudioWash(scene, intensity) : "";
 
         EditorSceneManager.MarkSceneDirty(scene);
         Debug.Log($"{scene.name}: set {lamps.Count} lamp(s) as realtime point lights about {typical:0.#} above the floor " +
                   $"(intensity {intensity:0.#}, floor brightness {FloorBrightness}), " +
-                  $"switched off {suns} directional light(s) and set a cool neutral indoor ambient. Save the scene.");
+                  $"switched off {suns} directional light(s) and set a {(floor != 0 ? mood.name : "cool neutral")} indoor light{wash}. Save the scene.");
+    }
+
+    // Replaces the studio's blue wash light (a scene root, so it never counts as part of the building) above the anchor
+    static string PlaceStudioWash(Scene scene, float lampIntensity)
+    {
+        foreach (var old in scene.GetRootGameObjects().Where(r => r.name == WashName))
+            Undo.DestroyObjectImmediate(old);
+
+        var anchor = SchoolKit.FindInBuilding(scene, WashAnchor).FirstOrDefault();
+        if (anchor == null)
+        {
+            Debug.LogWarning($"{Title}: no '{WashAnchor}' in the building, so the studio's blue wash light was skipped.");
+            return "";
+        }
+        var renderers = anchor.GetComponentsInChildren<Renderer>(true);
+        var at = anchor.position;
+        if (renderers.Length > 0)
+        {
+            var b = renderers[0].bounds;
+            foreach (var r in renderers) b.Encapsulate(r.bounds);
+            at = b.center;
+        }
+
+        var go = new GameObject(WashName);
+        SceneManager.MoveGameObjectToScene(go, scene);
+        go.transform.position = at + Vector3.up * WashHeightMetres * SchoolPalette.WorldPerMetre;
+        var light = go.AddComponent<Light>();
+        light.type = LightType.Point;
+        light.lightmapBakeType = LightmapBakeType.Realtime;
+        light.color = UiKit.Hex("#4A5CFF");
+        light.range = WashRangeMetres * SchoolPalette.WorldPerMetre;
+        light.intensity = lampIntensity * WashOfLamp;
+        light.shadows = LightShadows.None;
+        light.renderMode = LightRenderMode.Auto;
+        Undo.RegisterCreatedObjectUndo(go, Title);
+        return $" and a blue wash over the studio near {anchor.name}";
     }
 
     // Light reaching the floor under a typical lamp from all lamps at intensity 1, with URP's point light
