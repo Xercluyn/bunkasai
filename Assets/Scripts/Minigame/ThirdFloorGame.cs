@@ -9,15 +9,18 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Unity port of Assets/Minigame/ThirdFloorGame (index.html + script.js + style.css): see an animal, hear its
-/// English name and pick it from three words within 5 seconds; five rounds, all five right clears the quiz.
-/// Builds its whole UI at runtime. The animal pictures come from EmojiSheet.png (the colour emoji, 6×3 cells of
-/// 256 px) and the voice from Speech (Windows' system voices). Clearing the quiz clears the floor's quest.
+/// English name and pick it from three words within 14 seconds; three rounds, two right clears the quiz.
+/// Opens on the shared how-to-play card and a 3-2-1 countdown (every replay counts down too); the ☰ menu and
+/// its how-to-play card pause the round timer. Builds its whole UI at runtime. The animal pictures come from
+/// EmojiSheet.png (the colour emoji, 6×3 cells of 256 px), the voice from Speech (Windows' system voices) and
+/// the effects from Sfx. Clearing the quiz clears the floor's quest, holds the result and returns to the floor.
 /// </summary>
 public class ThirdFloorGame : MonoBehaviour
 {
-    // easy mode: 3 questions, 10 s each, 2 right clears it (was 5, 5 s, all 5)
+    // easy mode: 3 questions, 14 s each, 2 right clears it (was 5, 5 s, all 5)
     const int ROUNDS = 3, PASS = 2;
-    const float TIME = 10f, NEXT = 1.9f;
+    const float TIME = 14f, NEXT = 1.9f;
+    const int WARN_FROM = 3;   // red timer and a beep each second from here down
 
     [Tooltip("Assets/Minigame/ThirdFloorGame/EmojiSheet.png")]
     public Texture2D emojiSheet;
@@ -57,8 +60,9 @@ public class ThirdFloorGame : MonoBehaviour
     }
 
     List<Question> q = new List<Question>();
-    int idx, score, gen;
+    int idx, score, gen, lastWarn;
     bool locked, muted, timing;
+    bool held, menuOpen, helpOpen, intro, leaving;   // held: the round timer is paused by the menu / help card
     float timerStart, frozenLeft;
     readonly List<Opt> opts = new List<Opt>();
     Sprite[] cells;
@@ -67,9 +71,10 @@ public class ThirdFloorGame : MonoBehaviour
     RectTransform canvasRoot, column, quiz, end, optsBox, emojiRt, menu, cloudsLayer;
     Image[] dots;
     Image ring, emoji, trophy;
-    Text tnum, endTitle, endMsg, muteLbl, toastText;
-    GameObject menuBlocker, toast, homeBtn;
-    Coroutine toastRoutine, popRoutine;
+    Text tnum, endTitle, endMsg, muteLbl;
+    GameObject menuBlocker, homeBtn, againBtn, backBtn;
+    Coroutine popRoutine;
+    AudioSource sfx;
     readonly List<(RectTransform rt, float speed, float offset)> clouds = new List<(RectTransform, float, float)>();
     readonly List<(RectTransform rt, float x, float dur, float delay, float born)> falling = new List<(RectTransform, float, float, float, float)>();
 
@@ -90,10 +95,28 @@ public class ThirdFloorGame : MonoBehaviour
             }
         else Debug.LogWarning("ThirdFloorGame: Emoji Sheet not set; run Tools > Elevator Game > Create Third Floor Game Scene.");
 
+        sfx = MinigameKit.Audio(gameObject);
         UiKit.EnsureEventSystem();
         BuildUi();
-        StartQuiz();
+
+        // nothing runs until the how-to-play card is closed and the countdown is over
+        quiz.gameObject.SetActive(false);
+        intro = true;
+        MinigameKit.HowToPlay(canvasRoot, "どうぶつ えいご クイズ", "Animal English Quiz", Rules(), () =>
+        {
+            intro = false;
+            Begin();
+        });
+        backBtn.transform.SetAsLastSibling();   // ← 戻る still works over the card
     }
+
+    static (string ja, string en)[] Rules() => new[]
+    {
+        ("絵を見て、その動物の英語の名前を選ぼう。", "Look at the picture and pick the animal's English name."),
+        ($"問題は{ROUNDS}問。1問{(int)TIME}秒だよ。", $"{ROUNDS} questions, {(int)TIME} seconds each."),
+        ($"{PASS}問正解でクリア！", $"Get {PASS} right to clear it!"),
+        ("絵をタップすると英語が聞けるよ。", "Tap the picture to hear the word."),
+    };
 
     Sprite Cell(E e) => cells[(int)e];
 
@@ -156,8 +179,11 @@ public class ThirdFloorGame : MonoBehaviour
         tnum = UiKit.Label(timerFace.transform, ((int)TIME).ToString(), 28, Ink);
         UiKit.Stretch(tnum.rectTransform);
 
-        var hint = UiKit.Label(quiz, L.T("絵をタップして音を聞こう。正しい答えを選んでね。", "Tap the picture to hear it. Pick the right answer!"), 16, Ink2);
-        UiKit.Place(hint.rectTransform, 0f, 164f, W, 24f);
+        var hint = UiKit.Label(quiz, L.T("絵をタップして音を聞こう。正しい答えを選んでね。", "Tap the picture to hear it. Pick the right answer!"), 18, Ink2);
+        hint.resizeTextForBestFit = true;   // the English line is long: shrink rather than clip
+        hint.resizeTextMinSize = 15;
+        hint.resizeTextMaxSize = 18;
+        UiKit.Place(hint.rectTransform, 0f, 162f, W, 28f);
 
         // picture card: sun, animal, speaker
         var pic = Card(quiz, 0f, 200f, W, 262f, 36f, 8f);
@@ -192,13 +218,17 @@ public class ThirdFloorGame : MonoBehaviour
         trt.anchoredPosition = new Vector2(0f, -60f);
         trt.sizeDelta = new Vector2(150f, 150f);
         endTitle = UiKit.Label(endCard, "", 42, Ink);
+        endTitle.resizeTextForBestFit = true;   // 「ざんねん…もう一回！」 / "So close, try again!" are wide
+        endTitle.resizeTextMinSize = 26;
+        endTitle.resizeTextMaxSize = 42;
         Top(endTitle.rectTransform, 230f, 56f, W - 40f);
         endMsg = UiKit.Label(endCard, "", 19, Ink2);
         endMsg.lineSpacing = 1.3f;
         Top(endMsg.rectTransform, 296f, 90f, W - 60f);
         var again = Pressable(endCard, 0f, 0f, 260f, 56f, Gold, UiKit.Hex("#e0a93a"), 28f, 6f, L.T("もう一度あそぶ", "Play again"), 22, UiKit.Hex("#6a4400"), out _, out _, out _);
         Top((RectTransform)again.transform, 400f, 50f, 260f);
-        again.onClick.AddListener(StartQuiz);
+        again.onClick.AddListener(Begin);
+        againBtn = again.gameObject;
         var home = Pressable(endCard, 0f, 0f, 260f, 56f, Ok, UiKit.Hex("#33a874"), 28f, 6f, L.T("フロアに戻る", "Back to the floor"), 22, Color.white, out _, out _, out _);
         Top((RectTransform)home.transform, 474f, 50f, 260f);
         home.onClick.AddListener(Leave);
@@ -207,22 +237,11 @@ public class ThirdFloorGame : MonoBehaviour
 
         BuildMenu();
 
-        // toast
-        var toastBox = UiKit.Box("Toast", canvasRoot, Ink, 18f);
-        var tr = toastBox.rectTransform;
-        tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 0f);
-        tr.anchoredPosition = new Vector2(0f, 24f);
-        tr.sizeDelta = new Vector2(380f, 70f);
-        toastText = UiKit.Label(tr, "", 15, Color.white);
-        toastText.lineSpacing = 1.2f;
-        UiKit.Stretch(toastText.rectTransform, 12f);
-        toast = toastBox.gameObject;
-        toast.SetActive(false);
-
         // back to the 3D floor, always on top
         var back = UiKit.ColorButton(canvasRoot, L.T("← 戻る", "← Back"), Color.white, Ink, Ledge, 46f, 18, out var backText);
         UiKit.Place((RectTransform)back.transform, 16f, 12f, backText.preferredWidth + 52f, 46f);
         back.onClick.AddListener(Leave);
+        backBtn = back.gameObject;
     }
 
     // White card with a solid ledge underneath (box-shadow: 0 Npx 0 #b3d9f5). Returns the white face.
@@ -310,8 +329,8 @@ public class ThirdFloorGame : MonoBehaviour
         UiKit.HardShadow(box, Ledge, 6f);
         MenuItem(L.T("もう一度 きく", "Hear it again"), 0, out _, () => PlaySound());
         MenuItem(L.T("おとを OFFにする", "Sound OFF"), 1, out muteLbl, ToggleMute);
-        MenuItem(L.T("はじめから", "Start over"), 2, out _, () => { Speech.Stop(); StartQuiz(); });
-        MenuItem(L.T("あそびかた", "How to play"), 3, out _, () => Toast(L.T($"絵をタップして音を聞こう。{(int)TIME}秒いないに正しい答えを選んでね。{ROUNDS}問中{PASS}問正解でトロフィー！", $"Tap the picture to hear it. Pick the right answer within {(int)TIME} seconds. Get {PASS} of {ROUNDS} right for the trophy!")));
+        MenuItem(L.T("はじめから", "Start over"), 2, out _, () => { Speech.Stop(); Begin(); });
+        MenuItem(L.T("あそびかた", "How to play"), 3, out _, ShowHelp);
         menu.gameObject.SetActive(false);
         menuBlocker.SetActive(false);
     }
@@ -330,13 +349,16 @@ public class ThirdFloorGame : MonoBehaviour
         b.colors = colors;
         b.targetGraphic = row;
         b.onClick.AddListener(() => { CloseMenu(); action(); });
-        text = UiKit.Label(row.transform, label, 17, Ink, TextAnchor.MiddleLeft);
+        text = UiKit.Label(row.transform, label, 18, Ink, TextAnchor.MiddleLeft);
         UiKit.Place(text.rectTransform, 14f, 0f, 190f, 44f);
     }
 
-    /* ---------- menu, toast ---------- */
+    /* ---------- menu, help (both pause the round timer) ---------- */
     void OpenMenu(Vector3 worldPos)
     {
+        if (intro || helpOpen || leaving) return;   // not over the how-to-play card or the countdown
+        menuOpen = true;
+        HoldTimer();
         menuBlocker.SetActive(true);
         menuBlocker.transform.SetAsLastSibling();
         menu.gameObject.SetActive(true);
@@ -353,6 +375,37 @@ public class ThirdFloorGame : MonoBehaviour
     {
         menu.gameObject.SetActive(false);
         menuBlocker.SetActive(false);
+        if (!menuOpen) return;
+        menuOpen = false;
+        ReleaseTimer();
+    }
+
+    // the same how-to-play card as the start; its スタート！ carries on with the paused round
+    void ShowHelp()
+    {
+        helpOpen = true;
+        HoldTimer();
+        MinigameKit.HowToPlay(canvasRoot, "どうぶつ えいご クイズ", "Animal English Quiz", Rules(), () =>
+        {
+            helpOpen = false;
+            ReleaseTimer();
+        });
+        backBtn.transform.SetAsLastSibling();
+    }
+
+    void HoldTimer()
+    {
+        if (!timing) return;
+        StopTimer();
+        held = true;
+    }
+
+    void ReleaseTimer()
+    {
+        if (!held || menuOpen || helpOpen) return;
+        held = false;
+        timing = true;
+        timerStart = Time.time - (TIME - frozenLeft);
     }
 
     void ToggleMute()
@@ -360,16 +413,7 @@ public class ThirdFloorGame : MonoBehaviour
         muted = !muted;
         muteLbl.text = muted ? L.T("おとを ONにする", "Sound ON") : L.T("おとを OFFにする", "Sound OFF");
         if (muted) Speech.Stop();
-        Toast(muted ? L.T("おとを けしたよ", "Sound is off") : L.T("おとを ONにしたよ", "Sound is on"));
-    }
-
-    void Toast(string msg)
-    {
-        toastText.text = msg;
-        toast.SetActive(true);
-        toast.transform.SetAsLastSibling();
-        if (toastRoutine != null) StopCoroutine(toastRoutine);
-        toastRoutine = StartCoroutine(Later(4f, () => toast.SetActive(false)));
+        Toast.Show(muted ? L.T("おとを けしたよ", "Sound is off") : L.T("おとを ONにしたよ", "Sound is on"), UiKit.Fg);
     }
 
     /* ---------- speech ---------- */
@@ -418,6 +462,17 @@ public class ThirdFloorGame : MonoBehaviour
 
     void StartTimer()
     {
+        lastWarn = 0;
+        if (menuOpen || helpOpen)
+        {
+            // the next question came up while paused: it waits with a full clock
+            timing = false;
+            held = true;
+            frozenLeft = TIME;
+            tnum.text = ((int)TIME).ToString();
+            ring.color = tnum.color = Ink;
+            return;
+        }
         timing = true;
         timerStart = Time.time;
     }
@@ -429,10 +484,28 @@ public class ThirdFloorGame : MonoBehaviour
         frozenLeft = Mathf.Max(0f, TIME - (Time.time - timerStart));
     }
 
+    // 3-2-1, then a fresh quiz (first start, もう一度あそぶ, はじめから)
+    void Begin()
+    {
+        if (intro) return;
+        intro = true;
+        gen++;   // cancels pending next() calls from the last game
+        timing = held = false;
+        foreach (var f in falling) Destroy(f.rt.gameObject);
+        falling.Clear();
+        end.gameObject.SetActive(false);
+        quiz.gameObject.SetActive(false);
+        MinigameKit.Countdown(this, canvasRoot, () =>
+        {
+            intro = false;
+            StartQuiz();
+        });
+    }
+
     void StartQuiz()
     {
         gen++;   // cancels pending next() calls from the last game
-        timing = false;
+        timing = held = false;
         q = Shuffle(POOL).Take(ROUNDS).Select(a => new Question { w = a.w, e = a.e }).ToList();
         idx = 0;
         score = 0;
@@ -484,6 +557,7 @@ public class ThirdFloorGame : MonoBehaviour
         locked = true;
         Lock(cur);
         cur.res = "bad";
+        sfx.PlayOneShot(Sfx.Wrong());
         Say("Time is up! It is a " + cur.w);
         Dots();
         int g = gen;
@@ -506,6 +580,7 @@ public class ThirdFloorGame : MonoBehaviour
         {
             score++;
             cur.res = "ok";
+            sfx.PlayOneShot(Sfx.Correct());
             Say("Correct! " + cur.w);
         }
         else
@@ -513,6 +588,7 @@ public class ThirdFloorGame : MonoBehaviour
             SetOpt(o, false, true);
             StartCoroutine(Shake(o.root));
             cur.res = "bad";
+            sfx.PlayOneShot(Sfx.Wrong());
             Say("It is a " + cur.w);
         }
         Dots();
@@ -531,30 +607,33 @@ public class ThirdFloorGame : MonoBehaviour
 
     void Finish()
     {
-        timing = false;
+        timing = held = false;
         Dots();
         quiz.gameObject.SetActive(false);
         end.gameObject.SetActive(true);
         bool perfect = score >= PASS;   // cleared
         homeBtn.SetActive(perfect);
+        againBtn.SetActive(!perfect);   // a clear leaves on its own
         if (perfect)
         {
             GameProgress.ClearQuest(floorScene);   // the floor's QuestBanner shows クエストクリア！
             trophy.sprite = Cell(E.Trophy);
-            endTitle.text = "Congratulations!";
+            endTitle.text = L.T("やったね！", "Congratulations!");
             endMsg.text = L.T($"おめでとう！{ROUNDS}問中{score}問正解！クイズクリア！ ({score} / {ROUNDS})",
                 $"Well done! {score} of {ROUNDS} right. Quiz cleared! ({score} / {ROUNDS})");
             Confetti();
+            sfx.PlayOneShot(Sfx.Win());
             Say("Congratulations!");
-            StartCoroutine(LeaveSoon());   // the game ends by itself
+            MinigameKit.ResultThenExit(this, canvasRoot, Leave, MinigameKit.ResultHold);   // the game ends by itself
         }
         else
         {
             trophy.sprite = Cell(E.Seedling);
-            endTitle.text = "Failed";
+            endTitle.text = L.T("ざんねん…もう一回！", "So close, try again!");
             endMsg.text = L.T($"{ROUNDS}問中{score}問正解。{PASS}問正解でクリアだよ。もう一度がんばろう！",
                 $"{score} of {ROUNDS} right. Get {PASS} right to clear it. Try again!");
-            Say("Failed.");
+            sfx.PlayOneShot(Sfx.Bad());
+            Say("So close!");
             SayJa("もう一度がんばろう。", "Let's try again.");
         }
     }
@@ -574,22 +653,16 @@ public class ThirdFloorGame : MonoBehaviour
         }
     }
 
-    const float WinExit = 1.5f;   // seconds the win shows (and says Congratulations) before the game ends by itself
-
-    IEnumerator LeaveSoon()
-    {
-        yield return new WaitForSeconds(WinExit);
-        Leave();
-    }
-
     void Leave()
     {
+        if (leaving) return;   // the result hold and 「フロアに戻る」 can both fire
         Speech.Stop();
         if (!Application.CanStreamedLevelBeLoaded(floorScene))
         {
             Debug.LogError($"ThirdFloorGame: '{floorScene}' is not in Build Settings. Run Tools > Elevator Game > Create Third Floor Game Scene.");
             return;
         }
+        leaving = true;
         SceneManager.LoadScene(floorScene);
     }
 
@@ -600,21 +673,26 @@ public class ThirdFloorGame : MonoBehaviour
         var es = UnityEngine.EventSystems.EventSystem.current;
         if (es != null && es.currentSelectedGameObject != null) es.SetSelectedGameObject(null);
 
-        // timer: 5 → 0 in whole seconds, ring shrinking smoothly
+        // timer: 14 → 0 in whole seconds, ring shrinking smoothly; red with a beep a second over the last 3
         float left = timing ? Mathf.Max(0f, TIME - (Time.time - timerStart)) : frozenLeft;
         if (timing)
         {
             int n = Mathf.Max(0, (int)TIME - Mathf.FloorToInt(Time.time - timerStart));
             tnum.text = n.ToString();
-            bool low = n <= 2;
+            bool low = n <= WARN_FROM;
             ring.color = tnum.color = low ? BadC : Ink;
+            if (low && n >= 1 && n != lastWarn)
+            {
+                lastWarn = n;
+                sfx.PlayOneShot(Sfx.Warn());
+            }
             if (Time.time - timerStart >= TIME)
             {
                 StopTimer();
                 TimeUp(q[idx]);
             }
         }
-        else if (!locked && quiz.gameObject.activeSelf) left = TIME;
+        else if (!locked && !held && quiz.gameObject.activeSelf) left = TIME;
         ring.fillAmount = left / TIME;
 
         var kb = Keyboard.current;

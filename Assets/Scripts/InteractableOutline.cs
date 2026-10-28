@@ -4,7 +4,8 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// Orange line around an object the player can use (the elevator, the arcade box). It pulses gently all
-/// the time and turns brighter and thicker while its ElevatorPlayZone shows the Play button. Only the rim
+/// the time and turns brighter and thicker while its ElevatorPlayZone shows the Play button; while the object can't
+/// be used yet (locked, e.g. the elevator before the quest is cleared) it is a still, dim grey line. Only the rim
 /// past the object's silhouette shows (the object hides the rest), and walls in front hide it too.
 /// Added by Tools > Elevator Game > Outline Interactables; the model needs Read/Write enabled.
 /// </summary>
@@ -26,6 +27,10 @@ public class InteractableOutline : MonoBehaviour
 
     /// <summary>Set by ElevatorPlayZone while the player is close enough to interact.</summary>
     [System.NonSerialized] public bool focused;
+    /// <summary>Set by ElevatorPlayZone while the object can't be used yet: dim grey, idle width, no pulse.</summary>
+    [System.NonSerialized] public bool locked;
+
+    static readonly Color LockedColor = new Color(0.42f, 0.42f, 0.48f);
 
     static readonly Dictionary<Mesh, Mesh> smoothed = new Dictionary<Mesh, Mesh>();
     static readonly int ColorId = Shader.PropertyToID("_Color"), WidthId = Shader.PropertyToID("_Width"),
@@ -63,6 +68,15 @@ public class InteractableOutline : MonoBehaviour
     void Update()
     {
         if (material == null) return;
+        if (locked)
+        {
+            focus = 0f;
+            Color g = LockedColor * (focused ? 1.25f : 1f);   // a touch lighter with the player in front of it
+            g.a = 1f;
+            material.SetColor(ColorId, g);
+            material.SetFloat(WidthId, idleWidth);
+            return;
+        }
         focus = Mathf.MoveTowards(focus, focused ? 1f : 0f, Time.deltaTime * 5f);
         float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * (focused ? 6f : 2.5f));
         Color c = Color.Lerp(color * Mathf.Lerp(0.65f, 1f, pulse), color * 1.4f, focus);

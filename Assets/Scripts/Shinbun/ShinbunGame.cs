@@ -7,14 +7,17 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// The fifth floor's arcade game (Assets/Minigame/FifthFloorGame/GAMEPLAY.txt): a transport plane drops the
-/// agent onto a rooftop helipad, the agent auto-runs along an apartment walkway delivering newspapers, and a
-/// plane snatches the agent off the far helipad at the end.
-///  - Green doors: throw (Space / click) as the shrinking ring meets the target ring. PERFECT / GOOD score
-///    points and build a combo; running past without throwing is a MISS (no points lost, combo reset).
-///  - Red doors: traps with the same ring. Throwing costs points; leaving them alone earns a small bonus.
+/// The fifth floor's arcade game (Assets/Minigame/FifthFloorGame/GAMEPLAY.txt): the how-to-play card first,
+/// then a transport plane drops the agent onto a rooftop helipad (a practice timing press for the landing),
+/// a 3-2-1 countdown, the agent auto-runs along an apartment walkway delivering newspapers, and a plane
+/// snatches the agent off the far helipad at the end.
+///  - Green doors: throw (Space / click) as the shrinking green ring meets the target ring. PERFECT / GOOD
+///    score points and build a combo; running past without throwing is a MISS (no points lost, combo reset).
+///  - Red doors: traps with a red ✕ ring ("don't throw"). Throwing costs points; leaving them alone earns a
+///    small bonus.
 ///  - Yellow doors: plain rooms, nothing happens.
-/// Clearing it marks the fifth floor's quest as done and returns there.
+/// There is no losing: reaching the end clears it, marks the fifth floor's quest as done and returns there.
+/// Awake caps the course length and widens the timing so a scene saved with the old hard values stays easy.
 /// The scene is made by Tools > Elevator Game > Create Shinbun Arcade Scene, which fills in the models.
 /// </summary>
 public class ShinbunGame : MonoBehaviour
@@ -35,9 +38,9 @@ public class ShinbunGame : MonoBehaviour
     [Tooltip("Number of hallway pieces between the two helipads.")]
     public int hallways = 7;   // easy mode (was 14)
 
-    [Tooltip("Back to the floor as soon as the run reaches the end, skipping the plane pickup and the results.")]
+    [Tooltip("Back to the floor (after a short, skippable goal card) as soon as the run reaches the end, skipping the plane pickup and the results.")]
     public bool quickFinish = true;
-    public float runSpeed = 7f;
+    public float runSpeed = 6.5f;
 
     [Header("Agent")]
     [Tooltip("Agent height as a fraction of the coloured door (leaf and frame).")]
@@ -82,13 +85,26 @@ public class ShinbunGame : MonoBehaviour
     AudioClip sfxGood, sfxBad, sfxWin;
     int score, combo, delivered, deliverTotal, perfects, trapsHit;
     string animState;
+    bool leaving;
+
+    // Easy-mode limits, applied over whatever the scene saved
+    const int MaxHallways = 7;
+    const float MinPromptTime = 1.3f, MinGoodWindow = 0.35f, MaxRunSpeed = 6.5f;
+
+    void Awake()
+    {
+        hallways = Mathf.Min(hallways, MaxHallways);
+        promptTime = Mathf.Max(promptTime, MinPromptTime);
+        goodWindow = Mathf.Max(goodWindow, MinGoodWindow);
+        runSpeed = Mathf.Min(runSpeed, MaxRunSpeed);
+    }
 
     IEnumerator Start()
     {
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         cam = Camera.main;
-        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource = MinigameKit.Audio(gameObject);
         sfxGood = Sfx.Good();
         sfxBad = Sfx.Bad();
         sfxWin = Sfx.Win();
@@ -102,16 +118,19 @@ public class ShinbunGame : MonoBehaviour
         SpawnPlane();
         SpawnSkyline();
 
-        yield return Intro();
+        PrepareIntro();
         yield return Tutorial();
+        yield return Intro();
+        yield return Countdown();
         yield return Run();
+        hud.HideQuit();   // cleared from here on: leaving must clear the quest
         if (quickFinish)
         {
-            // reaching the end of the hallways wins: back to the floor right away
+            // reaching the end of the hallways wins: a short goal card (skippable), then back to the floor
             audioSource.PlayOneShot(sfxWin);
-            hud.Caption(L.T("ゴール！クリア！", "Goal! Cleared!"));
-            yield return new WaitForSeconds(1.2f);
-            Leave(true);
+            Play("Idle");
+            hud.ShowGoal(score, delivered, deliverTotal);
+            MinigameKit.ResultThenExit(this, hud.Canvas, () => Leave(true), MinigameKit.ResultHold);
             yield break;
         }
         yield return Ending();
@@ -269,9 +288,10 @@ public class ShinbunGame : MonoBehaviour
         }
     }
 
-    // ---------- 1. intro: drop from the plane onto the helipad ----------
+    // ---------- 1. how to play, with the plane waiting off-stage ----------
 
-    IEnumerator Intro()
+    // Agent aboard the plane short of the helipad, camera beside the pad
+    void PrepareIntro()
     {
         Vector3 pad = level.startPad;
         PlacePlane(new Vector3(pad.x, pad.y + planeAltitude, pad.z) - level.runDir * 150f);
@@ -279,10 +299,35 @@ public class ShinbunGame : MonoBehaviour
         agentT.position = planeT.TransformPoint(planeTailLocal);
         agentT.rotation = Quaternion.LookRotation(level.runDir);
         Play("Hang");
+        SnapCamera(IntroWatch(), PlaneCenter());
+    }
+
+    Vector3 IntroWatch() => level.startPad + level.cameraSide * 26f + Vector3.up * 3f - level.runDir * 8f;
+
+    IEnumerator Tutorial()
+    {
+        bool go = false;
+        var card = hud.ShowTutorial(() => go = true);
+        float opened = Time.unscaledTime;
+        while (!go)
+        {
+            var kb = Keyboard.current;
+            if (kb != null && Time.unscaledTime - opened > 0.3f &&
+                (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame)) go = true;
+            yield return null;
+        }
+        Destroy(card);
+    }
+
+    // ---------- 2. intro: drop from the plane onto the helipad (a practice press) ----------
+
+    IEnumerator Intro()
+    {
+        Vector3 pad = level.startPad;
 
         // Watch from beside the helipad as the plane comes in
-        Vector3 watch = pad + level.cameraSide * 26f + Vector3.up * 3f - level.runDir * 8f;
-        SnapCamera(watch, PlaneCenter());
+        Vector3 watch = IntroWatch();
+        hud.Caption(L.T("練習：飛行機が来るよ！", "Practice: here comes the plane!"));
         while (Vector3.Dot(agentT.position - pad, level.runDir) < 0f)
         {
             MovePlane();
@@ -293,7 +338,7 @@ public class ShinbunGame : MonoBehaviour
         // Jump: fall onto the pad; press as the ring closes to land cleanly
         agentT.SetParent(null, true);
         agentT.rotation = Quaternion.LookRotation(level.runDir);
-        hud.Caption(L.T("リングが重なったら スペース で着地！", "Press Space when the rings meet to land!"));
+        hud.Caption(L.T("練習：緑のリングが重なったら スペース か クリック で着地！", "Practice: press Space or click when the green rings meet to land!"));
         const float gravity = 30f, maxFall = 40f;
         float v = 0f;
         bool judged = false;
@@ -321,7 +366,8 @@ public class ShinbunGame : MonoBehaviour
         agentT.position = new Vector3(agentT.position.x, pad.y, agentT.position.z);
         hud.HidePrompt();
         hud.Caption("");
-        if (!judged) Miss();
+        // Only practice: a missed landing just gets a friendly word, no MISS sound
+        if (!judged) hud.Pop(L.T("着地OK！本番もこの調子", "Landed! Same again for real"), UiKit.Fg);
 
         Play("Land");
         for (float t = 0f; t < 1.3f; t += Time.deltaTime)
@@ -342,30 +388,25 @@ public class ShinbunGame : MonoBehaviour
         return d1 >= h ? (-v + Mathf.Sqrt(v * v + 2f * g * h)) / g : t1 + (h - d1) / vmax;
     }
 
-    // ---------- 2. tutorial, facing the landing spot ----------
+    // ---------- 3. countdown, camera swinging behind the runner ----------
 
-    IEnumerator Tutorial()
+    IEnumerator Countdown()
     {
-        Vector3 front = agentT.position + (level.runDir * 7f + level.cameraSide * 2f + Vector3.up * 2.2f) * S;
-        Vector3 look = agentT.position + Vector3.up * 1.1f * S;
+        hud.ShowHud(true);
         bool go = false;
-        var card = hud.ShowTutorial(() => go = true);
+        MinigameKit.Countdown(this, hud.Canvas, () => go = true);
         while (!go)
         {
-            var kb = Keyboard.current;
-            if (kb != null && (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame)) go = true;
             MovePlane();
-            MoveCamera(front, look, 3f);
+            RunCamera();
             yield return null;
         }
-        Destroy(card);
     }
 
-    // ---------- 3. auto-run along the hallways ----------
+    // ---------- 4. auto-run along the hallways ----------
 
     IEnumerator Run()
     {
-        hud.ShowHud(true);
         Play("Run");
         float throwUntil = 0f;
         Vector3 facing = level.runDir;
@@ -385,7 +426,7 @@ public class ShinbunGame : MonoBehaviour
             {
                 // Seconds until the agent is level with the door (holds still while throwing)
                 float t = Vector3.Dot(door.center - agentT.position, level.runDir) / runSpeed;
-                if (t <= promptTime) hud.ShowPrompt(cam.WorldToScreenPoint(door.center), 1f - t / promptTime);
+                if (t <= promptTime) hud.ShowPrompt(cam.WorldToScreenPoint(door.center), 1f - t / promptTime, door.kind);
                 else hud.HidePrompt();
 
                 if (running && t <= promptTime && Pressed() && Judge(t, out bool perfect))
@@ -417,11 +458,16 @@ public class ShinbunGame : MonoBehaviour
                 }
             }
 
-            Vector3 camPos = agentT.position + (level.cameraSide * 8.5f + Vector3.up * 2.6f + level.runDir * 1.5f) * S;
-            MoveCamera(camPos, agentT.position + (Vector3.up * 1.1f + level.runDir * 2.5f) * S, 5f);
+            RunCamera();
             yield return null;
         }
         hud.HidePrompt();
+    }
+
+    void RunCamera()
+    {
+        Vector3 camPos = agentT.position + (level.cameraSide * 8.5f + Vector3.up * 2.6f + level.runDir * 1.5f) * S;
+        MoveCamera(camPos, agentT.position + (Vector3.up * 1.1f + level.runDir * 2.5f) * S, 5f);
     }
 
     // A folded newspaper arcs from the agent's hand into the door
@@ -445,7 +491,7 @@ public class ShinbunGame : MonoBehaviour
         Destroy(paper);
     }
 
-    // ---------- 4. ending: skyhook pick-up from the far helipad ----------
+    // ---------- 5. ending (quickFinish off): skyhook pick-up from the far helipad ----------
 
     IEnumerator Ending()
     {
@@ -548,6 +594,7 @@ public class ShinbunGame : MonoBehaviour
 
     void Leave(bool cleared)
     {
+        if (leaving) return;
         if (cleared) GameProgress.ClearQuest(returnScene);
         if (!Application.CanStreamedLevelBeLoaded(returnScene))
         {
@@ -555,6 +602,7 @@ public class ShinbunGame : MonoBehaviour
                            "Run Tools > Elevator Game > Create Shinbun Arcade Scene to add it.");
             return;
         }
+        leaving = true;
         SceneManager.LoadScene(returnScene);
     }
 

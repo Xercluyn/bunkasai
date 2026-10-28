@@ -16,7 +16,7 @@ public class TicketVendingZone : ElevatorPlayZone
     public string questId = "";
 
     AudioSource audioSource;
-    AudioClip sfxGood, sfxBad;
+    AudioClip sfxGood;
 
     string Quest => string.IsNullOrEmpty(questId) ? gameObject.scene.name : questId;
 
@@ -34,7 +34,6 @@ public class TicketVendingZone : ElevatorPlayZone
         audioSource.playOnAwake = false;
         audioSource.spatialBlend = 0f;
         sfxGood = Sfx.Win();
-        sfxBad = Sfx.Bad();
     }
 
     protected override void Play()
@@ -49,7 +48,6 @@ public class TicketVendingZone : ElevatorPlayZone
         }
         else
         {
-            audioSource.PlayOneShot(sfxBad);
             Toast.Show(L.T($"お金が足りません（¥{GameProgress.Yen:#,0} / ¥{price:#,0}）。アーケードで稼ごう！",
                 $"Not enough money (¥{GameProgress.Yen:#,0} / ¥{price:#,0}). Earn some at the arcade!"), UiKit.Bad);
         }

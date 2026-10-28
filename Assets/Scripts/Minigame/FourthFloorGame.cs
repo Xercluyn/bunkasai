@@ -11,9 +11,10 @@ using UnityEngine.UI;
 /// Unity port of Assets/Minigame/FourthFloorGame (index.html + data.js + script.js + style.css), laid out as the
 /// page shows in a 1920×1080 browser window: lanterns, title and progress, the message, the seven stalls in one
 /// row, and the card tray under them. Drag each card (or tap it, then tap a stall) to the department's stall
-/// that runs it; when every stall has its card the game is cleared. Builds its whole UI at runtime from the PNGs
-/// in FourthFloorGame/images, which the setup tool puts in `art`. Clearing it clears the floor's quest; closing
-/// the congratulations panel goes back to the floor.
+/// that runs it; when every stall has its card the game is cleared. Untimed: a how-to-play card opens it, and a
+/// mistake makes the right stall glow as a hint. Builds its whole UI at runtime from the PNGs in
+/// FourthFloorGame/images, which the setup tool puts in `art`. Clearing it clears the floor's quest; the
+/// congratulations hold a few seconds (a click or Space skips) and then the game goes back to the floor.
 /// </summary>
 public class FourthFloorGame : MonoBehaviour
 {
@@ -29,8 +30,10 @@ public class FourthFloorGame : MonoBehaviour
     /* ---------- data.js settings ---------- */
     const int CardsPerGame = 0;          // cardsPerGame: null
     const bool OnlyFeatured = true;      // onlyFeatured: one card per department (featured: true); false = all cards
-    const int HintAfterMistakes = 3;     // hintAfterMistakes
-    const float WinExit = 1.2f;          // seconds the congratulations show before the game ends by itself (the page: 9)
+    const int HintAfterMistakes = 1;     // hintAfterMistakes (the page: 3)
+
+    // text sizes are the page's CSS px; the 1920×1080 canvas shows them at ×0.67 on a 1280×720 screen, so they grow
+    static int S(int px) => Mathf.RoundToInt(px * 1.4f);
 
     // name is Japanese, en English; Name picks by the current language
     class Dept { public string id, name, en, color; public string Name => L.T(name, en); }
@@ -80,7 +83,7 @@ public class FourthFloorGame : MonoBehaviour
     static string Title => L.T("読祭 マッチングゲーム！", "Yomisai Matching Game!");
     static string MsgInstruction => L.T("カードを、やっている学科の屋台へ！（ドラッグ、またはカードをタップ → 屋台をタップ）",
         "Bring each card to the department that runs it! (drag it, or click a card, then a department)");
-    static string MsgProgressLabel => L.T("せいかい Correctly placed:", "Correctly placed:");
+    static string MsgProgressLabel => L.T("せいかいの数：", "Correctly placed:");
     static string MsgSelected => L.T("「{food}」をえらんだよ。どの屋台かな？", "You picked \"{food}\". Which department is it?");
     static string MsgPickCardFirst => L.T("先にカードをえらんでね", "Pick a card first");
     static string MsgBoothFull => L.T("{dept}の屋台はもうかんせい！ ✓ ほかの屋台にためしてね", "{dept} is already done! ✓ Try another one");
@@ -89,11 +92,11 @@ public class FourthFloorGame : MonoBehaviour
         : new[] { "せいかい！ {food}は{dept}だよ！", "ナイス！ {dept}の{food}！", "ぴったり！ {food}は{dept}で体験できるよ！" };
     static string[] MsgWrong => L.English
         ? new[] { "Not that one, try again!", "So close! Try again!", "Hmm, which department could it be? Try again!" }
-        : new[] { "ちがうよ、もう一度！ Try again!", "おしい！ もう一度ためしてね。 Try again!", "うーん、どこの屋台かな？ Try again!" };
+        : new[] { "ちがうよ、もう一度！", "おしい！ もう一度ためしてね。", "うーん、どこの屋台かな？ もう一度！" };
     static string MsgHint => L.T("ヒント：ピカピカ光っている屋台を見てみて！", "Hint: look at the department that's glowing!");
     static string MsgCongratsTitle => L.T("ぜんぶ せいかい！ おめでとう！", "All correct! Congratulations!");
-    static string MsgCongratsText => L.T("Congratulations! すべての屋台が正しいカードでそろったよ！", "Congratulations! Every department has its right card!");
-    static string MsgCongratsHint => L.T("タップでとじる", "Click to close");
+    static string MsgCongratsText => L.T("すべての屋台が正しいカードでそろったよ！", "Every department has its right card!");
+    static string MsgCongratsHint => L.T("もうすぐフロアに戻るよ", "Heading back to the floor…");
     static string MsgAllDone => L.T("ぜんぶ せいかい！ おめでとう！", "All correct! Congratulations!");   // shown between two 🎉
 
     // style.css :root
@@ -106,7 +109,7 @@ public class FourthFloorGame : MonoBehaviour
     const float GameW = 1920f - 2f * 16f;                  // .game, with narrower side padding
     const float GameTop = 64f;                             // .game padding-top (min-width 1200)
     const float TopbarH = 86f;                             // title sign
-    const float MsgY = GameTop + TopbarH + 12f, MsgH = 64f;
+    const float MsgY = GameTop + TopbarH + 12f, MsgH = 76f;    // tall enough for the enlarged message
     const float BoothsY = MsgY + MsgH + 14f, BoothGap = 16f, MaxBooth = 400f;
     const float AreaBottom = ScreenH - 76f;                // above the back button
     const float PanelW = 506f, PanelGap = 24f, MaxCardW = 240f;
@@ -146,15 +149,17 @@ public class FourthFloorGame : MonoBehaviour
     int total, correct, trayCols;
     float trayColW;
     Vector2 trayOffset;
-    bool finished;
+    bool finished, leaving;
     Vector2 grabOffset;
+    AudioSource audioSource;
+    float messageShakeUntil;   // one MinigameKit.Shake at a time, or the message box would drift
 
     RectTransform canvasRoot, game, boothRow, tray, fx, ghost, progressFill, messageBox;
     Text progressText, message;
     Image messageBg;
     GameObject congrats, trayDone;
     readonly List<GameObject> messageParty = new List<GameObject>();
-    Coroutine congratsTimer, messagePop, bump;
+    Coroutine messagePop, bump;
     readonly List<RectTransform> lanterns = new List<RectTransform>();
     Dictionary<string, Sprite> sprites;
     Sprite party;
@@ -170,8 +175,17 @@ public class FourthFloorGame : MonoBehaviour
         if (sprites.Count == 0) Debug.LogWarning("FourthFloorGame: no art; run Tools > Elevator Game > Create Fourth Floor Game Scene.");
         if (emojiSheet != null) party = Sprite.Create(emojiSheet, new Rect(256, 0, 256, 256), new Vector2(0.5f, 0.5f), 100f);   // 🎉 cell
 
+        audioSource = MinigameKit.Audio(gameObject);
         UiKit.EnsureEventSystem();
         Init();
+        // untimed, so no countdown: the card just covers the game until スタート！
+        MinigameKit.HowToPlay(canvasRoot, "マッチングゲーム", "Matching Game", new[]
+        {
+            ("カードを、その出し物をやっている学科の屋台へドラッグしよう", "Drag each card to the stall of the department that runs it"),
+            ("タップでもOK：カードをタップ → 屋台をタップ", "Or tap a card, then tap a stall"),
+            ("まちがえたら、正しい屋台がピカピカ光ってヒントになるよ", "Wrong stall? The right one glows as a hint"),
+            ($"{booths.Count}つの屋台をぜんぶうめたらクリア！", $"Fill all {booths.Count} stalls to clear!"),
+        }, null, 1.5f);
     }
 
     Sprite Art(string id) => sprites.TryGetValue(id, out var s) ? s : null;
@@ -239,7 +253,10 @@ public class FourthFloorGame : MonoBehaviour
         messageBg = UiKit.Box("Message", game, new Color(1f, 1f, 1f, 0.12f), MsgH * 0.5f);
         messageBox = messageBg.rectTransform;
         UiKit.Place(messageBox, 0f, MsgY, GameW, MsgH);
-        message = UiKit.Label(messageBox, "", 28, Paper);
+        message = UiKit.Label(messageBox, "", S(28), Paper);
+        message.resizeTextForBestFit = true;   // long English lines shrink a little instead of spilling out
+        message.resizeTextMinSize = S(20);
+        message.resizeTextMaxSize = S(28);
         UiKit.Stretch(message.rectTransform);
         message.rectTransform.offsetMin = new Vector2(20f, 4f);
         message.rectTransform.offsetMax = new Vector2(-20f, -4f);
@@ -295,11 +312,11 @@ public class FourthFloorGame : MonoBehaviour
         fx = UiKit.Stretch(UiKit.Rect("Fx", canvasRoot));
 
         // back to the 3D floor, in the empty space under the page
-        var back = UiKit.ColorButton(canvasRoot, L.T("← フロアに戻る", "← Back to the floor"), Paper, Ink, new Color(0f, 0f, 0f, 0.5f), 48f, 22, out var backText);
+        var back = UiKit.ColorButton(canvasRoot, L.T("← フロアに戻る", "← Back to the floor"), Paper, Ink, new Color(0f, 0f, 0f, 0.5f), 56f, S(22), out var backText);
         var brt = (RectTransform)back.transform;
         brt.anchorMin = brt.anchorMax = brt.pivot = Vector2.zero;
-        brt.anchoredPosition = new Vector2(28f, 24f);
-        brt.sizeDelta = new Vector2(backText.preferredWidth + 44f, 48f);
+        brt.anchoredPosition = new Vector2(28f, 12f);
+        brt.sizeDelta = new Vector2(backText.preferredWidth + 48f, 56f);
         back.onClick.AddListener(Leave);
 
         BuildCongrats();
@@ -353,9 +370,10 @@ public class FourthFloorGame : MonoBehaviour
 
         const float progW = 580f, progH = 78f;
         float x = GameW - progW, y = GameTop + (TopbarH - progH) * 0.5f;
-        var plabel = UiKit.Label(game, MsgProgressLabel, 22, Paper, TextAnchor.LowerLeft);
-        UiKit.Place(plabel.rectTransform, x, y, progW - 150f, 46f);
-        progressText = UiKit.Label(game, "0 / 0", 44, Gold, TextAnchor.LowerRight);
+        var plabel = UiKit.Label(game, MsgProgressLabel, S(22), Paper, TextAnchor.LowerLeft);
+        plabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+        UiKit.Place(plabel.rectTransform, x, y, progW - 150f, 50f);
+        progressText = UiKit.Label(game, "0 / 0", S(40), Gold, TextAnchor.LowerRight);
         progressText.horizontalOverflow = HorizontalWrapMode.Overflow;
         UiKit.Place(progressText.rectTransform, GameW - 150f, y, 150f, 52f);
         progressText.rectTransform.pivot = new Vector2(0.8f, 0.5f);
@@ -371,14 +389,11 @@ public class FourthFloorGame : MonoBehaviour
     void BuildCongrats()
     {
         var dim = UiKit.Img("Congrats", canvasRoot, null, new Color(0f, 0f, 0f, 0.44f));
-        dim.raycastTarget = true;
+        dim.raycastTarget = true;   // blocks the game; MinigameKit.ResultThenExit takes the click
         UiKit.Stretch(dim.rectTransform);
-        var close = dim.gameObject.AddComponent<Button>();
-        close.transition = Selectable.Transition.None;
-        close.onClick.AddListener(HideCongrats);
         congrats = dim.gameObject;
 
-        const float w = 540f, h = 252f;
+        const float w = 600f, h = 300f;
         var panel = UiKit.Box("Panel", dim.transform, Paper, 28f, Gold, 5f);
         UiKit.Center(panel.rectTransform, w, h);
         panel.rectTransform.localScale = Vector3.one * 1.35f;   // enlarged with the rest
@@ -401,13 +416,16 @@ public class FourthFloorGame : MonoBehaviour
             ert.anchorMin = ert.anchorMax = ert.pivot = new Vector2(0.5f, 1f);
             ert.anchoredPosition = new Vector2(0f, -78f);
         }
-        var t = UiKit.Label(p, MsgCongratsTitle, 30, Lantern);
-        Top(t.rectTransform, 135f, 40f, w - 56f);
-        var body = UiKit.Label(p, MsgCongratsText, 16, Ink);
-        body.lineSpacing = 1.3f;
-        Top(body.rectTransform, 181f, 26f, w - 56f);
-        var hint = UiKit.Label(p, MsgCongratsHint, 13, new Color(Ink.r, Ink.g, Ink.b, 0.6f), TextAnchor.MiddleCenter, false);
-        Top(hint.rectTransform, 217f, 18f, w - 56f);
+        var t = UiKit.Label(p, MsgCongratsTitle, S(30), Lantern);
+        t.resizeTextForBestFit = true;
+        t.resizeTextMinSize = 28;
+        t.resizeTextMaxSize = S(30);
+        Top(t.rectTransform, 134f, 56f, w - 48f);
+        var body = UiKit.Label(p, MsgCongratsText, S(16), Ink);
+        body.lineSpacing = 1.15f;
+        Top(body.rectTransform, 194f, 56f, w - 48f);
+        var hint = UiKit.Label(p, MsgCongratsHint, S(13), new Color(Ink.r, Ink.g, Ink.b, 0.6f), TextAnchor.MiddleCenter, false);
+        Top(hint.rectTransform, 256f, 28f, w - 48f);
         congrats.SetActive(false);
     }
 
@@ -464,7 +482,7 @@ public class FourthFloorGame : MonoBehaviour
             UiKit.Stretch(b.glow.rectTransform, -16f);
             var board = UiKit.Box("Board", b.body, UiKit.Hex(dept.color), 16f, Ink, 3f);
             UiKit.Stretch(board.rectTransform);
-            var name = UiKit.Label(board.transform, dept.Name, 22, Color.white);
+            var name = UiKit.Label(board.transform, dept.Name, S(22), Color.white);
             name.rectTransform.anchorMin = new Vector2(0f, 0.75f);
             name.rectTransform.anchorMax = Vector2.one;
             name.rectTransform.offsetMin = new Vector2(8f, 0f);
@@ -505,7 +523,7 @@ public class FourthFloorGame : MonoBehaviour
         brt.anchoredPosition = new Vector2(12f, 12f);
         brt.sizeDelta = new Vector2(30f, 30f);
         UiKit.Stretch(UiKit.Img("Fill", brt, UiKit.Circle, Gold).rectTransform, 3f);
-        UiKit.Stretch(UiKit.Label(brt, "✓", 16, Ink).rectTransform);
+        UiKit.Stretch(UiKit.Label(brt, "✓", S(16), Ink).rectTransform);
         c.check = badge.gameObject;
         c.check.SetActive(false);
         return c;
@@ -537,7 +555,10 @@ public class FourthFloorGame : MonoBehaviour
             img.color = Ink;
             UiKit.Round(img, 18f);
             UiKit.Stretch(UiKit.Box("Paper", img.transform, Paper, 15f).rectTransform, 3f);
-            var name = UiKit.Label(parent, f.Name, 18, Ink);
+            var name = UiKit.Label(parent, f.Name, S(18), Ink);
+            name.resizeTextForBestFit = true;
+            name.resizeTextMinSize = 16;
+            name.resizeTextMaxSize = S(18);
             UiKit.Stretch(name.rectTransform, 8f);
         }
         else if (L.English)
@@ -545,13 +566,13 @@ public class FourthFloorGame : MonoBehaviour
             // the card art has its Japanese name printed along the bottom: cover that strip with the English name
             var strip = UiKit.Box("EnglishName", parent, UiKit.Hex("#FFFFFF"), 4f);
             var srt = strip.rectTransform;
-            srt.anchorMin = new Vector2(0.06f, 0.06f);
-            srt.anchorMax = new Vector2(0.94f, 0.24f);
+            srt.anchorMin = new Vector2(0.05f, 0.05f);
+            srt.anchorMax = new Vector2(0.95f, 0.26f);
             srt.offsetMin = srt.offsetMax = Vector2.zero;
-            var en = UiKit.Label(srt, f.Name, 18, Ink);
+            var en = UiKit.Label(srt, f.Name, S(18), Ink);
             en.resizeTextForBestFit = true;
-            en.resizeTextMinSize = 6;
-            en.resizeTextMaxSize = 20;
+            en.resizeTextMinSize = 10;   // low enough for the small card on a stall's counter
+            en.resizeTextMaxSize = S(20);
             en.verticalOverflow = VerticalWrapMode.Truncate;
             en.lineSpacing = 0.9f;
             UiKit.Stretch(en.rectTransform, 1f);
@@ -601,6 +622,7 @@ public class FourthFloorGame : MonoBehaviour
         {
             SetSelected(card);
             SetMessage(Fill(MsgSelected, card.food.Name), "info");
+            audioSource.PlayOneShot(Sfx.Pop());
         }
     }
 
@@ -630,6 +652,7 @@ public class FourthFloorGame : MonoBehaviour
         BuildCardLook(ghost, c.food, 18f);
         c.group.alpha = 0.25f;
         SetSelected(c);
+        audioSource.PlayOneShot(Sfx.Pop());
         Drag(e);
     }
 
@@ -719,6 +742,8 @@ public class FourthFloorGame : MonoBehaviour
         UiKit.Stretch(UiKit.Label(check, "✓", Mathf.RoundToInt(b.root.rect.width * 0.08f), Color.white).rectTransform);
         StartCoroutine(CheckPop(check));
         Sparkle(b.root);
+        audioSource.PlayOneShot(Sfx.Correct());
+        MinigameKit.Punch(this, b.root, 1.08f, 0.25f);   // the root: Update drives the body's scale
         SetMessage(Fill(MsgCorrect[UnityEngine.Random.Range(0, MsgCorrect.Length)], card.food.Name, b.dept.Name), "ok");
         UpdateProgress(true);
         LayoutCards(false);
@@ -737,6 +762,12 @@ public class FourthFloorGame : MonoBehaviour
         b.shakeUntil = Time.time + 0.5f;
         card.shakeUntil = Time.time + 0.5f;
         SetMessage(MsgWrong[UnityEngine.Random.Range(0, MsgWrong.Length)], "ng");
+        audioSource.PlayOneShot(Sfx.Wrong());
+        if (Time.unscaledTime >= messageShakeUntil)
+        {
+            messageShakeUntil = Time.unscaledTime + 0.32f;
+            MinigameKit.Shake(this, messageBox, 14f, 0.3f);
+        }
         if (HintAfterMistakes > 0 && wrongStreak[card.food.id] >= HintAfterMistakes)
         {
             var right = booths.Where(x => x.dept.id == card.food.dept && !x.complete).ToList();
@@ -784,25 +815,20 @@ public class FourthFloorGame : MonoBehaviour
         StartCoroutine(Pop((RectTransform)congrats.transform.GetChild(0), 0.5f, 1.35f));
         Confetti(110);
         SetMessage(MsgAllDone, "ok", true);
-        if (congratsTimer != null) StopCoroutine(congratsTimer);
-        congratsTimer = StartCoroutine(Later(WinExit, HideCongrats));   // the game ends by itself
+        audioSource.PlayOneShot(Sfx.Win());
+        MinigameKit.ResultThenExit(this, canvasRoot, Leave, MinigameKit.ResultHold, 1.5f);   // the game ends by itself
     }
 
-    // Closing the panel (a click or after 9 s) ends the game: back to the floor
-    void HideCongrats()
-    {
-        if (congratsTimer != null) StopCoroutine(congratsTimer);
-        congrats.SetActive(false);
-        Leave();
-    }
-
+    // once: the back button and the result hold can both ask
     void Leave()
     {
+        if (leaving) return;
         if (!Application.CanStreamedLevelBeLoaded(floorScene))
         {
             Debug.LogError($"FourthFloorGame: '{floorScene}' is not in Build Settings. Run Tools > Elevator Game > Create Fourth Floor Game Scene.");
             return;
         }
+        leaving = true;
         SceneManager.LoadScene(floorScene);
     }
 

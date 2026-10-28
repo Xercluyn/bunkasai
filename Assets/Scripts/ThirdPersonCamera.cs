@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 /// <summary>
@@ -7,7 +6,8 @@ using UnityEngine.InputSystem;
 /// The mouse orbits it around the character and it pulls in when a wall is in the way. It never turns
 /// by itself: WASD moves relative to the camera, so a camera that followed the character's facing
 /// would keep turning A/D strafes into circles.
-/// Put it on the Main Camera. Esc frees the cursor; click the game view to look around again.
+/// Put it on the Main Camera. The cursor is locked for looking around, and free while the pause menu
+/// (FloorPauseMenu, Esc) or a panel that must be clicked (the ending) is open.
 /// </summary>
 public class ThirdPersonCamera : MonoBehaviour
 {
@@ -20,8 +20,6 @@ public class ThirdPersonCamera : MonoBehaviour
     public float shoulderOffset = 0.25f;
 
     [Header("Look")]
-    [Tooltip("Degrees per pixel of mouse movement.")]
-    public float mouseSensitivity = 0.12f;
     public float minPitch = -35f;
     public float maxPitch = 60f;
     public float startPitch = 12f;
@@ -29,19 +27,14 @@ public class ThirdPersonCamera : MonoBehaviour
     [Tooltip("Layers the camera can't pass through.")]
     public LayerMask obstacleMask = ~0;
 
-    /// <summary>Set by UI that needs a free mouse cursor (e.g. the elevator Play button).</summary>
-    public static bool uiNeedsCursor;
-
-    /// <summary>Set while a panel that must be clicked is open (the ending). Kept apart from uiNeedsCursor,
-    /// which play zones switch off when their button hides.</summary>
+    /// <summary>Set while a panel that must be clicked is open (the ending): frees the cursor.</summary>
     public static bool panelOpen;
 
     // no domain reload on entering Play Mode: start each session with the cursor rules reset
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void NewSession() => uiNeedsCursor = panelOpen = false;
+    static void NewSession() => panelOpen = false;
 
     float yaw, pitch, height = 1.8f, currentDistance;
-    bool userFreedCursor;
     Collider[] targetColliders;
     Camera cam;
 
@@ -78,7 +71,7 @@ public class ThirdPersonCamera : MonoBehaviour
         var mouse = Mouse.current;
         if (Cursor.lockState == CursorLockMode.Locked && mouse != null)
         {
-            Vector2 d = mouse.delta.ReadValue() * mouseSensitivity;
+            Vector2 d = mouse.delta.ReadValue() * FloorPauseMenu.LookSpeed;   // the pause menu's 視点感度
             yaw += d.x;
             pitch = Mathf.Clamp(pitch - d.y, minPitch, maxPitch);
         }
@@ -128,20 +121,13 @@ public class ThirdPersonCamera : MonoBehaviour
         return c.transform.IsChildOf(target);
     }
 
+    // Locked unless a menu or panel needs the mouse. Asked for again every frame, so a click back into the game
+    // view relocks it after the editor or the browser let it go.
     void UpdateCursor()
     {
-        var kb = Keyboard.current;
-        var mouse = Mouse.current;
-        if (kb != null && kb.escapeKey.wasPressedThisFrame) userFreedCursor = true;
-        if (userFreedCursor && !uiNeedsCursor && !panelOpen && mouse != null && mouse.leftButton.wasPressedThisFrame && !PointerOverUi())
-            userFreedCursor = false;
-
-        bool free = userFreedCursor || uiNeedsCursor || panelOpen;
+        bool free = FloorPauseMenu.Open || panelOpen;
         var mode = free ? CursorLockMode.None : CursorLockMode.Locked;
         if (Cursor.lockState != mode) Cursor.lockState = mode;
         Cursor.visible = free;
     }
-
-    static bool PointerOverUi() =>
-        EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 }

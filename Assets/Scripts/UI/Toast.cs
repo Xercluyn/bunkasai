@@ -5,7 +5,7 @@ using UnityEngine.UI;
 /// <summary>
 /// A one-line message strip in the lower middle of the screen that fades after a few seconds
 /// (the ticket machine's 「お金が足りません」, the elevator's 「クエストをクリアしてから」). Toast.Show from anywhere;
-/// it builds its own canvas the first time in each scene.
+/// it builds its own canvas the first time in each scene. It pops as it appears (a softer buzz for UiKit.Bad).
 /// </summary>
 public class Toast : MonoBehaviour
 {
@@ -42,6 +42,7 @@ public class Toast : MonoBehaviour
     {
         text.text = message;
         text.color = color;
+        Sfx.PlayUi(color == UiKit.Bad ? Sfx.Wrong() : Sfx.Pop());
         if (fade != null) StopCoroutine(fade);
         fade = StartCoroutine(Fade(seconds));
     }

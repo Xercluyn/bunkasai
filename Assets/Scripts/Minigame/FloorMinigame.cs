@@ -7,13 +7,15 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Unity port of Assets/Minigame (index.html + script.js + style.css): find three "↑" cards
-/// among twelve within 30 seconds and 7 taps. Builds its whole UI at runtime, so the scene
-/// only needs a camera, an EventSystem and this component.
+/// among twelve within 55 seconds and 10 taps. スタート (and every restart) runs the shared 3-2-1
+/// countdown before the clock starts; a win holds for MinigameKit.ResultHold (skippable) and then
+/// rides the elevator to the next floor. Builds its whole UI at runtime, so the scene only needs a
+/// camera, an EventSystem and this component.
 /// </summary>
 [RequireComponent(typeof(AudioSource))]
 public class FloorMinigame : MonoBehaviour
 {
-    const float TOTAL_TIME = 45f;      // easy mode (was 30)
+    const float TOTAL_TIME = 55f;      // easy mode (was 30, then 45)
     const int NEED = 3;
     const float FLIP = 0.3f;
     const float HOLD = 0.5f;      // how long a wrong card stays face-up before turning back
@@ -21,7 +23,8 @@ public class FloorMinigame : MonoBehaviour
 
     enum Dir { Up, Right, Down, Left }
     static readonly float[] ROT = { 0f, 90f, 180f, 270f };
-    enum State { Idle, Playing, Paused, Over }
+    enum State { Idle, Countdown, Playing, Paused, Over }
+    const int WARN_FROM = 5;      // warning beep once a second over the last seconds
 
     [Tooltip("Scene loaded by 「次のステージへ」. Leave empty until the next level exists.")]
     [SceneName] public string nextLevelScene = "";
@@ -34,12 +37,12 @@ public class FloorMinigame : MonoBehaviour
         public int index;
         public Dir dir;
         public RectTransform root, inner, coverSide, faceSide, arrow;
-        public Image coverShadow, coverRing, faceGlow, faceShadow, faceRing, faceBorder, arrowImg;
+        public Image coverShadow, coverRing, faceGlow, faceShadow, faceRing, faceBorder, arrowImg, flash;
         public CanvasGroup faceGroup;
         public UiPointerState pointer;
         public bool flipped, good, bad, ghost, disabled, hasArrow;
-        public float angle, lift, shadowDown = 6f, shakeX;
-        public Coroutine anim, shake;
+        public float angle, lift, shadowDown = 6f;
+        public Coroutine anim;
     }
 
     readonly List<Card> cards = new List<Card>();
@@ -47,6 +50,8 @@ public class FloorMinigame : MonoBehaviour
     int score, taps;
     State state = State.Idle;
     float startAt, pausedElapsed;
+    int lastWarn;                 // the last whole second that beeped
+    bool leaving;
     readonly List<Card> pendingBad = new List<Card>();   // wrong cards waiting to turn back
     readonly List<Coroutine> flipTimers = new List<Coroutine>();
     Coroutine endTimer;
@@ -58,6 +63,8 @@ public class FloorMinigame : MonoBehaviour
     Image timeBarImg, timeMeterBorder, tapMeterBorder;
     Image[] scorePips, tapPips;
     Button passBtn, restartPlayBtn;
+    Text passBtnText;
+    Transform canvasRoot;
     GameObject startScreen, winScreen, loseScreen, passScreen;
     Text winTime, loseReason, loseScore, loseNote, passTime, passScore, passTaps;
     bool timeDanger, tapDanger;
@@ -119,6 +126,7 @@ public class FloorMinigame : MonoBehaviour
     {
         var canvas = UiKit.MakeCanvas("MinigameCanvas", 0, new Vector2(900f, 740f));
         var root = (RectTransform)canvas.transform;
+        canvasRoot = root;
 
         // body background
         var bg = UiKit.Img("Background", root, null, UiKit.Bg);
@@ -166,17 +174,18 @@ public class FloorMinigame : MonoBehaviour
         // actions
         float actionsY = 160f + boardH + 14f;
         restartPlayBtn = UiKit.SubButton(wrap, L.T("↻ リスタート", "↻ Restart"), out var rpText);
-        passBtn = UiKit.SubButton(wrap, L.T("一時停止中", "Paused"), out var passText);
-        float w1 = rpText.preferredWidth + 60f, w2 = passText.preferredWidth + 60f;
+        passBtn = UiKit.SubButton(wrap, L.T("続ける ▶", "Continue ▶"), out passBtnText);
+        float w1 = rpText.preferredWidth + 60f, w2 = passBtnText.preferredWidth + 60f;   // sized for the longer label
+        passBtnText.text = L.T("一時停止", "Pause");
         float ax = (W - (w1 + 12f + w2)) * 0.5f;
         UiKit.Place((RectTransform)restartPlayBtn.transform, ax, actionsY, w1, 46f);
         UiKit.Place((RectTransform)passBtn.transform, ax + w1 + 12f, actionsY, w2, 46f);
         restartPlayBtn.interactable = passBtn.interactable = false;
         restartPlayBtn.onClick.AddListener(StartGame);   // リスタート: new shuffle, timer and taps reset
-        passBtn.onClick.AddListener(Pause);              // パス: pause; 続ける: resume from the same spot
+        passBtn.onClick.AddListener(() => { if (state == State.Paused) Resume(); else Pause(); });   // 一時停止 / 続ける
 
-        var foot = UiKit.Label(wrap, L.T("「↑」を3枚見つけよう！", "Find three \"↑\" cards!"), 13, UiKit.Muted, TextAnchor.MiddleCenter, false);
-        UiKit.Place(foot.rectTransform, 0f, actionsY + 46f + 14f, W, 18f);
+        var foot = UiKit.Label(wrap, L.T("「↑」を3枚見つけよう！", "Find three \"↑\" cards!"), 18, UiKit.Muted, TextAnchor.MiddleCenter, false);
+        UiKit.Place(foot.rectTransform, 0f, actionsY + 46f + 10f, W, 24f);
 
         BuildOverlays(root);
 
@@ -195,16 +204,17 @@ public class FloorMinigame : MonoBehaviour
     {
         borderImg = UiKit.Box("Meter", parent, UiKit.Panel, 14f, UiKit.Line, 2f);
         var m = borderImg.rectTransform;
-        UiKit.Place(m, x, 54f, w, 92f);
-        var l = UiKit.Label(m, label, 11, UiKit.Muted, TextAnchor.MiddleLeft);
-        UiKit.Place(l.rectTransform, 14f, 10f, w - 28f, 14f);
-        val = UiKit.Label(m, "", 28, UiKit.Fg, TextAnchor.MiddleLeft);
+        UiKit.Place(m, x, 48f, w, 106f);
+        var l = UiKit.Label(m, label, 18, UiKit.Muted, TextAnchor.MiddleLeft);
+        l.horizontalOverflow = HorizontalWrapMode.Overflow;
+        UiKit.Place(l.rectTransform, 14f, 8f, w - 28f, 24f);
+        val = UiKit.Label(m, "", 32, UiKit.Fg, TextAnchor.MiddleLeft);
         val.horizontalOverflow = HorizontalWrapMode.Overflow;
-        UiKit.Place(val.rectTransform, 14f, 28f, w - 28f, 30f);
+        UiKit.Place(val.rectTransform, 14f, 34f, w - 28f, 34f);
         val.rectTransform.pivot = new Vector2(0.3f, 0.5f);   // pulse grows from near the digits
-        val.rectTransform.anchoredPosition += new Vector2(0.3f * (w - 28f), -15f);
+        val.rectTransform.anchoredPosition += new Vector2(0.3f * (w - 28f), -17f);
         bottom = UiKit.Rect("Bottom", m);
-        UiKit.Place(bottom, 14f, 62f, w - 28f, 20f);
+        UiKit.Place(bottom, 14f, 78f, w - 28f, 20f);
     }
 
     Image[] BuildPips(RectTransform parent, int count, float width)
@@ -231,7 +241,7 @@ public class FloorMinigame : MonoBehaviour
         Rule(rules, "✕", UiKit.Bad, L.T("違うカードは「?」に戻ります。場所を覚えよう！", "Wrong cards turn back to \"?\". Remember where they are!"));
         Rule(rules, MAX_TAPS.ToString(), UiKit.Accent, L.T($"押せるのは{MAX_TAPS}回まで。", $"You can tap up to {MAX_TAPS} times."));
         Rule(rules, ((int)TOTAL_TIME).ToString(), UiKit.Bad, L.T($"制限時間は{(int)TOTAL_TIME}秒。急げ！", $"You have {(int)TOTAL_TIME} seconds. Hurry!"));
-        Rule(rules, "▶▶", UiKit.Accent, L.T("「パス」で一時停止、「続ける」で再開！", "\"Pause\" stops the game, \"Continue\" resumes it!"));
+        Rule(rules, "II", UiKit.Accent, L.T("「一時停止」で止めて、「続ける」で再開！", "\"Pause\" stops the game, \"Continue\" resumes it!"));
         UiKit.MainButton(start, L.T("スタート！", "Start!"), out _).onClick.AddListener(StartGame);
 
         // Win screen
@@ -278,7 +288,7 @@ public class FloorMinigame : MonoBehaviour
         overlay = dim.gameObject;
 
         var panel = UiKit.Box("Panel", dim.transform, UiKit.Panel, 22f, UiKit.Line, 3f).rectTransform;
-        UiKit.Center(panel, 420f, 300f);
+        UiKit.Center(panel, 480f, 300f);
         var v = panel.gameObject.AddComponent<VerticalLayoutGroup>();
         v.padding = new RectOffset(25, 25, 27, 27);
         v.spacing = 14f;
@@ -312,11 +322,11 @@ public class FloorMinigame : MonoBehaviour
         h.childControlWidth = h.childControlHeight = true;
         h.childForceExpandWidth = h.childForceExpandHeight = false;
 
-        var b = UiKit.Label(li.transform, icon, 18, iconColor, TextAnchor.UpperCenter);
+        var b = UiKit.Label(li.transform, icon, 20, iconColor, TextAnchor.UpperCenter);
         b.horizontalOverflow = HorizontalWrapMode.Overflow;
         var be = b.gameObject.AddComponent<LayoutElement>();
         be.minWidth = be.preferredWidth = 30f;
-        var t = UiKit.Label(li.transform, text, 17, UiKit.Fg, TextAnchor.UpperLeft);
+        var t = UiKit.Label(li.transform, text, 19, UiKit.Fg, TextAnchor.UpperLeft);
         t.lineSpacing = 1.15f;
         t.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
     }
@@ -344,16 +354,16 @@ public class FloorMinigame : MonoBehaviour
         v.childForceExpandHeight = false;
         box.gameObject.AddComponent<LayoutElement>().minWidth = 110f;
 
-        var l = UiKit.Label(box.transform, label, 11, UiKit.Muted);
+        var l = UiKit.Label(box.transform, label, 18, UiKit.Muted);
         l.horizontalOverflow = HorizontalWrapMode.Overflow;
-        var s = UiKit.Label(box.transform, value, 24, UiKit.Fg);
+        var s = UiKit.Label(box.transform, value, 26, UiKit.Fg);
         s.horizontalOverflow = HorizontalWrapMode.Overflow;
         return s;
     }
 
     static Text Reason(RectTransform parent, string text)
     {
-        var t = UiKit.Label(parent, text, 15, UiKit.Muted, TextAnchor.UpperCenter, false);
+        var t = UiKit.Label(parent, text, 18, UiKit.Muted, TextAnchor.UpperCenter, false);
         t.lineSpacing = 1.15f;
         return t;
     }
@@ -385,7 +395,6 @@ public class FloorMinigame : MonoBehaviour
         foreach (var c in cards)
         {
             if (c.anim != null) StopCoroutine(c.anim);
-            if (c.shake != null) StopCoroutine(c.shake);
             Destroy(c.root.gameObject);
         }
         cards.Clear();
@@ -439,6 +448,8 @@ public class FloorMinigame : MonoBehaviour
             UiKit.Center(UiKit.Img("Fill", c.faceSide, UiKit.Circle, UiKit.CardFace).rectTransform, s - 6f, s - 6f);
             c.arrowImg = UiKit.Img("Arrow", c.faceSide, UiKit.Arrow, UiKit.CardInk);
             c.arrow = UiKit.Center(c.arrowImg.rectTransform, (s - 6f) * 0.56f, (s - 6f) * 0.56f);
+            c.flash = UiKit.Img("Flash", c.faceSide, UiKit.Circle, Color.clear);   // brief red flash on a wrong card
+            UiKit.Center(c.flash.rectTransform, s + 6f, s + 6f);
 
             cards.Add(c);
             ApplyCard(c, true);
@@ -489,8 +500,7 @@ public class FloorMinigame : MonoBehaviour
 
         c.bad = true;
         audioSource.PlayOneShot(sfxBad);
-        if (c.shake != null) StopCoroutine(c.shake);
-        c.shake = StartCoroutine(Shake(c));
+        StartCoroutine(WrongFeedback(c));
 
         if (taps >= MAX_TAPS) { Finish("taps"); return; }
         // turns back on its own; other cards can be tapped meanwhile
@@ -525,7 +535,7 @@ public class FloorMinigame : MonoBehaviour
         timeDanger = t < 10f;
     }
 
-    static string Small(string s) => "<size=16><color=#a9a2d9>" + s + "</color></size>";
+    static string Small(string s) => "<size=20><color=#a9a2d9>" + s + "</color></size>";
 
     static void SetPip(Image pip, bool on, Color onColor)
     {
@@ -539,6 +549,12 @@ public class FloorMinigame : MonoBehaviour
         {
             float left = TOTAL_TIME - (Time.time - startAt);
             RenderTime(left);
+            int sec = Mathf.CeilToInt(left);
+            if (sec >= 1 && sec <= WARN_FROM && sec != lastWarn)
+            {
+                lastWarn = sec;
+                audioSource.PlayOneShot(Sfx.Warn());
+            }
             if (left <= 0f) Finish("time");
         }
 
@@ -564,7 +580,6 @@ public class FloorMinigame : MonoBehaviour
     {
         bool showFace = c.angle > 90f;
         c.inner.localScale = new Vector3(Mathf.Max(0.001f, Mathf.Abs(Mathf.Cos(c.angle * Mathf.Deg2Rad))), 1f, 1f);
-        c.inner.anchoredPosition = new Vector2(c.shakeX, 0f);
         c.coverSide.gameObject.SetActive(!showFace);
         c.faceSide.gameObject.SetActive(showFace);
 
@@ -611,20 +626,19 @@ public class FloorMinigame : MonoBehaviour
         c.anim = null;
     }
 
-    // .card.bad .inner { animation: shake .2s }, started as the flip lands
-    IEnumerator Shake(Card c)
+    // wrong card: a firm shake and a red flash, started as the flip lands
+    IEnumerator WrongFeedback(Card c)
     {
         yield return new WaitForSeconds(FLIP * 0.9f);
-        for (float t = 0f; t < 0.2f; t += Time.deltaTime)
+        if (c.root == null) yield break;   // board rebuilt meanwhile
+        MinigameKit.Shake(this, c.root, 10f, 0.35f);
+        for (float t = 0f; t < 0.4f; t += Time.deltaTime)
         {
-            float p = t / 0.2f;
-            c.shakeX = p < 0.33f ? Mathf.Lerp(0f, -3f, p / 0.33f)
-                     : p < 0.66f ? Mathf.Lerp(-3f, 3f, (p - 0.33f) / 0.33f)
-                     : Mathf.Lerp(3f, 0f, (p - 0.66f) / 0.34f);
+            if (c.flash == null) yield break;
+            c.flash.color = new Color(UiKit.Bad.r, UiKit.Bad.g, UiKit.Bad.b, 0.75f * (1f - t / 0.4f));
             yield return null;
         }
-        c.shakeX = 0f;
-        c.shake = null;
+        if (c.flash != null) c.flash.color = Color.clear;
     }
 
     void StartGame()
@@ -644,10 +658,18 @@ public class FloorMinigame : MonoBehaviour
         RenderScore();
         RenderTaps();
         RenderTime(TOTAL_TIME);
-        state = State.Playing;
-        passBtn.interactable = true;
-        restartPlayBtn.interactable = true;
-        startAt = Time.time;
+        // the clock starts after 3-2-1; the countdown layer blocks the board meanwhile
+        state = State.Countdown;
+        passBtn.interactable = restartPlayBtn.interactable = false;
+        passBtnText.text = L.T("一時停止", "Pause");
+        lastWarn = 0;
+        MinigameKit.Countdown(this, canvasRoot, () =>
+        {
+            if (state != State.Countdown) return;
+            state = State.Playing;
+            passBtn.interactable = restartPlayBtn.interactable = true;
+            startAt = Time.time;
+        });
     }
 
     /* ---------- pass = pause, then continue from the same spot ---------- */
@@ -659,7 +681,7 @@ public class FloorMinigame : MonoBehaviour
         ClearFlipTimers();
         foreach (var c in pendingBad) Hide(c);
         pendingBad.Clear();
-        passBtn.interactable = false;
+        passBtnText.text = L.T("続ける ▶", "Continue ▶");
         passTime.text = Mathf.Max(0f, TOTAL_TIME - pausedElapsed).ToString("0.0") + L.T("秒", "s");
         passScore.text = score + "/3";
         passTaps.text = (MAX_TAPS - taps) + "/" + MAX_TAPS;
@@ -671,7 +693,7 @@ public class FloorMinigame : MonoBehaviour
         if (state != State.Paused) return;
         passScreen.SetActive(false);
         state = State.Playing;
-        passBtn.interactable = true;
+        passBtnText.text = L.T("一時停止", "Pause");
         startAt = Time.time - pausedElapsed;
     }
 
@@ -681,6 +703,7 @@ public class FloorMinigame : MonoBehaviour
         state = State.Over;
         passBtn.interactable = false;
         restartPlayBtn.interactable = false;
+        passBtnText.text = L.T("一時停止", "Pause");
         ClearFlipTimers();
         float elapsed = Mathf.Min(TOTAL_TIME, Time.time - startAt);
         RenderTime(TOTAL_TIME - elapsed);
@@ -694,7 +717,8 @@ public class FloorMinigame : MonoBehaviour
                 ShowOverlay(winScreen);
                 audioSource.PlayOneShot(sfxWin);
                 confetti.Burst();
-                endTimer = StartCoroutine(Delay(WinExit, NextLevel));   // straight on to the next floor
+                // holds a moment (click / Space skips), then straight on to the next floor
+                endTimer = MinigameKit.ResultThenExit(this, canvasRoot, NextLevel, MinigameKit.ResultHold);
             }));
         }
         else
@@ -722,6 +746,8 @@ public class FloorMinigame : MonoBehaviour
 
     void NextLevel()
     {
+        if (leaving) return;   // the result hold and 「次のステージへ」 can both fire
+        leaving = true;
         if (GameProgress.PlayingSingleFloor)
         {
             // only the first floor was picked on the menu: winning here clears it (the ending shows there)
@@ -737,8 +763,6 @@ public class FloorMinigame : MonoBehaviour
         Debug.LogWarning("FloorMinigame: next level scene not set or not in Build Settings; returning to the floor.");
         SceneManager.LoadScene(floorScene);
     }
-
-    const float WinExit = 1.2f;   // seconds the win shows before the game ends by itself
 
     /* ---------- timers (setTimeout equivalents) ---------- */
     Coroutine After(float seconds, Action action) => StartCoroutine(Delay(seconds, action));

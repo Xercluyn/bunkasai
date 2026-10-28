@@ -1,5 +1,7 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -7,7 +9,10 @@ using UnityEngine.UI;
 /// <summary>
 /// Trigger area in front of the elevator button (or any machine, like the fifth floor's arcade box).
 /// While the player stands inside it, a prompt like 「E　▶ プレイ」 appears at the bottom centre of the screen
-/// and the object's orange outline lights up; pressing E (or Enter, or clicking it) loads the minigame scene.
+/// (with a blip) and the object's orange outline lights up; pressing E, Enter or the left mouse button (or clicking
+/// the prompt) leaves for the minigame scene a moment later, with a click and a whoosh. Nothing happens while the
+/// player is locked (intro, pause menu, ending). An object that can't be used yet (the elevator before the quest
+/// is cleared) gets a dim grey outline instead.
 /// Size and move the BoxCollider so it covers the floor right in front of the button.
 /// </summary>
 [RequireComponent(typeof(BoxCollider))]
@@ -38,10 +43,20 @@ public class ElevatorPlayZone : MonoBehaviour
     protected PlayerMovement player;
     InteractableOutline outline;
     RectTransform buttonRect;
-    Text labelText;
+    Text labelText, keysText;
+    bool leaving;
+
+    /// <summary>True from a zone starting its minigame until the scene changes; the pause menu stays shut.</summary>
+    public static bool Leaving { get; private set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void NewPlay() => Leaving = false;
 
     /// <summary>False hides the prompt even with the player in the zone (e.g. the ticket is already bought).</summary>
     protected virtual bool Available => true;
+
+    /// <summary>False greys the object's outline: it can be walked up to but not used yet (the locked elevator).</summary>
+    protected virtual bool Unlocked => true;
 
     void Reset() => ConfigurePhysics();
 
@@ -67,23 +82,38 @@ public class ElevatorPlayZone : MonoBehaviour
             UiKit.Stretch(key.rectTransform);
             labelText.rectTransform.offsetMin = new Vector2(56f, 0f);
             labelText.rectTransform.offsetMax = new Vector2(-20f, 0f);
+
+            // 「E / クリック」 under the button
+            keysText = UiKit.Label(buttonRect, "", 15, UiKit.Fg);
+            var krt = keysText.rectTransform;
+            krt.anchorMin = krt.anchorMax = new Vector2(0.5f, 0f);
+            krt.pivot = new Vector2(0.5f, 1f);
+            krt.anchoredPosition = new Vector2(0f, -8f);
+            krt.sizeDelta = new Vector2(300f, 20f);
+            UiKit.HardShadow(keysText, new Color(0f, 0f, 0f, 0.6f), 2f);
             Relabel();
         }
 
-        playButton.onClick.AddListener(Play);
+        playButton.onClick.AddListener(TryPlay);
         playButton.gameObject.SetActive(false);
         L.Changed += Relabel;
     }
 
     void OnEnable() => zones.Add(this);
 
-    void OnDestroy() => L.Changed -= Relabel;
+    void OnDestroy()
+    {
+        L.Changed -= Relabel;
+        PlayerLock.Set(this, false);
+        if (leaving) leaving = Leaving = false;
+    }
 
     // the language was switched
     void Relabel()
     {
         if (labelText == null) return;
         labelText.text = L.Tr(buttonLabel);
+        keysText.text = L.T("E / クリック", "E / Click");
         buttonRect.sizeDelta = new Vector2(Mathf.Max(200f, labelText.preferredWidth + 76f), 54f);
     }
 
@@ -111,23 +141,38 @@ public class ElevatorPlayZone : MonoBehaviour
     {
         zones.Remove(this);
         player = null;
+        PlayerLock.Set(this, false);
+        if (leaving) leaving = Leaving = false;
         if (outline != null) outline.focused = false;
         if (playButton != null) playButton.gameObject.SetActive(false);
     }
 
     void Update()
     {
+        if (outline != null) outline.locked = !Unlocked;
         bool show = Wants && Nearest();
         if (playButton.gameObject.activeSelf != show)
         {
             playButton.gameObject.SetActive(show);
             if (outline != null) outline.focused = show;
+            if (show) Sfx.PlayUi(Sfx.Blip(), 0.6f);
         }
         if (!show) return;
 
         var kb = Keyboard.current;
-        if (kb != null && (kb.eKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame))
-            Play();
+        var mouse = Mouse.current;
+        bool key = kb != null && (kb.eKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame);
+        // a click while looking around (cursor locked, nothing on screen under it) works like E
+        bool click = mouse != null && mouse.leftButton.wasPressedThisFrame && Cursor.lockState == CursorLockMode.Locked &&
+                     !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject());
+        if (key || click) TryPlay();
+    }
+
+    // E, a click or the prompt: not while the player is locked or already on the way
+    void TryPlay()
+    {
+        if (leaving || PlayerLock.Locked) return;
+        Play();
     }
 
     bool Wants => player != null && Available && (!requireFacing || IsFacing());
@@ -175,7 +220,18 @@ public class ElevatorPlayZone : MonoBehaviour
             return;
         }
         if (player != null) GameProgress.RememberSpot(player.transform);   // come back here afterwards
-        SceneManager.LoadScene(minigameScene);
+        StartCoroutine(Leave(minigameScene));
+    }
+
+    // click and whoosh, hold the player still, then load (a moment later, so the sounds and press register)
+    IEnumerator Leave(string scene)
+    {
+        leaving = Leaving = true;
+        PlayerLock.Set(this, true);
+        Sfx.PlayUi(Sfx.Click());
+        Sfx.PlayUi(Sfx.Whoosh(), 0.7f);
+        yield return new WaitForSecondsRealtime(0.25f);
+        SceneManager.LoadScene(scene);
     }
 
     void OnDrawGizmos()

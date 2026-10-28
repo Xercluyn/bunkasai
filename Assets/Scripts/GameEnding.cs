@@ -6,8 +6,9 @@ using UnityEngine.UI;
 /// <summary>
 /// The end of the game: on the fifth floor once its quest is cleared (back from the newspaper game), or, when
 /// one floor was picked on the menu, once that floor's quest is cleared. A panel says the game is cleared and
-/// offers メニューへ (back to the menu, a new game) or staying to look around; the floor's 「≡ メニュー」 button
-/// (FloorMenuButton) stays in the corner either way. The panel waits for the クエストクリア！ celebration, then pops in.
+/// offers メニューへ (back to the menu, a new game) or staying to look around; the pause menu (Esc) still leads back to
+/// the menu afterwards. The panel waits for the クエストクリア！ celebration (and a closed pause menu), then pops in;
+/// the player stays still while it is up.
 /// Added by Tools > Elevator Game > Add Ending To Fifth Floor, or at runtime by PlayerMovement on every floor:
 /// a runtime one only shows on the top floor (quest cleared and no elevator going up) or in one-floor mode.
 /// </summary>
@@ -83,9 +84,10 @@ public class GameEnding : MonoBehaviour
             text.text = L.T("おめでとう！学園祭のすべてのクエストをクリアしました。", "Congratulations! You cleared every quest of the school festival.");
         }
         yield return new WaitForSecondsRealtime(delay);
-        while (QuestBanner.Celebrating) yield return null;
+        while (QuestBanner.Celebrating || FloorPauseMenu.Open) yield return null;
         panel.SetActive(true);
         ThirdPersonCamera.panelOpen = true;   // free the mouse so the buttons can be clicked
+        PlayerLock.Set(this, true);
 
         // dim fades in, the panel pops: 85% → 103% → 100%
         for (float t = 0f; t < 0.45f; t += Time.unscaledDeltaTime)
@@ -103,6 +105,7 @@ public class GameEnding : MonoBehaviour
     {
         panel.SetActive(false);
         ThirdPersonCamera.panelOpen = false;
+        PlayerLock.Set(this, false);
     }
 
     // 「２階」 / "2F" from the floor's quest banner; "this floor" without one
@@ -116,6 +119,7 @@ public class GameEnding : MonoBehaviour
     void Restart()
     {
         ThirdPersonCamera.panelOpen = false;
+        PlayerLock.Set(this, false);
         // no quests, no money: a new game from the menu (or the first floor if there's no menu)
         if (!string.IsNullOrEmpty(GameProgress.MenuScene) && Application.CanStreamedLevelBeLoaded(GameProgress.MenuScene))
         {
@@ -130,5 +134,9 @@ public class GameEnding : MonoBehaviour
             SceneManager.LoadScene(0);
     }
 
-    void OnDestroy() => ThirdPersonCamera.panelOpen = false;
+    void OnDestroy()
+    {
+        ThirdPersonCamera.panelOpen = false;
+        PlayerLock.Set(this, false);
+    }
 }

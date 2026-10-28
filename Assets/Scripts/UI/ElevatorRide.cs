@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// The ride between floors: elevator doors close over the screen, the floor indicator counts up while the next
 /// scene loads behind them (with a gentle shake and passing light bars), the display flashes and 「3階」 stamps in
-/// with that floor's game, then the doors open on the new floor. Lives across the scene load and removes itself;
+/// with that floor's game (a two-tone chime), then the doors open on the new floor; the doors whoosh both ways. Lives across the scene load and removes itself;
 /// QuestBanner waits for it (Busy) before showing the floor's name and quest.
 /// Used by the menu, the elevators going up (ElevatorExitZone) and the first floor's minigame.
 /// </summary>
@@ -153,13 +153,14 @@ public class ElevatorRide : MonoBehaviour
         }
 
         // doors close
+        audioSource.PlayOneShot(Sfx.Whoosh(), 0.8f);
         for (float t = 0f; t < DoorTime; t += Time.unscaledDeltaTime)
         {
             SetDoors(UiKit.EaseInOut(t / DoorTime));
             yield return null;
         }
         SetDoors(1f);
-        audioSource.PlayOneShot(Sfx.Make("doors", (180, 0f, .12f, Sfx.Wave.Triangle, .18f, 120)));
+        audioSource.PlayOneShot(DoorsShut());
 
         // ride: load behind the doors while the number counts
         var load = SceneManager.LoadSceneAsync(scene);
@@ -184,7 +185,7 @@ public class ElevatorRide : MonoBehaviour
         if (showFloor)
         {
             // ding: the display flashes and the floor stamps in
-            audioSource.PlayOneShot(Sfx.Make("ding", (1319, 0f, .5f, Sfx.Wave.Triangle, .16f, 0), (1047, .18f, .7f, Sfx.Wave.Triangle, .14f, 0)));
+            audioSource.PlayOneShot(Ding());
             for (float t = 0f; t < 0.9f; t += Time.unscaledDeltaTime)
             {
                 float flash = Mathf.Abs(Mathf.Sin(t / 0.3f * Mathf.PI));
@@ -207,6 +208,7 @@ public class ElevatorRide : MonoBehaviour
         contentGroup.alpha = 0f;
 
         // doors open on the new floor
+        audioSource.PlayOneShot(Sfx.Whoosh(), 0.8f);
         for (float t = 0f; t < DoorTime; t += Time.unscaledDeltaTime)
         {
             SetDoors(1f - UiKit.EaseInOut(t / DoorTime));
@@ -215,6 +217,15 @@ public class ElevatorRide : MonoBehaviour
         Busy = false;
         Destroy(gameObject);
     }
+
+    // the doors meeting: a soft low thunk
+    static AudioClip DoorsShut() => Sfx.Cached("rideDoors", () => Sfx.Make("rideDoors",
+        (180, 0f, .12f, Sfx.Wave.Triangle, .18f, 120), (500, 0f, .06f, Sfx.Wave.Noise, .12f, 200)));
+
+    // the arrival chime: two bell-like tones falling a major third, each with a quiet octave shimmer
+    static AudioClip Ding() => Sfx.Cached("rideDing", () => Sfx.Make("rideDing",
+        (1319, 0f, .6f, Sfx.Wave.Sine, .17f, 0), (2638, 0f, .25f, Sfx.Wave.Sine, .04f, 0),
+        (1047, .2f, .9f, Sfx.Wave.Sine, .16f, 0), (2094, .2f, .3f, Sfx.Wave.Sine, .035f, 0)));
 
     void OnDestroy() => Busy = false;
 }

@@ -5,7 +5,9 @@ using UnityEngine.UI;
 /// <summary>
 /// Shows the player where to go next on a floor: a bobbing amber marker with a label and distance over the
 /// place (arcade box, studio console, ticket machine or elevator), an arrow at the edge of the screen when it's
-/// out of view, and a "next" line under the quest panel. The target follows the quest:
+/// out of view (with the same short label under it, kept clear of the quest panel and the controls guide), and a
+/// "next" line under the quest panel. All of it hides while the floor intro or the elevator ride has the screen.
+/// The target follows the quest:
 /// not cleared → the floor's minigame (or, on the 2nd floor with enough money, the ticket machine);
 /// cleared → the elevator up. Found from the floor's play zones, so it needs no setup.
 /// Created at runtime by PlayerMovement.
@@ -16,8 +18,8 @@ public class QuestGuide : MonoBehaviour
 
     enum Kind { None, Game, Ticket, Elevator }
 
-    RectTransform canvasRect, marker, markerBob, edge, hintRect;
-    Text markerText, hintText;
+    RectTransform canvasRect, marker, markerBob, edge, edgeLabel, hintRect;
+    Text markerText, edgeText, hintText;
     GameObject hint;
     ElevatorPlayZone[] zones = new ElevatorPlayZone[0];
     float nextScan;
@@ -25,7 +27,7 @@ public class QuestGuide : MonoBehaviour
 
     void Awake()
     {
-        var canvas = UiKit.MakeCanvas("QuestGuideCanvas", 18, new Vector2(1280f, 720f));   // under the quest banner's intro
+        var canvas = UiKit.MakeCanvas("QuestGuideCanvas", 21, new Vector2(1280f, 720f));   // over the corner panels; hidden during the intro
         canvasRect = (RectTransform)canvas.transform;
 
         // marker over the target: label pill, then a ▼ pointing down at it
@@ -54,6 +56,12 @@ public class QuestGuide : MonoBehaviour
         edge.anchorMin = edge.anchorMax = new Vector2(0.5f, 0.5f);
         edge.sizeDelta = new Vector2(46f, 46f);
         UiKit.HardShadow(e, UiKit.Hex("#b3560b"), 3f);
+        var el = UiKit.Box("EdgeLabel", canvasRect, UiKit.Hex("#241e57", 0.9f), 12f, UiKit.Accent, 2f);
+        edgeLabel = el.rectTransform;
+        edgeLabel.anchorMin = edgeLabel.anchorMax = new Vector2(0.5f, 0.5f);
+        edgeText = UiKit.Label(edgeLabel, "", 15, UiKit.Fg);
+        edgeText.horizontalOverflow = HorizontalWrapMode.Overflow;
+        UiKit.Stretch(edgeText.rectTransform, 2f);
 
         // "next" line under the quest panel (upper left)
         var hb = UiKit.Box("Next", canvasRect, UiKit.Hex("#241e57", 0.85f), 12f, UiKit.Accent, 2f);
@@ -78,14 +86,16 @@ public class QuestGuide : MonoBehaviour
         if (cam == null) cam = Camera.main;
 
         var (kind, zone) = Pick();
-        hint.SetActive(kind != Kind.None);
+        bool busy = QuestBanner.Intro || ElevatorRide.Busy;   // the intro / ride has the screen
+        hint.SetActive(kind != Kind.None && !busy);
         hintText.text = HintLine(kind, zone);
         // just under the quest panel, however tall its text makes it
         hintRect.anchoredPosition = new Vector2(16f, -(QuestBanner.CornerBottom > 0f ? QuestBanner.CornerBottom + 10f : 118f));
 
-        bool show = kind != Kind.None && zone != null && cam != null && player != null && !zone.PlayerInside;
+        bool show = !busy && kind != Kind.None && zone != null && cam != null && player != null && !zone.PlayerInside;
         marker.gameObject.SetActive(false);
         edge.gameObject.SetActive(false);
+        edgeLabel.gameObject.SetActive(false);
         if (!show) return;
 
         Vector3 world = zone.TargetPosition();
@@ -111,12 +121,91 @@ public class QuestGuide : MonoBehaviour
             Vector2 dir = local.sqrMagnitude > 0.01f ? local.normalized : Vector2.up;
             float sx = (half.x - margin) / Mathf.Max(0.0001f, Mathf.Abs(dir.x));
             float sy = (half.y - margin) / Mathf.Max(0.0001f, Mathf.Abs(dir.y));
+            Vector2 p = dir * Mathf.Min(sx, sy);
+            Vector2 limit = half - new Vector2(margin, margin);
+            Rect quest = QuestCorner(half), controls = ControlsRect();
+            p = KeepOff(p, quest, limit);
+            p = KeepOff(p, controls, limit);
             edge.gameObject.SetActive(true);
-            edge.anchoredPosition = dir * Mathf.Min(sx, sy);
+            edge.anchoredPosition = p;
             edge.localEulerAngles = new Vector3(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg - 90f);   // the sprite points up
             float pulse = 1f + 0.12f * Mathf.Sin(Time.unscaledTime * 6f);
             edge.localScale = Vector3.one * pulse;
+
+            // its label sits on the screen side of the arrow, inside the screen
+            edgeText.text = MarkerLine(kind, zone);
+            Vector2 size = new Vector2(edgeText.preferredWidth + 22f, 28f);
+            edgeLabel.sizeDelta = size;
+            Vector2 lp = p - dir * 46f;
+            if (Mathf.Abs(dir.y) >= Mathf.Abs(dir.x)) lp.x = p.x;   // top/bottom edge: straight above or below it
+            lp.x = Mathf.Clamp(lp.x, -half.x + size.x * 0.5f + 8f, half.x - size.x * 0.5f - 8f);
+            lp.y = Mathf.Clamp(lp.y, -half.y + 22f, half.y - 22f);
+            lp = SlideOff(lp, size, quest, half);
+            lp = SlideOff(lp, size, controls, half);
+            edgeLabel.gameObject.SetActive(true);
+            edgeLabel.anchoredPosition = lp;
         }
+    }
+
+    // The quest panel and the 次： line under it (upper left: 16..516 across, down to the line's bottom), in this
+    // canvas's centred coordinates; empty before the panel exists
+    Rect QuestCorner(Vector2 half)
+    {
+        if (QuestBanner.CornerBottom <= 0f) return Rect.zero;
+        float bottom = hint.activeSelf ? -hintRect.anchoredPosition.y + hintRect.rect.height : QuestBanner.CornerBottom;
+        return Rect.MinMaxRect(-half.x + 16f, half.y - bottom, -half.x + 516f, half.y - 16f);
+    }
+
+    // The controls guide (upper right) in this canvas's coordinates; empty without one
+    Rect ControlsRect()
+    {
+        var panel = player != null ? player.ControlsPanel : null;
+        if (panel == null || !panel.gameObject.activeInHierarchy) return Rect.zero;
+        var corners = new Vector3[4];
+        panel.GetWorldCorners(corners);   // overlay canvases: screen pixels
+        Vector2 a = canvasRect.InverseTransformPoint(corners[0]), b = canvasRect.InverseTransformPoint(corners[2]);
+        return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+    }
+
+    // Moves a label of `size` centred at p sideways (or else down/up) until it no longer overlaps `r`
+    static Vector2 SlideOff(Vector2 p, Vector2 size, Rect r, Vector2 half)
+    {
+        if (r.width <= 0f) return p;
+        Vector2 h = size * 0.5f + new Vector2(8f, 6f);
+        if (p.x + h.x <= r.xMin || p.x - h.x >= r.xMax || p.y + h.y <= r.yMin || p.y - h.y >= r.yMax) return p;
+        float right = r.xMax + h.x, left = r.xMin - h.x;
+        bool rightFits = right + size.x * 0.5f <= half.x, leftFits = left - size.x * 0.5f >= -half.x;
+        if (rightFits && (!leftFits || right - p.x <= p.x - left)) return new Vector2(right, p.y);
+        if (leftFits) return new Vector2(left, p.y);
+        return new Vector2(p.x, r.yMin - h.y);
+    }
+
+    // Slides an edge arrow at p out of `r` (grown by the arrow's size), along the screen edge it sits on;
+    // anywhere nearest if sliding would leave the screen
+    static Vector2 KeepOff(Vector2 p, Rect r, Vector2 limit)
+    {
+        if (r.width <= 0f) return p;
+        const float pad = 34f;
+        r = Rect.MinMaxRect(r.xMin - pad, r.yMin - pad, r.xMax + pad, r.yMax + pad);
+        if (!r.Contains(p)) return p;
+        bool onTopOrBottom = Mathf.Abs(p.y) >= limit.y - 1f, onSide = Mathf.Abs(p.x) >= limit.x - 1f;
+        Vector2 best = p;
+        float bestD = float.MaxValue;
+        for (int pass = 0; pass < 2 && bestD == float.MaxValue; pass++)
+        {
+            bool any = pass == 1;
+            foreach (var c in new[]
+            {
+                (new Vector2(r.xMax, p.y), any || onTopOrBottom), (new Vector2(r.xMin, p.y), any || onTopOrBottom),
+                (new Vector2(p.x, r.yMin), any || onSide), (new Vector2(p.x, r.yMax), any || onSide),
+            })
+            {
+                if (!c.Item2 || Mathf.Abs(c.Item1.x) > limit.x || Mathf.Abs(c.Item1.y) > limit.y) continue;
+                float d = (c.Item1 - p).sqrMagnitude;
+                if (d < bestD) { bestD = d; best = c.Item1; }
+            }
+        }
+        return best;
     }
 
     // What to aim for now, from the quest's state and the floor's play zones

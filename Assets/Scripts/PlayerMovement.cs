@@ -4,7 +4,9 @@ using UnityEngine.UI;
 
 /// <summary>
 /// WASD / arrow-key movement (new Input System), camera-relative, always at running pace with the Run animation,
-/// with a raycast ground check. Shows a small controls guide in the upper-right corner.
+/// with a raycast ground check. Shows a small controls guide in the upper-right corner, which folds down to a
+/// single 「Esc: メニュー」 line once the player has been moving for a while. Also sets up the floor's quest guide,
+/// pause menu (FloorPauseMenu), footsteps and ending.
 /// Attach to the character. A CharacterController is added automatically.
 /// </summary>
 [RequireComponent(typeof(CharacterController))]
@@ -52,6 +54,13 @@ public class PlayerMovement : MonoBehaviour
     float naturalWalkSpeed, naturalRunSpeed, worldHeight;
     bool running;
 
+    /// <summary>The character's height in world units (models differ in scale per floor).</summary>
+    public float WorldHeight => worldHeight;
+    /// <summary>True while the player is moving.</summary>
+    public bool Moving => running;
+    /// <summary>True while standing on the ground (false while falling).</summary>
+    public bool Grounded { get; private set; }
+
     static readonly int RunState = Animator.StringToHash("Run");
 
     void Awake()
@@ -80,7 +89,8 @@ public class PlayerMovement : MonoBehaviour
     {
         if (showControls) BuildControlsGuide();
         if (showGuide) new GameObject("QuestGuide").AddComponent<QuestGuide>().player = this;
-        new GameObject("FloorMenu").AddComponent<FloorMenuButton>();   // back to the main menu
+        FloorPauseMenu.Ensure();   // Esc: volume, look speed, language, back to the main menu
+        if (GetComponent<Footsteps>() == null) gameObject.AddComponent<Footsteps>();
         // the game's ending (全フロアクリア, 最初から) on the top floor, unless the scene already has one
         if (FindAnyObjectByType<GameEnding>(FindObjectsInactive.Include) == null)
         {
@@ -97,18 +107,25 @@ public class PlayerMovement : MonoBehaviour
         hasRunState = animator.HasState(0, RunState);
     }
 
-    // 操作方法 panel in the upper-right corner: how to move, look and free the mouse
+    // 操作方法 panel in the upper-right corner: how to move, look, interact and open the menu
     Text guideTitle;
     Text[] guideLines;
+    RectTransform guidePanel;
+    float movedFor;          // seconds spent moving; the guide folds down after CollapseAfter
+    bool guideCollapsed;
+    const float CollapseAfter = 10f, GuideWidth = 290f;
+
+    /// <summary>The controls guide's panel (upper right), or null without one; QuestGuide keeps its arrow off it.</summary>
+    public RectTransform ControlsPanel => guidePanel;
 
     void BuildControlsGuide()
     {
         var canvas = UiKit.MakeCanvas("ControlsCanvas", 19, new Vector2(1280f, 720f));
         var panel = UiKit.Box("Controls", canvas.transform, UiKit.Hex("#241e57", 0.85f), 12f, UiKit.Line, 2f);
-        var rt = panel.rectTransform;
+        var rt = guidePanel = panel.rectTransform;
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 1f);
         rt.anchoredPosition = new Vector2(-16f, -16f);
-        rt.sizeDelta = new Vector2(250f, 0f);
+        rt.sizeDelta = new Vector2(GuideWidth, 0f);
         var v = panel.gameObject.AddComponent<VerticalLayoutGroup>();
         v.padding = new RectOffset(16, 16, 10, 12);
         v.spacing = 3f;
@@ -118,26 +135,46 @@ public class PlayerMovement : MonoBehaviour
         panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         panel.raycastTarget = false;
 
-        guideTitle = UiKit.Label(panel.transform, "", 14, UiKit.Accent, TextAnchor.MiddleLeft);
+        guideTitle = UiKit.Label(panel.transform, "", 15, UiKit.Accent, TextAnchor.MiddleLeft);
         guideLines = new Text[4];
         for (int i = 0; i < guideLines.Length; i++)
-            guideLines[i] = UiKit.Label(panel.transform, "", 16, UiKit.Fg, TextAnchor.MiddleLeft);
+            guideLines[i] = UiKit.Label(panel.transform, "", 18, UiKit.Fg, TextAnchor.MiddleLeft);
         WriteGuide();
         L.Changed += WriteGuide;
     }
 
     void WriteGuide()
     {
+        if (guideCollapsed)
+        {
+            // one compact line, as narrow as its text
+            guideTitle.gameObject.SetActive(false);
+            for (int i = 0; i < guideLines.Length - 1; i++) guideLines[i].gameObject.SetActive(false);
+            var last = guideLines[guideLines.Length - 1];
+            last.text = $"<color=#ffffff>Esc</color><color=#a9a2d9>: {L.T("メニュー", "Menu")}</color>";
+            guidePanel.sizeDelta = new Vector2(last.preferredWidth + 34f, 0f);
+            return;
+        }
         guideTitle.text = L.T("操作方法", "CONTROLS");
         var lines = new[]
         {
             ("WASD / ↑↓←→", L.T("移動", "Move")),
             (L.T("マウス", "Mouse"), L.T("視点を回す", "Look around")),
-            ("E / Enter", L.T("決定", "Interact")),
-            ("Esc", L.T("マウスカーソルを出す", "Show the mouse cursor")),
+            ("E / " + L.T("クリック", "Click"), L.T("決定", "Interact")),
+            ("Esc", L.T("メニュー", "Menu")),
         };
         for (int i = 0; i < lines.Length; i++)
             guideLines[i].text = $"<color=#ffffff>{lines[i].Item1}</color>　<color=#a9a2d9>{lines[i].Item2}</color>";
+    }
+
+    // after a while on the move the player knows the controls: fold the guide down to its Esc line
+    void UpdateGuide()
+    {
+        if (guidePanel == null || guideCollapsed) return;
+        if (running) movedFor += Time.deltaTime;
+        if (movedFor < CollapseAfter) return;
+        guideCollapsed = true;
+        WriteGuide();
     }
 
     void OnDestroy() => L.Changed -= WriteGuide;
@@ -182,6 +219,8 @@ public class PlayerMovement : MonoBehaviour
             h = (kb.dKey.isPressed || kb.rightArrowKey.isPressed ? 1f : 0f) - (kb.aKey.isPressed || kb.leftArrowKey.isPressed ? 1f : 0f);
             v = (kb.wKey.isPressed || kb.upArrowKey.isPressed ? 1f : 0f) - (kb.sKey.isPressed || kb.downArrowKey.isPressed ? 1f : 0f);
         }
+        if (PlayerLock.Locked) h = v = 0f;   // the intro, a menu, the ride or the ending has the screen
+        UpdateGuide();
 
         // Camera-relative directions (flattened onto the ground plane)
         Vector3 fwd = cam != null ? cam.forward : Vector3.forward;
@@ -246,9 +285,11 @@ public class PlayerMovement : MonoBehaviour
         if (found && y <= groundY + 0.03f && verticalVelocity <= 0f)
         {
             verticalVelocity = 0f;
+            Grounded = true;
             return groundY - y;                      // snap onto the ground
         }
 
+        Grounded = false;
         verticalVelocity += gravity * Time.deltaTime; // falling (or walking off an edge)
         float dy = verticalVelocity * Time.deltaTime;
         if (found) dy = Mathf.Max(dy, groundY - y);   // never fall below the ground

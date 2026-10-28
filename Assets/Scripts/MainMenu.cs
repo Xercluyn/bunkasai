@@ -12,7 +12,8 @@ using UnityEngine.UI;
 /// quest wins the game, see GameEnding). On the left: the title, 「1階から5階まで遊ぶ」 for the full run, and a card
 /// describing the floor under the pointer. A string of paper lanterns swings across the top. Everything plays in
 /// on opening: the title drops in line by line and the building rises. English / 日本語 in the corner switches
-/// the language. Every visit starts a fresh session.
+/// the language. Every visit starts a fresh session. Pointing at a floor blips (each floor a little higher) and
+/// choosing one whooshes.
 /// Everything is built at runtime, so the scene only needs a camera and this component
 /// (Tools > Elevator Game > Create Menu Scene makes it).
 /// </summary>
@@ -73,7 +74,7 @@ public class MainMenu : MonoBehaviour
     Transform building, car;
     Camera cam;
     int hover;
-    float carY, opened, rise;
+    float carY, opened, rise, lastBlip;
     bool leaving;
 
     Text subtitle, runLabel, hintText, infoNumber, infoFloor, infoGame, infoNote, langText;
@@ -371,6 +372,12 @@ public class MainMenu : MonoBehaviour
                 if (hitInfo.collider == f.hit) now = f.n;
         if (now != hover)
         {
+            // a soft blip on reaching a floor (not too often when the pointer runs down the building)
+            if (now > 0 && t - lastBlip > 0.07f)
+            {
+                lastBlip = t;
+                Sfx.PlayUi(Sfx.Blip(), 0.35f, 0.9f + 0.08f * now);
+            }
             hover = now;
             ShowInfo();
         }
@@ -442,6 +449,7 @@ public class MainMenu : MonoBehaviour
         GameProgress.NewSession();
         GameProgress.SingleFloor = "";
         leaving = ElevatorRide.Go(floor1, 1, 1);
+        if (leaving) Chosen();
     }
 
     void PlayFloor(int n)
@@ -451,5 +459,9 @@ public class MainMenu : MonoBehaviour
         GameProgress.NewSession();
         GameProgress.SingleFloor = Floors[n - 1];
         leaving = ElevatorRide.Go(Floors[n - 1], 1, n);
+        if (leaving) Chosen();
     }
+
+    // off to the elevator: a quick rush, a little higher than the doors' own whoosh that follows
+    static void Chosen() => Sfx.PlayUi(Sfx.Whoosh(), 0.7f, 1.25f);
 }

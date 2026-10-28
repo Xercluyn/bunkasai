@@ -7,22 +7,24 @@ using UnityEngine;
 /// Text-to-speech for the minigames (the browser's speechSynthesis in the HTML originals). Unity has none, so on
 /// Windows one hidden PowerShell process runs the system voices (System.Speech) and reads lines from stdin;
 /// it starts with the first word and stops when the game quits. Silent elsewhere or if no voice is installed.
+/// Speaks at the game's volume (Sfx.Volume), and not at all when that is 0.
 /// </summary>
 public static class Speech
 {
     static Process process;
     static bool failed;
 
-    // One line per request: cancel|lang|rate|base64(UTF-8 text). "stop" cancels what is playing.
+    // One line per request: cancel|lang|rate|volume 0-100|base64(UTF-8 text). "stop" cancels what is playing.
     const string Script =
         "Add-Type -AssemblyName System.Speech;" +
         "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer;$s.SetOutputToDefaultAudioDevice();" +
         "$v=@{};foreach($i in $s.GetInstalledVoices()){if($i.Enabled){$c=$i.VoiceInfo.Culture.TwoLetterISOLanguageName;if(-not $v.ContainsKey($c)){$v[$c]=$i.VoiceInfo}}};" +
         "while($null -ne ($l=[Console]::In.ReadLine())){" +
         "if($l -eq 'stop'){$s.SpeakAsyncCancelAll();continue};" +
-        "$p=$l.Split('|');if($p.Length -lt 4){continue};" +
+        "$p=$l.Split('|');if($p.Length -lt 5){continue};" +
         "if($p[0] -eq '1'){$s.SpeakAsyncCancelAll()};" +
-        "$t=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p[3]));" +
+        "try{$s.Volume=[Math]::Max(0,[Math]::Min(100,[int]$p[3]))}catch{};" +
+        "$t=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p[4]));" +
         "$b=New-Object System.Speech.Synthesis.PromptBuilder;" +
         "$r=[int]$p[2];$rate=if($r -le -3){'ExtraSlow'}elseif($r -lt 0){'Slow'}else{'Medium'};" +
         "$st=New-Object System.Speech.Synthesis.PromptStyle;$st.Rate=[System.Speech.Synthesis.PromptRate]::$rate;" +
@@ -35,7 +37,10 @@ public static class Speech
     public static void Say(string text, string lang, int rate = 0, bool cancel = true)
     {
         if (string.IsNullOrEmpty(text) || !Ensure()) return;
-        Send((cancel ? "1" : "0") + "|" + lang + "|" + rate + "|" + Convert.ToBase64String(Encoding.UTF8.GetBytes(text)));
+        // the voice plays outside Unity, so AudioListener.volume doesn't reach it: send the game volume along
+        int volume = Mathf.RoundToInt(Sfx.Volume * 100f);
+        if (volume <= 0) return;
+        Send((cancel ? "1" : "0") + "|" + lang + "|" + rate + "|" + volume + "|" + Convert.ToBase64String(Encoding.UTF8.GetBytes(text)));
     }
 
     public static void Stop()

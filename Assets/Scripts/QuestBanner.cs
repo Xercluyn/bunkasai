@@ -10,6 +10,7 @@ using UnityEngine.UI;
 /// over an amber band, then both slide into a small panel in the upper-left corner for the rest of the level.
 /// Once the quest is cleared (GameProgress.ClearQuest with this scene's name), クエストクリア！ stamps in instead,
 /// with a ring burst, confetti and a 「3階のクエスト達成」 ribbon, and the corner panel turns green.
+/// The player stays still (PlayerLock) from the start of the intro or celebration until the corner panel slides in.
 /// Add it with Tools > Elevator Game > Add Quest Banner.
 /// </summary>
 public class QuestBanner : MonoBehaviour
@@ -54,8 +55,11 @@ public class QuestBanner : MonoBehaviour
     public static float CornerBottom;
     /// <summary>True while クエストクリア！ is on screen; GameEnding waits for it.</summary>
     public static bool Celebrating;
+    /// <summary>True while the big intro or celebration has the screen (until the corner panel slides in); the
+    /// quest guide hides meanwhile.</summary>
+    public static bool Intro;
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void NewPlay() => Celebrating = false;
+    static void NewPlay() => Celebrating = Intro = false;
 
     bool cleared;
     Coroutine show;
@@ -162,6 +166,8 @@ public class QuestBanner : MonoBehaviour
     {
         L.Changed -= Redraw;
         CornerBottom = 0f;
+        Celebrating = Intro = false;
+        PlayerLock.Set(this, false);
     }
 
     void LateUpdate()
@@ -251,6 +257,8 @@ public class QuestBanner : MonoBehaviour
     IEnumerator Show(bool keepCorner)
     {
         if (cleared) Celebrating = true;
+        Intro = true;
+        PlayerLock.Set(this, true);
         while (ElevatorRide.Busy) yield return null;   // the doors are still shut
         intro.gameObject.SetActive(true);
         intro.alpha = 0f;
@@ -288,7 +296,8 @@ public class QuestBanner : MonoBehaviour
         if (cleared) yield return Celebrate();
         else yield return RevealQuest();
         intro.gameObject.SetActive(false);
-        Celebrating = false;
+        Celebrating = Intro = false;
+        PlayerLock.Set(this, false);   // free to move as the corner panel arrives
 
         // the corner panel slides in from the left with a little overshoot
         if (!keepCorner || corner.alpha < 1f)
