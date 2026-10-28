@@ -278,6 +278,21 @@ public static class SchoolKit
         return go;
     }
 
+    /// <summary>
+    /// True the first time it's asked for `step` in this scene (then remembered): for one-off rearrangements, so
+    /// running a tool again doesn't undo what was moved by hand afterwards.
+    /// </summary>
+    public static bool Once(Scene scene, string step)
+    {
+        var dressing = Record(scene);
+        string key = "#" + step;
+        if (dressing.placed.Contains(key)) return false;
+        Undo.RecordObject(dressing, "School props");
+        dressing.placed.Add(key);
+        EditorUtility.SetDirty(dressing);
+        return true;
+    }
+
     /// <summary>Moves an existing prop to `position` / `yaw`; false (nothing done) when it isn't there.</summary>
     public static bool Move(Scene scene, string id, Vector3 position, float yaw)
     {
