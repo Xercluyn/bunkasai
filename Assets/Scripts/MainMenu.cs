@@ -41,7 +41,7 @@ public class MainMenu : MonoBehaviour
     // floor labels: the game line wraps at LabelGameW, and labels keep ScreenMargin inside the screen edges
     const float LabelW = 170f, LabelH = 84f, LabelGameW = 160f, ScreenMargin = 12f;
     // the left column's width (full-run button and floor card); the language button, upper right
-    const float CardW = 480f, LangW = 150f, LangH = 44f, LangRight = 24f, LangTop = 84f;
+    const float CardW = 480f, LangW = 150f, LangH = 44f, LangRight = 24f, LangBottom = 24f;
 
     class Floor
     {
@@ -272,11 +272,11 @@ public class MainMenu : MonoBehaviour
         hintText.lineSpacing = 1.2f;
         UiKit.Stretch(hintText.rectTransform, 16f);
 
-        // language, upper right, under the lights
+        // language, lower right corner (the upper right is where the 5th floor's label goes)
         var lang = UiKit.SubButton(root, "", out langText);
         var lrt = (RectTransform)lang.transform;
-        lrt.anchorMin = lrt.anchorMax = lrt.pivot = new Vector2(1f, 1f);
-        lrt.anchoredPosition = new Vector2(-LangRight, -LangTop);
+        lrt.anchorMin = lrt.anchorMax = lrt.pivot = new Vector2(1f, 0f);
+        lrt.anchoredPosition = new Vector2(-LangRight, LangBottom);
         lrt.sizeDelta = new Vector2(LangW, LangH);
         langText.fontSize = 17;
         lang.onClick.AddListener(L.Toggle);
@@ -396,6 +396,8 @@ public class MainMenu : MonoBehaviour
         if (hover > 0 && mouse != null && mouse.leftButton.wasPressedThisFrame) { PlayFloor(hover); return; }
 
         float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 10f);
+        float scale = labelLayer.rect.width / Mathf.Max(1f, Screen.width);
+        float column = LabelColumn(scale);
         foreach (var f in floors)
         {
             bool on = f.n == hover;
@@ -407,12 +409,12 @@ public class MainMenu : MonoBehaviour
             f.body.material.color = Color.Lerp(Body, BodyLit, f.slide);
             foreach (var w in f.windows) w.material.color = Color.Lerp(WindowDark, WindowLit, f.glow);
 
-            // label beside the floor's right edge
-            Vector3 edge = f.root.TransformPoint(new Vector3(FloorW * 0.5f + 0.4f, FloorH * 0.5f, -FloorD * 0.5f));
-            Vector3 sp = cam.WorldToScreenPoint(edge);
-            float scale = labelLayer.rect.width / Mathf.Max(1f, Screen.width);
+            // label beside the floor's right edge, all five in one column
+            Vector3 sp = cam.WorldToScreenPoint(LabelAnchor(f));
             float grow = 1f + 0.2f * f.slide;
-            f.label.anchoredPosition = ClampLabel(new Vector2(sp.x, sp.y) * scale + new Vector2(16f * f.slide, 0f), grow);
+            float half = LabelH * 0.5f * grow;
+            float y = Mathf.Clamp(sp.y * scale, ScreenMargin + half, labelLayer.rect.height - ScreenMargin - half);
+            f.label.anchoredPosition = new Vector2(column + 16f * f.slide, y);
             f.name.color = Color.Lerp(UiKit.Fg, UiKit.Accent, f.slide);
             f.label.localScale = Vector3.one * grow;
         }
@@ -426,18 +428,29 @@ public class MainMenu : MonoBehaviour
         car.localPosition = new Vector3(cp.x, carY, cp.z);
     }
 
-    // Keep a floor label (pivot at its left middle, scaled by `grow`) on screen and clear of the language button
-    Vector2 ClampLabel(Vector2 pos, float grow)
+    // A floor's label anchor: just beyond its right edge, at mid height
+    Vector3 LabelAnchor(Floor f) =>
+        f.root.TransformPoint(new Vector3(FloorW * 0.5f + 0.4f, FloorH * 0.5f, -FloorD * 0.5f));
+
+    // The x (pivot at the left) shared by all floor labels: beside the building's furthest-right floor edge, pulled
+    // left as a whole if any label (hovered size, slid out) would leave the screen or touch the language button
+    float LabelColumn(float scale)
     {
         Rect area = labelLayer.rect;
-        float w = LabelW * grow, half = LabelH * 0.5f * grow;
-        pos.y = Mathf.Clamp(pos.y, ScreenMargin + half, area.height - ScreenMargin - half);
-        float right = area.width - ScreenMargin;
-        // In the button's rows: stay left of it (moving left keeps the floors' vertical order, so labels never stack)
-        if (pos.y + half > area.height - LangTop - LangH - ScreenMargin)
-            right = area.width - LangRight - LangW - ScreenMargin;
-        pos.x = Mathf.Min(pos.x, right - w);
-        return pos;
+        const float maxGrow = 1.2f, maxSlide = 16f;
+        float w = LabelW * maxGrow + maxSlide, half = LabelH * 0.5f * maxGrow;
+        float column = float.MinValue, limit = float.MaxValue;
+        foreach (var f in floors)
+        {
+            Vector3 sp = cam.WorldToScreenPoint(LabelAnchor(f));
+            column = Mathf.Max(column, sp.x * scale);
+            float y = Mathf.Clamp(sp.y * scale, ScreenMargin + half, area.height - ScreenMargin - half);
+            float right = area.width - ScreenMargin;
+            if (y - half < LangBottom + LangH + ScreenMargin)   // in the button's rows: stay left of it
+                right = area.width - LangRight - LangW - ScreenMargin;
+            limit = Mathf.Min(limit, right - w);
+        }
+        return Mathf.Min(column, limit);
     }
 
     // The opening entrances, the lights and the button's pulse
