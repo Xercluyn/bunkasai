@@ -35,7 +35,7 @@ public static class UiKit
     public static readonly Color Dim = Hex("#050d22");
     public static readonly Color MainFill = Hex("#3ee0f5");
     public static readonly Color MainShadow = Hex("#0e7490");
-    public static readonly Color Glow = Hex("#e0f7ff"); // lit windows, flashes
+    public static readonly Color Light = Hex("#e0f7ff"); // lit windows, flashes
 
     public static Color Hex(string hex, float alpha = 1f)
     {
