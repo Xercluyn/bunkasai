@@ -76,6 +76,7 @@ public static class SchoolLayout3F
         if (pc == null || model == null || cabinet == null) return;
         var drafting = ShortDraftingSet();
         var clutter = new[] { DeskPlans(), DeskBlueprint(), DeskStudyModel() };
+        var towers = new[] { TowerModel("f3_deco_tower_mid", false), TowerModel("f3_deco_tower_high", true) };
 
         Undo.SetCurrentGroupName(Title);
         var report = new Report();
@@ -97,6 +98,7 @@ public static class SchoolLayout3F
             Relocate(scene, "f3_cabinet", cabinet, new Vector3(-272.3f, 0f, 140f), 90f, report);
         }
         Decorate(scene, clutter, report);
+        PlaceTowers(scene, towers, report);
         ClearModelShelves(scene, report);
         Summarise(report);
     }
@@ -177,6 +179,25 @@ public static class SchoolLayout3F
                 var go = Place(scene, id, clutter[(row + c) % clutter.Length], table.position, table.eulerAngles.y);
                 if (go != null) report.placed++;
             }
+    }
+
+    // Medium and high-rise study models on three tables Decorate leaves bare, spread over the room
+    // (row, column, high-rise?)
+    static readonly (int row, int col, bool high)[] TowerTables = { (2, 3, true), (4, 2, false), (6, 2, true) };
+
+    static void PlaceTowers(Scene scene, GameObject[] towers, Report report)
+    {
+        var root = PropsRoot(scene);
+        foreach (var (row, col, high) in TowerTables)
+        {
+            string id = $"f3_tower_{row}_{col}";
+            if (IsDeleted(scene, id)) { report.deleted++; continue; }
+            if (IsPlaced(scene, id)) { report.kept++; continue; }
+            var table = root.Find(DraftId(row, col));
+            if (table == null) continue;   // no table to put it on
+            var go = Place(scene, id, towers[high ? 1 : 0], table.position, table.eulerAngles.y);
+            if (go != null) report.placed++;
+        }
     }
 
     // ---------- placement helpers ----------
@@ -437,6 +458,41 @@ public static class SchoolLayout3F
         Sheet(p, "SheetR", V(0.6f, 0f, -0.4f), 2f, 0.594f, 0.42f, m.paper, m.ink);
         SetSquare(p, "SetSquareR", V(1.1f, 0f, -0.12f), 180f, 0.2f, m.clear);
         TSquare(p, "TSquareR", V(0.5f, 0f, -0.1f), 0f, 0.5f, m.wood);
+        return SavePrefab(p, false);
+    }
+
+    // A 1:100-ish study model in the middle of the table, shared by both seats: a podium with a slim tower
+    // (about 0.35 m, a 10-storey block; 0.6 m with a setback crown for the high-rise), a low neighbour, trees
+    static GameObject TowerModel(string id, bool high)
+    {
+        var p = NewProp(id);
+        var m = ClutterMats();
+        var glass = Mat("F3_modelGlass", UiKit.Hex("#AFC6D6"), TexKind.Plain, 0.7f);
+        var at = V(0f, 0f, -0.4f);
+        const float baseTop = TopY + 0.006f;
+        Flat(p, "Base", at, 0f, Vector3.zero, TopY + 0.003f, V(0.46f, 0.006f, 0.34f), m.card);
+        Flat(p, "Podium", at, 0f, V(-0.04f, 0f, 0.02f), baseTop + 0.03f, V(0.26f, 0.06f, 0.2f), m.white);
+        float tower = high ? 0.48f : 0.3f, podiumTop = baseTop + 0.06f;
+        Flat(p, "Tower", at, 0f, V(-0.06f, 0f, 0.03f), podiumTop + tower * 0.5f, V(0.12f, tower, 0.12f), m.cream);
+        // window bands: thin glass strips on the front and side every storey-ish
+        int bands = Mathf.RoundToInt(tower / 0.04f);
+        for (int i = 1; i < bands; i++)
+        {
+            float y = podiumTop + i * tower / bands;
+            Flat(p, $"BandF{i}", at, 0f, V(-0.06f, 0f, -0.031f), y, V(0.118f, 0.008f, 0.004f), glass);
+            Flat(p, $"BandS{i}", at, 0f, V(-0.001f, 0f, 0.03f), y, V(0.004f, 0.008f, 0.118f), glass);
+        }
+        if (high)
+        {
+            float crown = podiumTop + tower;
+            Flat(p, "Setback", at, 0f, V(-0.06f, 0f, 0.03f), crown + 0.04f, V(0.08f, 0.08f, 0.08f), m.white);
+            Flat(p, "Mast", at, 0f, V(-0.06f, 0f, 0.03f), crown + 0.12f, V(0.008f, 0.08f, 0.008f), m.lead);
+        }
+        Flat(p, "Neighbour", at, 0f, V(0.15f, 0f, -0.06f), baseTop + 0.07f, V(0.1f, 0.14f, 0.12f), m.white);
+        var trees = new[] { (0.17f, 0.11f), (0.08f, 0.13f), (-0.19f, -0.12f), (0.19f, -0.14f) };
+        for (int i = 0; i < trees.Length; i++)
+            Flat(p, $"Tree{i}", at, 0f, V(trees[i].Item1, 0f, trees[i].Item2), baseTop + 0.02f,
+                 V(0.035f, 0.04f, 0.035f), m.tree, default, PrimitiveType.Sphere);
         return SavePrefab(p, false);
     }
 

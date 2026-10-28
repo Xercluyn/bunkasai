@@ -12,7 +12,8 @@ using UnityEngine.SceneManagement;
 /// hallway (x −171.15..−150.29, running north from z −20.39, door.035 on its east wall) dead-ends 25 units short of
 /// the corridor; between them is a closed pocket (x −171.15..−127.59, z −45.83..−20.39, floor and ceiling but no
 /// way in). Two wall panels of the same width are cut: the corridor's north wall (z −45.83) and the hallway's end
-/// wall (z −20.39), so the pocket becomes the alley. Every wall triangle of the shell (Plane.002, dressed or not)
+/// wall (z −20.39), so the pocket becomes the alley; the pocket's east half is walled off (x −150.29, in line with
+/// the hallway's east wall) so the alley runs straight. Every wall triangle of the shell (Plane.002, dressed or not)
 /// whose centroid lies in a hole box goes, both windings; whatever of the removed faces lies outside the hole (a
 /// lintel when a hole is lower than the wall) is put back double-sided with ShellDresser's box-projected wall UVs.
 /// The copy is saved as "(base) alley (2s)" next to the source and also given to the shell's MeshCollider; at
@@ -36,6 +37,14 @@ public static class AlleyCutter
     {
         Box(new Vector3(-171.0f, -0.5f, -46.33f), new Vector3(-150.45f, 20.6f, -45.33f)),   // corridor's north wall
         Box(new Vector3(-171.0f, -0.5f, -20.89f), new Vector3(-150.45f, 20.6f, -19.89f)),   // hallway's end wall
+    };
+
+    // Walls added, double-sided (world rectangles, zero thickness across x): the pocket's east half would be an
+    // alcove off the alley, so it's closed off in line with the hallway's east wall and the two pillars, leaving a
+    // straight alley
+    static readonly Bounds[] Closers =
+    {
+        Box(new Vector3(-150.29f, 0f, -45.83f), new Vector3(-150.29f, 20.14f, -20.39f)),
     };
 
     [MenuItem("Tools/Elevator Game/School/Cut 5F Alley")]
@@ -65,6 +74,31 @@ public static class AlleyCutter
     }
 
     // ---------- cutting ----------
+
+    // True when the mesh already has a wall face in the plane of closing wall `wall` (added by an earlier run)
+    static bool HasWall(Mesh mesh, Matrix4x4 l2w, Bounds wall)
+    {
+        var near = wall;
+        near.Expand(new Vector3(0.6f, -1f, -1f));   // ±0.3 across the plane, a little inside its edges
+        var verts = mesh.vertices;
+        for (int s = 0; s < mesh.subMeshCount; s++)
+        {
+            if (mesh.GetTopology(s) != MeshTopology.Triangles) continue;
+            var tris = mesh.GetTriangles(s);
+            for (int i = 0; i < tris.Length; i += 3)
+            {
+                Vector3 a = l2w.MultiplyPoint3x4(verts[tris[i]]), b = l2w.MultiplyPoint3x4(verts[tris[i + 1]]),
+                        c = l2w.MultiplyPoint3x4(verts[tris[i + 2]]);
+                var n = Vector3.Cross(b - a, c - a);
+                if (n.sqrMagnitude > 0f && Mathf.Abs(n.normalized.x) > 0.9f && near.Contains((a + b + c) / 3f)) return true;
+            }
+        }
+        return false;
+    }
+
+    // A thin "hole" just past the far end of `wall` along z, so Patch fills in the whole of `wall` as its left strip
+    static Bounds OutsideOf(Bounds wall) =>
+        new Bounds(new Vector3(wall.center.x, wall.center.y, wall.max.z + 10f), new Vector3(0.01f, wall.size.y, 1f));
 
     static int HoleOf(Vector3 p)
     {
@@ -107,15 +141,18 @@ public static class AlleyCutter
                 kept[s].Add(tris[i]); kept[s].Add(tris[i + 1]); kept[s].Add(tris[i + 2]);
             }
         }
-        // Nothing in the holes: already cut (or the shell changed), so the mesh stays as it is
-        if (removed == 0) { Debug.Log($"{Title}: no wall faces of '{source.name}' left in the holes; nothing to cut.", mf); return; }
+        var missing = Closers.Where(c => !HasWall(source, l2w, c)).ToList();
+        // Nothing in the holes and every closing wall there: already done, so the mesh stays as it is
+        if (removed == 0 && missing.Count == 0) { Debug.Log($"{Title}: '{source.name}' is already cut and closed; nothing to do.", mf); return; }
 
         var cut = Object.Instantiate(source);
         cut.name = AlleyName(source.name);
-        int sub = source.subMeshCount > WallSubmesh ? WallSubmesh : removedSub;
+        int sub = source.subMeshCount > WallSubmesh ? WallSubmesh : Mathf.Max(0, removedSub);
         int patches = 0;
+        var w2l = mf.transform.worldToLocalMatrix;
         for (int h = 0; h < Holes.Length; h++)
-            if (cutAreas[h] != null) patches += Patch(cut, kept, sub, Holes[h], cutAreas[h].Value, mf.transform.worldToLocalMatrix, tile);
+            if (cutAreas[h] != null) patches += Patch(cut, kept, sub, Holes[h], cutAreas[h].Value, w2l, tile);
+        foreach (var wall in missing) patches += Patch(cut, kept, sub, OutsideOf(wall), wall, w2l, tile);
         for (int s = 0; s < kept.Length; s++) cut.SetTriangles(kept[s], s, false);
         cut.RecalculateBounds();
         if (patches > 0 && cut.tangents.Length > 0) cut.RecalculateTangents();
