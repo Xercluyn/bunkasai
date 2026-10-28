@@ -207,7 +207,7 @@ public static class ShinbunSetup
 
     /// <summary>
     /// Puts (or refits) a trigger zone of type T on the floor round target, reaching about half the player's
-    /// height out from it, with its button floating over the top and target outlined in orange.
+    /// height out from it, with its button floating over the top and target outlined in cyan.
     /// An existing zone matching `existing` is reused, so running a setup again just refits it.
     /// `area` (world space) fits it round one part of target instead, e.g. a console on a desk inside a merged
     /// room mesh; the zone then also reaches down to the floor under the part.
@@ -272,7 +272,7 @@ public static class ShinbunSetup
         Undo.RecordObject(zone, "Add " + name);
         zone.buttonTarget = anchor;
         zone.interactable = target;
-        InteractableOutlineSetup.Apply(target);   // orange outline that lights up with the button
+        InteractableOutlineSetup.Apply(target);   // cyan outline that lights up with the button
 
         EditorSceneManager.MarkSceneDirty(scene);
         Selection.activeGameObject = zone.gameObject;

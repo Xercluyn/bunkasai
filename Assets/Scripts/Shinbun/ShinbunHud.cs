@@ -13,6 +13,10 @@ public class ShinbunHud
 {
     const float QuitConfirmSeconds = 3f;
     const float QuitWidth = 120f, QuitArmedWidth = 260f;
+    const float RingMargin = 110f, KeyDrop = 50f;   // ring's half size plus some air; the label hangs below it
+
+    static readonly Color TargetWhite = Fade(UiKit.Fg, 0.9f);
+    static readonly Color TargetPink = Fade(Color.Lerp(UiKit.Bad, UiKit.Fg, 0.6f), 0.9f);
 
     readonly MonoBehaviour host;
     readonly RectTransform canvas;
@@ -42,7 +46,7 @@ public class ShinbunHud
         promptRoot.sizeDelta = new Vector2(150f, 150f);
         glow = UiKit.Img("Glow", promptRoot, UiKit.Glow, Color.clear);
         UiKit.Center(glow.rectTransform, 210f, 210f);
-        target = UiKit.Img("Target", promptRoot, UiKit.Ring, UiKit.Hex("#ffffff", 0.9f));
+        target = UiKit.Img("Target", promptRoot, UiKit.Ring, TargetWhite);
         UiKit.Stretch(target.rectTransform);
         approachImg = UiKit.Img("Approach", promptRoot, UiKit.Ring, UiKit.Good);
         approach = approachImg.rectTransform;
@@ -61,7 +65,7 @@ public class ShinbunHud
         // What to do, under the ring
         key = UiKit.Label(promptRoot, "", 24, UiKit.Good);
         key.horizontalOverflow = HorizontalWrapMode.Overflow;
-        UiKit.HardShadow(key, UiKit.Hex("#0c0a24"), 3f);
+        UiKit.HardShadow(key, UiKit.PanelShadow, 3f);
         UiKit.Center(key.rectTransform, 360f, 40f).anchoredPosition = new Vector2(0f, -112f);
         SetPromptKind(DoorKind.Deliver);
         prompt.alpha = 0f;
@@ -89,6 +93,7 @@ public class ShinbunHud
         quitRect.anchorMin = quitRect.anchorMax = quitRect.pivot = new Vector2(1f, 1f);
         quitRect.anchoredPosition = new Vector2(-16f, -16f);
         quitRect.sizeDelta = new Vector2(QuitWidth, 46f);
+        BestFit(quitText, 12);
         quit.onClick.AddListener(() =>
         {
             if (Time.unscaledTime < quitArmedUntil) onQuit();
@@ -98,11 +103,35 @@ public class ShinbunHud
         // Judgement pop-up and a caption line near the bottom
         feedback = UiKit.Label(canvas, "", 64, UiKit.Accent);
         UiKit.Center(feedback.rectTransform, 900f, 100f).anchoredPosition = new Vector2(0f, 170f);
-        UiKit.HardShadow(feedback, UiKit.Hex("#0c0a24"), 4f);
+        BestFit(feedback, 36);
+        UiKit.HardShadow(feedback, UiKit.PanelShadow, 4f);
         caption = UiKit.Label(canvas, "", 26, UiKit.Fg);
         UiKit.Center(caption.rectTransform, 1100f, 60f).anchoredPosition = new Vector2(0f, -280f);
-        UiKit.HardShadow(caption, UiKit.Hex("#0c0a24"), 3f);
+        BestFit(caption, 18);
+        UiKit.HardShadow(caption, UiKit.PanelShadow, 3f);
     }
+
+    // Shrinks a fixed-size label's text (down to minSize) instead of letting a long string spill out
+    static Text BestFit(Text t, int minSize)
+    {
+        t.horizontalOverflow = HorizontalWrapMode.Wrap;
+        t.verticalOverflow = VerticalWrapMode.Truncate;
+        t.resizeTextMinSize = minSize;
+        t.resizeTextMaxSize = t.fontSize;
+        t.resizeTextForBestFit = true;
+        return t;
+    }
+
+    // A label in a layout group that keeps one line's height and shrinks to fit the card's width
+    static Text FitLine(Transform parent, string text, int size, int minSize, Color color, Color shadow, float down)
+    {
+        var t = BestFit(UiKit.Label(parent, text, size, color), minSize);
+        UiKit.HardShadow(t, shadow, down);
+        t.gameObject.AddComponent<LayoutElement>().preferredHeight = size * 1.3f;
+        return t;
+    }
+
+    static Color Fade(Color c, float alpha) => new Color(c.r, c.g, c.b, alpha);
 
     CanvasGroup Group(string name)
     {
@@ -161,6 +190,10 @@ public class ShinbunHud
             ? L.T("まって！投げないで", "WAIT! Don't throw")
             : L.T("SPACE / クリック！", "SPACE / Click!");
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas, screenPoint, null, out Vector2 local);
+        // Kept on screen (with room for the label underneath) even if the door is at or past the edge
+        Vector2 half = canvas.rect.size * 0.5f;
+        local.x = Mathf.Clamp(local.x, -half.x + RingMargin, half.x - RingMargin);
+        local.y = Mathf.Clamp(local.y, -half.y + RingMargin + KeyDrop, half.y - RingMargin);
         promptRoot.anchoredPosition = local;
         float s = Mathf.Lerp(3f, 1f, Mathf.Clamp01(progress));
         approach.localScale = new Vector3(s, s, 1f);
@@ -175,7 +208,7 @@ public class ShinbunHud
         Color c = trap ? UiKit.Bad : UiKit.Good;
         approachImg.color = c;
         glow.color = new Color(c.r, c.g, c.b, 0.3f);
-        target.color = trap ? UiKit.Hex("#ffb3ba", 0.9f) : UiKit.Hex("#ffffff", 0.9f);
+        target.color = trap ? TargetPink : TargetWhite;
         key.color = c;
         cross.SetActive(trap);
     }
@@ -209,7 +242,7 @@ public class ShinbunHud
     /// <summary>The how-to-play card with a picture of each door; calls onStart from its button.</summary>
     public GameObject ShowTutorial(Action onStart)
     {
-        var dim = UiKit.Img("Tutorial", canvas, null, UiKit.Hex("#120f2b", 0.6f));
+        var dim = UiKit.Img("Tutorial", canvas, null, Fade(UiKit.Dim, 0.6f));
         dim.raycastTarget = true;   // keep clicks off the game while reading
         UiKit.Stretch(dim.rectTransform);
 
@@ -225,8 +258,8 @@ public class ShinbunHud
         card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         UiKit.Headline(card.transform, 34,
-            (L.T("新聞", "Newspaper"), UiKit.Accent, UiKit.Hex("#b3560b")),
-            (L.T("配達ミッション", " Delivery Mission"), UiKit.Fg, UiKit.Hex("#0c0a24")));
+            (L.T("新聞", "Newspaper"), UiKit.Accent, UiKit.AccentShadow),
+            (L.T("配達ミッション", " Delivery Mission"), UiKit.Fg, UiKit.PanelShadow));
         UiKit.Label(card.transform, L.T("まずは飛行機から着地の練習！そのあとエージェントは廊下を自動で走ります。ドアの色を見て新聞を届けよう！",
             "First, a practice landing from the plane! Then the agent runs down the hallway by itself. Watch the door colours and deliver the papers!"),
             19, UiKit.Muted, TextAnchor.MiddleCenter, false);
@@ -241,8 +274,9 @@ public class ShinbunHud
         DoorCard(row, Red, L.T("赤のドア", "Red door"), L.T("赤いリングはトラップ！\n投げずにスルーしよう", "Red ring = trap!\nRun past, don't throw"));
         DoorCard(row, Yellow, L.T("黄色のドア", "Yellow door"), L.T("ふつうの部屋。\nなにも起きない", "An ordinary room.\nNothing happens"));
 
-        UiKit.Label(card.transform, L.T("<color=#ffb526>スペース</color> または <color=#ffb526>クリック</color> で投げる　/　緑のドアを逃すと MISS",
-            "<color=#ffb526>Space</color> or <color=#ffb526>click</color> to throw　/　Missing a green door is a MISS"),
+        string accent = "#" + ColorUtility.ToHtmlStringRGB(UiKit.Accent);
+        UiKit.Label(card.transform, L.T($"<color={accent}>スペース</color> または <color={accent}>クリック</color> で投げる　/　緑のドアを逃す・早すぎると MISS",
+            $"<color={accent}>Space</color> or <color={accent}>click</color> to throw　/　Missing a green door, or throwing too early, is a MISS"),
             18, UiKit.Fg, TextAnchor.MiddleCenter, false);
 
         var start = UiKit.MainButton(card.transform, L.T("▶ スタート", "▶ Start"), out _);
@@ -250,7 +284,7 @@ public class ShinbunHud
         return dim.gameObject;
     }
 
-    static readonly Color Green = UiKit.Hex("#2fd16a"), Red = UiKit.Hex("#e8333f"), Yellow = UiKit.Hex("#f2c232");
+    static readonly Color Green = UiKit.Good, Red = UiKit.Bad, Yellow = UiKit.Hex("#f2c232");
 
     static void DoorCard(Transform parent, Color color, string title, string text)
     {
@@ -271,12 +305,12 @@ public class ShinbunHud
         var leaf = UiKit.Box("Leaf", frame.transform, Color.Lerp(color, Color.black, 0.28f), 5f);
         UiKit.Stretch(leaf.rectTransform, 8f);
         leaf.rectTransform.offsetMin = new Vector2(8f, 0f);
-        var knob = UiKit.Img("Knob", leaf.transform, UiKit.Circle, UiKit.Hex("#fdfbff"));
+        var knob = UiKit.Img("Knob", leaf.transform, UiKit.Circle, UiKit.Fg);
         knob.rectTransform.anchorMin = knob.rectTransform.anchorMax = new Vector2(0.78f, 0.45f);
         knob.rectTransform.sizeDelta = new Vector2(10f, 10f);
 
         var t = UiKit.Label(box.transform, title, 20, color);
-        UiKit.HardShadow(t, UiKit.Hex("#0c0a24"), 2f);
+        UiKit.HardShadow(t, UiKit.PanelShadow, 2f);
         UiKit.Label(box.transform, text, 18, UiKit.Fg, TextAnchor.UpperCenter, false);
     }
 
@@ -298,8 +332,7 @@ public class ShinbunHud
         v.childForceExpandHeight = false;
         card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        var title = UiKit.Display(UiKit.Label(card.transform, L.T("ゴール！クリア！", "Goal! Cleared!"), 46, UiKit.Good));
-        UiKit.HardShadow(title, UiKit.Hex("#13703c"), 4f);
+        UiKit.Display(FitLine(card.transform, L.T("ゴール！クリア！", "Goal! Cleared!"), 46, 28, UiKit.Good, UiKit.GoodShadow, 4f));
         UiKit.Label(card.transform, L.T($"スコア　{finalScore}", $"SCORE　{finalScore}"), 30, UiKit.Accent);
         UiKit.Label(card.transform, L.T($"配達成功　{done} / {total}", $"Delivered　{done} / {total}"), 22, UiKit.Fg);
         MinigameKit.Punch(host, card.rectTransform, 1.1f, 0.3f);
@@ -312,7 +345,7 @@ public class ShinbunHud
         ShowHud(false);
         HidePrompt();
         Caption("");
-        var dim = UiKit.Img("Results", canvas, null, UiKit.Hex("#120f2b", 0.7f));
+        var dim = UiKit.Img("Results", canvas, null, Fade(UiKit.Dim, 0.7f));
         dim.raycastTarget = true;
         UiKit.Stretch(dim.rectTransform);
 
@@ -327,10 +360,10 @@ public class ShinbunHud
         v.childForceExpandHeight = false;
         card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        UiKit.Headline(card.transform, 38, (L.T("ミッションコンプリート！", "Mission Complete!"), UiKit.Good, UiKit.Hex("#13703c")));
+        FitLine(card.transform, L.T("ミッションコンプリート！", "Mission Complete!"), 38, 24, UiKit.Good, UiKit.GoodShadow, 3f);
         UiKit.Label(card.transform, L.T("スコア", "SCORE"), 18, UiKit.Muted);
         var s = UiKit.Label(card.transform, finalScore.ToString(), 56, UiKit.Accent);
-        UiKit.HardShadow(s, UiKit.Hex("#b3560b"), 4f);
+        UiKit.HardShadow(s, UiKit.AccentShadow, 4f);
         UiKit.Label(card.transform, L.T($"配達成功　{done} / {total}　　PERFECT　{perfects}　　トラップ　{traps}",
             $"Delivered　{done} / {total}　　PERFECT　{perfects}　　Traps　{traps}"), 18, UiKit.Fg);
 

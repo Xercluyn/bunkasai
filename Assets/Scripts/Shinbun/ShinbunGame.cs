@@ -12,12 +12,13 @@ using UnityEngine.SceneManagement;
 /// a 3-2-1 countdown, the agent auto-runs along an apartment walkway delivering newspapers, and a plane
 /// snatches the agent off the far helipad at the end.
 ///  - Green doors: throw (Space / click) as the shrinking green ring meets the target ring. PERFECT / GOOD
-///    score points and build a combo; running past without throwing is a MISS (no points lost, combo reset).
-///  - Red doors: traps with a red ✕ ring ("don't throw"). Throwing costs points; leaving them alone earns a
-///    small bonus.
+///    score points and build a combo; running past without throwing, or throwing while the ring is still too
+///    big, is a MISS (no points lost, combo reset, no second try at that door).
+///  - Red doors: traps with a red ✕ ring ("don't throw"). Throwing at any point while the ring shows costs
+///    points; leaving them alone earns a small bonus.
 ///  - Yellow doors: plain rooms, nothing happens.
 /// There is no losing: reaching the end clears it, marks the fifth floor's quest as done and returns there.
-/// Awake caps the course length and widens the timing so a scene saved with the old hard values stays easy.
+/// The camera runs close beside the agent, so a door only comes into view about when its ring appears.
 /// The scene is made by Tools > Elevator Game > Create Shinbun Arcade Scene, which fills in the models.
 /// </summary>
 public class ShinbunGame : MonoBehaviour
@@ -36,11 +37,11 @@ public class ShinbunGame : MonoBehaviour
 
     [Header("Course")]
     [Tooltip("Number of hallway pieces between the two helipads.")]
-    public int hallways = 7;   // easy mode (was 14)
+    public int hallways = 10;
 
     [Tooltip("Back to the floor (after a short, skippable goal card) as soon as the run reaches the end, skipping the plane pickup and the results.")]
     public bool quickFinish = true;
-    public float runSpeed = 6.5f;
+    public float runSpeed = 7.5f;
 
     [Header("Agent")]
     [Tooltip("Agent height as a fraction of the coloured door (leaf and frame).")]
@@ -49,9 +50,9 @@ public class ShinbunGame : MonoBehaviour
 
     [Header("Timing (seconds)")]
     [Tooltip("How long the ring takes to close before the moment to press.")]
-    public float promptTime = 1.3f;
-    public float perfectWindow = 0.1f;
-    public float goodWindow = 0.35f;
+    public float promptTime = 1.1f;
+    public float perfectWindow = 0.08f;
+    public float goodWindow = 0.25f;
     [Tooltip("How long the agent stops to throw.")]
     public float throwTime = 0.7f;
 
@@ -86,18 +87,6 @@ public class ShinbunGame : MonoBehaviour
     int score, combo, delivered, deliverTotal, perfects, trapsHit;
     string animState;
     bool leaving;
-
-    // Easy-mode limits, applied over whatever the scene saved
-    const int MaxHallways = 7;
-    const float MinPromptTime = 1.3f, MinGoodWindow = 0.35f, MaxRunSpeed = 6.5f;
-
-    void Awake()
-    {
-        hallways = Mathf.Min(hallways, MaxHallways);
-        promptTime = Mathf.Max(promptTime, MinPromptTime);
-        goodWindow = Mathf.Max(goodWindow, MinGoodWindow);
-        runSpeed = Mathf.Min(runSpeed, MaxRunSpeed);
-    }
 
     IEnumerator Start()
     {
@@ -238,13 +227,13 @@ public class ShinbunGame : MonoBehaviour
         ground.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);   // facing up
         ground.transform.localScale = Vector3.one * SkylineRadius * 2.2f;
         var gr = ground.GetComponent<Renderer>();
-        gr.material = new Material(skylineMaterial) { mainTexture = null, color = UiKit.Hex("#355371") };
+        gr.material = new Material(skylineMaterial) { mainTexture = null, color = UiKit.Hex("#2b4a78") };
         gr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
         // The picture's rooftops sit about a third of the way up it; put them just at eye level
         skyline.position = new Vector3(0f, -0.38f * height, 0f);
         cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = UiKit.Hex("#58a8eb");
+        cam.backgroundColor = UiKit.Hex("#62b6f7");   // bright clear-day blue
     }
 
     const float SkylineRadius = 600f;
@@ -359,7 +348,7 @@ public class ShinbunGame : MonoBehaviour
                     Score(perfect, perfect ? L.T("PERFECT 着地！", "PERFECT landing!") : L.T("GOOD 着地！", "GOOD landing!"));
                 }
             }
-            Vector3 follow = agentT.position + (level.cameraSide * 12f + Vector3.up * 1.5f) * S;
+            Vector3 follow = agentT.position + (level.cameraSide * 6.5f + Vector3.up * 1.2f) * S;
             MoveCamera(follow, agentT.position + Vector3.up * agentHeight * 0.5f, 5f);
             yield return null;
         }
@@ -373,7 +362,7 @@ public class ShinbunGame : MonoBehaviour
         for (float t = 0f; t < 1.3f; t += Time.deltaTime)
         {
             MovePlane();
-            MoveCamera(agentT.position + (level.cameraSide * 9f + Vector3.up * 2f) * S, agentT.position + Vector3.up * S, 4f);
+            MoveCamera(agentT.position + (level.cameraSide * 5f + Vector3.up * 1.8f) * S, agentT.position + Vector3.up * S, 4f);
             yield return null;
         }
         Play("Idle");
@@ -429,25 +418,35 @@ public class ShinbunGame : MonoBehaviour
                 if (t <= promptTime) hud.ShowPrompt(cam.WorldToScreenPoint(door.center), 1f - t / promptTime, door.kind);
                 else hud.HidePrompt();
 
-                if (running && t <= promptTime && Pressed() && Judge(t, out bool perfect))
+                // While the ring shows every press counts, so mashing doesn't pay: a trap is hit whenever
+                // it's thrown at, and a delivery thrown before its good window is spent (too early)
+                if (running && t <= promptTime && Pressed())
                 {
                     door.resolved = true;
                     hud.HidePrompt();
-                    if (door.kind == DoorKind.Deliver)
+                    bool inTime = Judge(t, out bool perfect);
+                    if (door.kind == DoorKind.Deliver && !inTime)
                     {
-                        delivered++;
-                        if (perfect) perfects++;
-                        Score(perfect, perfect ? "PERFECT!" : "GOOD!");
+                        Miss(L.T("早い！", "Too early!"));
                     }
                     else
                     {
-                        TrapHit();
+                        if (door.kind == DoorKind.Deliver)
+                        {
+                            delivered++;
+                            if (perfect) perfects++;
+                            Score(perfect, perfect ? "PERFECT!" : "GOOD!");
+                        }
+                        else
+                        {
+                            TrapHit();
+                        }
+                        throwUntil = Time.time + throwTime;
+                        facing = new Vector3(door.center.x, agentT.position.y, door.center.z) - agentT.position;
+                        if (facing.sqrMagnitude < 1e-4f) facing = -level.cameraSide;
+                        Play("Throw");
+                        StartCoroutine(ThrowPaper(door.center));
                     }
-                    throwUntil = Time.time + throwTime;
-                    facing = new Vector3(door.center.x, agentT.position.y, door.center.z) - agentT.position;
-                    if (facing.sqrMagnitude < 1e-4f) facing = -level.cameraSide;
-                    Play("Throw");
-                    StartCoroutine(ThrowPaper(door.center));
                 }
                 else if (t < -goodWindow)
                 {
@@ -464,11 +463,25 @@ public class ShinbunGame : MonoBehaviour
         hud.HidePrompt();
     }
 
+    // Close side-on shot, square to the door wall, so the wall shows as far ahead of the agent as the frame's
+    // half width at the wall: depth to the wall × tan(half the horizontal FOV). That reach is set just past
+    // where a door's ring appears (promptTime × runSpeed, ≈8.3 at the defaults) plus about half a door, so
+    // the door slides in as its ring does, and well short of the next door (≈12.3 further on): ≈9.9 ahead.
+    // At 16:9 and 60° that puts the camera ≈3.7 S from the agent, with the wall ≈2.6 beyond it. Any yaw
+    // toward the run would push the leading edge further out, so the camera looks straight across.
     void RunCamera()
     {
-        Vector3 camPos = agentT.position + (level.cameraSide * 8.5f + Vector3.up * 2.6f + level.runDir * 1.5f) * S;
-        MoveCamera(camPos, agentT.position + (Vector3.up * 1.1f + level.runDir * 2.5f) * S, 5f);
+        var door = level.doors.Count > 0 ? level.doors[0] : null;
+        float wallGap = door != null ? Mathf.Abs(Vector3.Dot(door.center - agentT.position, level.cameraSide)) : 1.5f * S;
+        float reach = promptTime * runSpeed + 0.9f * S;
+        float halfWidth = Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * cam.aspect;
+        float side = Mathf.Max(reach / (halfWidth * CameraPitchMargin) - wallGap, MinCameraSide * S);
+        Vector3 camPos = agentT.position + level.cameraSide * side + Vector3.up * 2f * S;
+        MoveCamera(camPos, agentT.position + Vector3.up * 1.1f * S, 5f);
     }
+
+    const float CameraPitchMargin = 1.05f;   // the slight downward look widens the frame a little at the wall
+    const float MinCameraSide = 3f;          // on very wide screens, don't push the camera into the agent
 
     // A folded newspaper arcs from the agent's hand into the door
     IEnumerator ThrowPaper(Vector3 target)
@@ -479,7 +492,7 @@ public class ShinbunGame : MonoBehaviour
         Destroy(paper.GetComponent<Collider>());
         paper.transform.localScale = new Vector3(0.4f, 0.08f, 0.3f) * S;
         var r = paper.GetComponent<Renderer>();
-        r.material.color = UiKit.Hex("#f2efe6");
+        r.material.color = UiKit.Light;
         Vector3 from = agentT.position + Vector3.up * agentHeight * 0.7f;
         for (float t = 0f; t < 1f; t += Time.deltaTime / 0.35f)
         {
@@ -538,7 +551,7 @@ public class ShinbunGame : MonoBehaviour
 
     // ---------- scoring ----------
 
-    // True when the press is close enough to count; earlier presses are ignored
+    // True when the press is close enough to count as on time
     bool Judge(float timeLeft, out bool perfect)
     {
         float off = Mathf.Abs(timeLeft);
@@ -550,15 +563,15 @@ public class ShinbunGame : MonoBehaviour
     {
         score += (perfect ? perfectPoints : goodPoints) + combo * comboBonus;
         combo++;
-        hud.Pop(text, perfect ? UiKit.Accent : UiKit.Hex("#5ec8ff"));
+        hud.Pop(text, perfect ? UiKit.Accent : UiKit.Accent2);
         audioSource.PlayOneShot(sfxGood);
         UpdateScore();
     }
 
-    void Miss()
+    void Miss(string text = "MISS")
     {
         combo = 0;
-        hud.Pop("MISS", UiKit.Bad);
+        hud.Pop(text, UiKit.Bad);
         audioSource.PlayOneShot(sfxBad);
         UpdateScore();
     }

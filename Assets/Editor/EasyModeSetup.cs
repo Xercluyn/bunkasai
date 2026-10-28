@@ -9,15 +9,15 @@ using UnityEngine.SceneManagement;
 /// Tools > Elevator Game > Apply Easy Mode: the easy, ~5-minute settings for values that are saved in scenes
 /// (the code-side ones are constants in each minigame). Shorter quest-banner intro on every floor (and its floor
 /// number for 1階 / 1F), a quicker
-/// ending, and a shorter, more forgiving, slightly slower newspaper game on the fifth floor (ShinbunGame also
-/// clamps to these at runtime, so a scene that missed this tool still plays easy). Opens each scene, saves it,
+/// ending, and the fifth floor's newspaper game set to its current tuning (a little longer, quicker and tighter
+/// than the old easy values; the scene keeps whatever was saved until this runs). Opens each scene, saves it,
 /// then reopens the scene you had open; the dialog and the Console list what was written where.
 /// </summary>
 public static class EasyModeSetup
 {
     const float BannerHold = 1.2f, BannerFadeOut = 0.8f, EndingDelay = 2.5f;
-    const int Hallways = 7;
-    const float PromptTime = 1.3f, GoodWindow = 0.35f, RunSpeed = 6.5f;
+    const int Hallways = 10;
+    const float PromptTime = 1.1f, GoodWindow = 0.25f, PerfectWindow = 0.08f, RunSpeed = 7.5f;
 
     [MenuItem("Tools/Elevator Game/Apply Easy Mode")]
     static void Apply()
@@ -61,6 +61,7 @@ public static class EasyModeSetup
                 game.hallways = Hallways;
                 game.promptTime = PromptTime;
                 game.goodWindow = GoodWindow;
+                game.perfectWindow = PerfectWindow;
                 game.runSpeed = RunSpeed;
                 EditorUtility.SetDirty(game);
                 games++;
@@ -68,7 +69,7 @@ public static class EasyModeSetup
             var applied = new List<string>();
             if (games > 0)
                 applied.Add($"ShinbunGame ×{games}: hallways {Hallways}, promptTime {PromptTime} s, " +
-                            $"goodWindow {GoodWindow} s, runSpeed {RunSpeed}");
+                            $"goodWindow {GoodWindow} s, perfectWindow {PerfectWindow} s, runSpeed {RunSpeed}");
             Save(scene, applied, report);
         }
 

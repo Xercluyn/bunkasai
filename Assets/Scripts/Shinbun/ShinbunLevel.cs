@@ -31,7 +31,7 @@ public class ShinbunLevel
     public Vector3 startPad, endPad;          // middle of each helipad's landing surface
     public readonly List<Door> doors = new List<Door>();
 
-    static readonly Color Green = UiKit.Hex("#2fd16a"), Red = UiKit.Hex("#e8333f"), Yellow = UiKit.Hex("#f2c232");
+    static readonly Color Green = UiKit.Good, Red = UiKit.Bad, Yellow = UiKit.Hex("#f2c232");   // yellow: plain rooms, named so on the tutorial card
 
     public static ShinbunLevel Build(ShinbunGame game, IList<DoorKind> layout)
     {
