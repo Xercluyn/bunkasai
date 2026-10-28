@@ -73,6 +73,33 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
 4. Apply Easy Mode, to write the new 5F values into ShinbunArcade.
 5. Outline Interactables / the floor setups, if the camera background colours in the scenes still look old.
 
+## Done 2026-10-28 (third session): the floors look like the real campus
+- Source: facility photos and floor plans at yomiuririkou.ac.jp/iten (キャンパス施設紹介).
+- Floor mapping:
+  - 1F lobby;
+  - 2F reception and library;
+  - 3F 建築 (drafting and PC rooms);
+  - 4F TV studio, sub-control room and power lab;
+  - 5F 介護, 臨床工学, IT and the lounge.
+- Everything lives in `Assets/Editor/School/`:
+  - `SchoolPalette`: per-floor colours taken from the photos.
+  - `SchoolKit`: materials, primitive props, placement and free-spot search.
+  - `SchoolTextures`: procedural seamless PNGs in `Assets/Textures/School`.
+  - `ShellDresser`: splits each shell into floor, wall and ceiling submeshes with world UVs, as `… dressed (2s)` meshes.
+  - `PropRecolour`: recolours the furniture.
+  - `PropsLower` / `PropsUpper`: campus props saved as prefabs in `Assets/Prefabs/School`, placed under a `SchoolProps` root.
+  - `SchoolDresser`: the one-click menu.
+- The `SchoolProps` root has the `SchoolDressing` marker, so the building tools skip it.
+- `IndoorLightingSetup` now sets a light mood per floor, plus a blue studio wash on 4F.
+- **Run:** Tools > Elevator Game > School > **Dress School (All Floors)**, after Make Walls Double-Sided.
+  - Every step is safe to re-run.
+  - Props you have moved by hand stay where they are. To re-place a prop, delete it under `SchoolProps`.
+- **Not run in Unity yet.** Check:
+  - prop placement, especially on 1F `door`, 5F `bed` and the size of the 4F studio;
+  - sign text orientation;
+  - tile scale.
+- Compile without Unity with `Tools/compile.ps1`.
+
 ## Not done yet / next steps
 1. **Play-test everything.** None of today's polish pass has run in Unity yet; it was only compile-checked. Watch for:
    - footsteps in time on 1F and 5F (tune `Footsteps.strideBodyHeights`, `volume`);

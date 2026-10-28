@@ -56,7 +56,7 @@ public static class IndoorLightingSetup
     static Mood MoodOf(int floor) => floor == 1 ? WarmLobby : floor == 2 || floor == 4 ? Neutral : Cool;
 
     [MenuItem("Tools/Elevator Game/Fix Indoor Lighting")]
-    static void Fix()
+    internal static void Fix()
     {
         var scene = SceneManager.GetActiveScene();
         int floor = SchoolKit.FloorOf(scene);
