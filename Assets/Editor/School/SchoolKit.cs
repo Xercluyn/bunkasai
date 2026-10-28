@@ -171,9 +171,29 @@ public static class SchoolKit
         if (font != null)
         {
             tm.font = font;
-            go.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+            go.GetComponent<MeshRenderer>().sharedMaterial = TextMaterial(font);
         }
         return go.transform;
+    }
+
+    // The font's atlas with a depth-tested text shader: the built-in font material draws over everything, so
+    // sign text showed through walls
+    static Material TextMaterial(Font font)
+    {
+        var shader = Shader.Find("Elevator Game/World Text");
+        if (shader == null) return font.material;
+        EnsureFolder(MaterialFolder);
+        string path = $"{MaterialFolder}/WorldText_{font.name}.mat";
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (mat == null)
+        {
+            mat = new Material(shader);
+            AssetDatabase.CreateAsset(mat, path);
+        }
+        mat.shader = shader;
+        mat.mainTexture = font.material.mainTexture;
+        EditorUtility.SetDirty(mat);
+        return mat;
     }
 
     /// <summary>
