@@ -10,21 +10,32 @@ using UnityEngine.UI;
 /// </summary>
 public static class UiKit
 {
-    // ---------- palette (style.css :root) ----------
-    public static readonly Color Bg = Hex("#120f2b");
-    public static readonly Color Bg2 = Hex("#1d1846");
-    public static readonly Color Panel = Hex("#241e57");
-    public static readonly Color Line = Hex("#3b3380");
-    public static readonly Color Fg = Hex("#f2efff");
-    public static readonly Color Muted = Hex("#a9a2d9");
-    public static readonly Color Accent = Hex("#ffb526");
-    public static readonly Color Accent2 = Hex("#ff5fa2");
-    public static readonly Color Good = Hex("#3ef08a");
-    public static readonly Color Bad = Hex("#ff4d5e");
-    public static readonly Color CardBackA = Hex("#4a3bd1");
-    public static readonly Color CardBackB = Hex("#2a1f8f");
-    public static readonly Color CardFace = Hex("#fdfbff");
-    public static readonly Color CardInk = Hex("#1b1640");
+    // ---------- palette: IT-department navy + white, cyan accent ----------
+    public static readonly Color Bg = Hex("#0b1a3a");
+    public static readonly Color Bg2 = Hex("#10255a");
+    public static readonly Color Panel = Hex("#163273");
+    public static readonly Color Line = Hex("#2a55b0");
+    public static readonly Color Fg = Hex("#ffffff");
+    public static readonly Color Muted = Hex("#a9c4ec");
+    public static readonly Color Accent = Hex("#22d3ee");
+    public static readonly Color Accent2 = Hex("#7fb2ff");
+    public static readonly Color Good = Hex("#34d399");
+    public static readonly Color Bad = Hex("#ff5470");
+    public static readonly Color CardBackA = Hex("#2563eb");
+    public static readonly Color CardBackB = Hex("#1e3a8a");
+    public static readonly Color CardFace = Hex("#ffffff");
+    public static readonly Color CardInk = Hex("#0b1a3a");
+    // Hard drop shadows under coloured text, dark ink for text on accent fills, and the modal dim.
+    public static readonly Color AccentShadow = Hex("#0e7490");
+    public static readonly Color Accent2Shadow = Hex("#1e40af");
+    public static readonly Color GoodShadow = Hex("#047857");
+    public static readonly Color BadShadow = Hex("#9f1239");
+    public static readonly Color PanelShadow = Hex("#050d22");
+    public static readonly Color Ink = Hex("#06263a");
+    public static readonly Color Dim = Hex("#050d22");
+    public static readonly Color MainFill = Hex("#3ee0f5");
+    public static readonly Color MainShadow = Hex("#0e7490");
+    public static readonly Color Glow = Hex("#e0f7ff"); // lit windows, flashes
 
     public static Color Hex(string hex, float alpha = 1f)
     {
@@ -323,16 +334,16 @@ public static class UiKit
         return s;
     }
 
-    /// <summary>Big amber button (style.css `.btn`).</summary>
+    /// <summary>Big cyan button (style.css `.btn`).</summary>
     public static Button MainButton(Transform parent, string label, out Text text)
     {
         var button = ButtonRoot(parent, 54f, out RectTransform face, out UiPressFeedback fx);
-        var bg = Box("Bg", face, Hex("#ffc340"), 14f);
+        var bg = Box("Bg", face, MainFill, 14f);
         Stretch(bg.rectTransform);
-        fx.shadow = HardShadow(bg, Hex("#b3560b"), 6f);
+        fx.shadow = HardShadow(bg, MainShadow, 6f);
         fx.shadowDepth = 6f;
         fx.depth = 4f;
-        text = Display(Label(face, label, 20, Hex("#3a1a00")));
+        text = Display(Label(face, label, 20, Ink));
         Stretch(text.rectTransform);
         return button;
     }
@@ -343,7 +354,7 @@ public static class UiKit
         var button = ButtonRoot(parent, 46f, out RectTransform face, out UiPressFeedback fx);
         var bg = Box("Bg", face, Panel, 23f, Line, 2f);
         Stretch(bg.rectTransform);
-        fx.shadow = HardShadow(bg, Hex("#0c0a24"), 4f);
+        fx.shadow = HardShadow(bg, PanelShadow, 4f);
         fx.shadowDepth = 4f;
         fx.depth = 3f;
         fx.border = bg;
