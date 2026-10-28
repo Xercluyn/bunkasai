@@ -112,6 +112,17 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
 - **Deleted props stay deleted:** `SchoolDressing.placed` records every id ever placed. Ids missing from `SchoolProps` were deleted by hand and are never placed again. To bring one back, remove its id from the list. One-off moves are recorded as `#step` entries, so re-runs keep your hand nudges.
 - **Run:** Dress School (All Floors), or Recolour Furniture plus **Arrange Rooms (3F, 5F)**.
 
+## Done 2026-10-29: second layout pass
+- Sign text uses the depth-tested `Assets/Shaders/WorldText.shader`, so it no longer shows through walls.
+- 2F: a copy of the floor's dark grey door stands beside the reception counter (`SchoolLayout2F`).
+- 3F architecture class:
+  - 5 rows of 3 short 2.4 m drafting sets with 2 stools each, centred with wide aisles;
+  - the first and last rows are retired;
+  - paperwork, rulers and study models on 9 tables (`f3_deco_*`);
+  - `apron_short` shelves between the rows are hidden, and the ones at the back are painted white.
+- 5F: `AlleyCutter` removes two wall panels (z −45.83 and z −20.39, x −171..−150). That connects the corridor, through the closed pocket, to the hallway behind the elevators. The source images are in `Assets/Problems`.
+- Menu: **Arrange Rooms (2F, 3F, 5F)**. Dress School runs it too.
+
 ## Not done yet / next steps
 1. **Play-test everything.** None of today's polish pass has run in Unity yet; it was only compile-checked. Watch for:
    - footsteps in time on 1F and 5F (tune `Footsteps.strideBodyHeights`, `volume`);
