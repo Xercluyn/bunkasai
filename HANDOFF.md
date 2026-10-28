@@ -45,6 +45,34 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
   - 4F: hint after 1 mistake; 1.4× text.
   - 5F: the ring is red with ✕ on trap doors; the tutorial comes first; Quit asks twice; easy values are clamped in code (7 hallways, 1.3 s, 0.35 s window, run speed 6.5).
 
+## Done 2026-10-28 (second session)
+- **IT theme:** navy + white + cyan accent replaces Lantern Night.
+  - Tokens in `UiKit.cs`: Bg, Panel, Accent `#22d3ee`, AccentShadow, Ink, Dim, MainFill, Light, …
+  - Helpers `UiKit.Fit` (best-fit, shrink instead of wrap) and `UiKit.WithAlpha`.
+  - Minigames keep their own local palettes, in the same family.
+  - `InteractableOutline.color` is renamed to `tint` (default cyan), so the old orange saved in scenes is ignored.
+- **Text overlaps fixed:**
+  - Main menu: the floor card (the 2階 overlap) is now 480×112 with single-line best-fit; floor labels are clamped on screen; the title has new spacing.
+  - Also fixed: GameEnding, Toast, QuestGuide, 2F best time / legend / hint, 4F congrats.
+- **5F is harder:**
+  - New values: 10 hallways, speed 7.5, prompt 1.1 s, good 0.25 s, perfect 0.08 s.
+  - The clamps in code are removed.
+  - Pressing while a ring shows but off-time is a MISS ("早い！"), and on a trap it is a hit.
+  - The run camera is closer: it is computed from the aspect ratio so you see about 9.9 units ahead, and the next door (12.3 away) stays hidden.
+  - The ring is clamped on screen.
+- **Walls:**
+  - New **Tools > Elevator Game > Make Walls Double-Sided (All Floors)**. The FBX walls have mixed face winding, and URP was culling half of them. The tool writes `Assets/Generated/<scene>/<mesh> (2s).asset`.
+  - WallGapCloser can now find gaps along straight walls.
+  - ThirdPersonCamera is pulled in by the walls.
+  - Near clip is now 0.1 × scale.
+
+**Run in Unity, in this order, then save:**
+1. Close Wall Gaps on ThirdScene. It was never run there.
+2. Make Walls Double-Sided (All Floors).
+3. Set Up This Floor on each floor, to bake the near clip.
+4. Apply Easy Mode, to write the new 5F values into ShinbunArcade.
+5. Outline Interactables / the floor setups, if the camera background colours in the scenes still look old.
+
 ## Not done yet / next steps
 1. **Play-test everything.** None of today's polish pass has run in Unity yet; it was only compile-checked. Watch for:
    - footsteps in time on 1F and 5F (tune `Footsteps.strideBodyHeights`, `volume`);
