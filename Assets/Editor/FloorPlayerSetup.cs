@@ -24,7 +24,7 @@ public static class FloorPlayerSetup
 
     const float FloorHeight = 1.6f;            // character height on a floor without a ceiling, in metres
     const float CharacterToCeiling = 0.58f;    // character height / ceiling height (the fifth floor's)
-    const float NearClip = 0.3f, FarClip = 1000f;   // camera clip planes for a FloorHeight tall character
+    const float NearClip = 0.1f, FarClip = 1000f;   // camera clip planes for a FloorHeight tall character
 
     [MenuItem("Tools/Elevator Game/Setup Player On This Floor")]
     static void SetupPlayer() => Setup(true);
@@ -222,7 +222,7 @@ public static class FloorPlayerSetup
         follow.target = null;   // finds the PlayerMovement character on Start
 
         Undo.RecordObject(cam, Title);
-        cam.nearClipPlane = Mathf.Max(0.001f, NearClip * scale);
+        cam.nearClipPlane = Mathf.Max(0.05f, NearClip * scale);
         cam.farClipPlane = Mathf.Max(cam.nearClipPlane * 10f, FarClip * scale);
     }
 

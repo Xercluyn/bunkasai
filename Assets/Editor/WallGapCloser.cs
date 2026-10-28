@@ -12,6 +12,7 @@ using UnityEngine.SceneManagement;
 /// edge of the building's meshes, looks a short way past it along its face, and stretches the edge to meet
 /// the surface it finds there, with a little overlap. Gaps wider than the reach, such as doorways and
 /// windows, are left open. The fixed meshes are saved in Assets/Generated/(scene name) and the swap can be undone.
+/// Run it before Make Walls Double-Sided; run again afterwards, it re-closes the original mesh and keeps it double-sided.
 /// </summary>
 public static class WallGapCloser
 {
@@ -59,8 +60,24 @@ public static class WallGapCloser
             {
                 var mf = filters[i];
                 if (EditorUtility.DisplayCancelableProgressBar(Title, mf.name, (float)i / filters.Count)) return;
-                var fixedMesh = Close(mf, Original(mf), reach, ignore, out int moved);
-                if (fixedMesh != null) results.Add((mf, fixedMesh, moved));
+                var source = Original(mf);
+                if (WallThickness.IsDoubleSided(source))
+                {
+                    // Every edge of a double-sided mesh is shared by its two sides, so none look open
+                    Debug.LogWarning($"{Title}: '{mf.name}' is already double-sided and its original mesh can't be found. " +
+                                     "Run Close Wall Gaps before Make Walls Double-Sided.", mf);
+                    continue;
+                }
+                var fixedMesh = Close(mf, source, reach, ignore, out int moved);
+                if (fixedMesh == null) continue;
+                // Rerun after Make Walls Double-Sided: keep the walls double-sided
+                if (WallThickness.IsDoubleSided(mf.sharedMesh))
+                {
+                    var both = WallDoubleSider.DoubleSided(fixedMesh, mf.sharedMesh.name);
+                    Object.DestroyImmediate(fixedMesh);
+                    fixedMesh = both;
+                }
+                results.Add((mf, fixedMesh, moved));
             }
         }
         finally
@@ -140,9 +157,10 @@ public static class WallGapCloser
                 }
         }
 
-        // Each open edge points outward along its face, away from the rest of its triangle
+        // Each open edge points outward along its face, away from the rest of its triangle; along runs from
+        // the point to the edge's other end
         var l2w = mf.transform.localToWorldMatrix;
-        var outward = new Dictionary<int, List<Vector3>>();
+        var outward = new Dictionary<int, List<(Vector3 dir, Vector3 along)>>();
         foreach (var e in edges.Values)
         {
             if (e.count != 1) continue;
@@ -151,10 +169,10 @@ public static class WallGapCloser
             if (normal.sqrMagnitude < 1e-12f || (B - A).sqrMagnitude < 1e-12f) continue;
             Vector3 dir = Vector3.Cross(B - A, normal).normalized;
             if (Vector3.Dot(dir, C - A) > 0f) dir = -dir;
-            foreach (int v in new[] { weld[e.a], weld[e.b] })
+            foreach (var (v, along) in new[] { (weld[e.a], B - A), (weld[e.b], A - B) })
             {
-                if (!outward.TryGetValue(v, out var list)) outward[v] = list = new List<Vector3>();
-                if (!list.Any(d => Vector3.Dot(d, dir) > 0.95f)) list.Add(dir);
+                if (!outward.TryGetValue(v, out var list)) outward[v] = list = new List<(Vector3, Vector3)>();
+                if (!list.Any(d => Vector3.Dot(d.dir, dir) > 0.95f)) list.Add((dir, along));
             }
         }
         if (outward.Count == 0) return null;   // closed mesh
@@ -166,8 +184,8 @@ public static class WallGapCloser
         {
             Vector3 p = l2w.MultiplyPoint3x4(verts[firstIndex[kv.Key]]);
             Vector3 total = Vector3.zero;
-            foreach (var dir in kv.Value)
-                if (GapTo(p, dir, reach, ignore, out float gap)) total += dir * (gap + overlap);
+            foreach (var (dir, along) in kv.Value)
+                if (GapTo(p, dir, along, reach, ignore, out float gap)) total += dir * (gap + overlap);
             if (total != Vector3.zero) shift[kv.Key] = total;
         }
         if (shift.Count == 0) return null;
@@ -184,24 +202,36 @@ public static class WallGapCloser
         return result;
     }
 
-    // Distance from an open edge to the surface just past it. A ray finds walls across the gap; a thin
-    // sphere also finds a wall continuing in the same plane, which a ray along that plane would slip past.
-    static bool GapTo(Vector3 p, Vector3 dir, float reach, Transform ignore, out float gap)
+    // Distance from an open edge to the surface just past it. A ray finds walls across the gap; spheres also
+    // find a wall continuing in the same plane, which a ray along that plane would slip past: a tiny one for
+    // walls that line up, a wider one for walls a little out of line.
+    // A sweep that starts touching a collider can't tell where it is and drops that whole collider, and the
+    // walls are mostly one mesh, so every cast starts clear of the edge's own face (skin past it) and of the
+    // floor or ceiling at its ends (moved a little along the edge).
+    static bool GapTo(Vector3 p, Vector3 dir, Vector3 along, float reach, Transform ignore, out float gap)
     {
         float skin = reach * 0.01f;
-        Vector3 start = p + dir * skin;
+        float length = along.magnitude;
+        Vector3 side = length > 1e-6f ? along / length : Vector3.zero;
+        Vector3 Start(float inset, float ahead) => p + side * Mathf.Min(inset, 0.5f * length) + dir * ahead;
         gap = float.MaxValue;
+
+        Vector3 start = Start(skin, skin);
         foreach (var hit in Physics.RaycastAll(start, dir, reach, ~0, QueryTriggerInteraction.Ignore))
             if (!Ignored(hit, ignore)) gap = Mathf.Min(gap, hit.distance + skin);
-        if (gap < float.MaxValue) return true;
+
+        float tiny = skin * 0.5f;
+        foreach (var hit in Physics.SphereCastAll(start, tiny, dir, reach, ~0, QueryTriggerInteraction.Ignore))
+            if (!Ignored(hit, ignore)) gap = Mathf.Min(gap, hit.distance + tiny + skin);
 
         float radius = reach * 0.1f;
-        foreach (var hit in Physics.SphereCastAll(start, radius, dir, reach, ~0, QueryTriggerInteraction.Ignore))
-            if (!Ignored(hit, ignore)) gap = Mathf.Min(gap, hit.distance + radius + skin);
+        float ahead = skin + radius;
+        foreach (var hit in Physics.SphereCastAll(Start(ahead, ahead), radius, dir, reach - ahead, ~0, QueryTriggerInteraction.Ignore))
+            if (!Ignored(hit, ignore)) gap = Mathf.Min(gap, hit.distance + radius + ahead);
         return gap <= reach;
     }
 
-    // Skips the player and anything already touching the edge where it starts
+    // Skips the player and anything the cast already touches where it starts (its distance is unknown)
     static bool Ignored(RaycastHit hit, Transform ignore) =>
         hit.distance <= 0f || (ignore != null && hit.collider.transform.IsChildOf(ignore));
 

@@ -46,6 +46,7 @@ public class BuildingCollision : MonoBehaviour
     // Copy of the mesh with every triangle also added facing the other way
     static Mesh DoubleSided(Mesh mesh)
     {
+        if (WallThickness.IsDoubleSided(mesh)) return mesh;   // Make Walls Double-Sided already did it
         if (doubleSided.TryGetValue(mesh, out var cached) && cached != null) return cached;
 
         var tris = new List<int>();

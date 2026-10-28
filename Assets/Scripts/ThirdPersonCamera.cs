@@ -99,8 +99,12 @@ public class ThirdPersonCamera : MonoBehaviour
         float best = maxDist;
         foreach (var hit in Physics.SphereCastAll(origin, radius, dir, maxDist, obstacleMask, QueryTriggerInteraction.Ignore))
         {
-            if (IsTarget(hit.collider) || hit.distance <= 0f) continue;   // ignore self and overlaps at the start
-            best = Mathf.Min(best, hit.distance);
+            if (IsTarget(hit.collider)) continue;
+            if (hit.distance > 0f) { best = Mathf.Min(best, hit.distance); continue; }
+            // Already touching at the pivot (hugging a wall): the sweep reports no distance, so a ray finds
+            // whether that wall lies behind the character; one beside it, along the view, doesn't count
+            if (hit.collider.Raycast(new Ray(origin, dir), out var ray, maxDist))
+                best = Mathf.Min(best, Mathf.Max(0f, ray.distance - radius));
         }
         return best;
     }

@@ -15,6 +15,11 @@ public class WallThickness : MonoBehaviour
     [Tooltip("Wall thickness in world units. 0 = 8% of the player's height.")]
     public float thickness = 0f;
 
+    /// <summary>Ends the name of a mesh that already has every face both ways round (Make Walls Double-Sided).</summary>
+    public const string DoubleSidedSuffix = "(2s)";
+
+    public static bool IsDoubleSided(Mesh mesh) => mesh != null && mesh.name.EndsWith(DoubleSidedSuffix);
+
     static readonly Dictionary<(Mesh, float), Mesh> solidified = new Dictionary<(Mesh, float), Mesh>();
 
     void Awake()
@@ -25,7 +30,7 @@ public class WallThickness : MonoBehaviour
         foreach (var mf in GetComponentsInChildren<MeshFilter>(true))
         {
             var mesh = mf.sharedMesh;
-            if (mesh == null) continue;
+            if (mesh == null || IsDoubleSided(mesh)) continue;   // already seen from both sides; a back shell would sit askew
             if (!mesh.isReadable)
             {
                 Debug.LogWarning($"WallThickness: can't read mesh '{mesh.name}'. Turn on Read/Write in its model's import settings.", mf);
