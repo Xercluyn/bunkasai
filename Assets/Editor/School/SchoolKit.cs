@@ -210,17 +210,56 @@ public static class SchoolKit
         return root.transform;
     }
 
-    /// <summary>True when the props root already has a child `id` (placed earlier, maybe moved by hand).</summary>
-    public static bool IsPlaced(Scene scene, string id) => PropsRoot(scene).Find(id) != null;
+    // Every id the first versions of PropsLower / PropsUpper could place. A scene dressed before props were
+    // recorded counts these as placed once, so the ones deleted by hand since then stay deleted.
+    static readonly string[] LegacyIds =
+    {
+        "f1_directory", "f1_accent_wall", "f1_tactile", "f1_door_mat", "f1_umbrella", "f1_rail", "f1_exit_sign",
+        "f2_counter", "f2_runner", "f2_shelf_1", "f2_shelf_2", "f2_shelf_3", "f2_library_sign", "f2_reading_table",
+        "f3_drafting_1", "f3_drafting_2", "f3_drafting_3", "f3_whiteboard", "f3_pc_desk_1", "f3_pc_desk_2",
+        "f3_arch_model", "f3_cabinet",
+        "studioCam1", "studioCam2", "studioCam3", "studioCam4", "studioGrid", "studioCyc", "studioCurtain", "studioMonitor75",
+        "subConsole", "subMonitorWall", "subRack1", "subRack2", "subChair1", "subChair2",
+        "powerFrame", "powerMeterPanel", "powerSwitchgear", "powerSign",
+        "careBed1", "careBed2", "careBed3", "careLift", "careShower1", "careShower2", "careShower3", "careSign",
+        "ceBed", "ceMachine1", "ceMachine2", "ceMachine3", "ceIv1", "ceIv2", "ceIv3", "ceTrolley", "ceLamp", "ceSign",
+        "itDesk1", "itDesk2", "itChair1", "itChair2", "itChair3", "itChair4", "itSign",
+        "loungeTable1", "loungeTable2", "loungeChair1", "loungeChair2", "loungeChair3", "loungeChair4",
+        "loungeChair5", "loungeChair6", "loungeChair7", "loungeChair8",
+    };
+
+    // The props root's record of placed ids, adopting a pre-record scene's props the first time
+    static SchoolDressing Record(Scene scene)
+    {
+        var root = PropsRoot(scene);
+        var dressing = root.GetComponent<SchoolDressing>();
+        if (dressing.adopted) return dressing;
+        Undo.RecordObject(dressing, "School props");
+        dressing.adopted = true;
+        if (root.childCount > 0) dressing.placed.AddRange(LegacyIds.Where(id => !dressing.placed.Contains(id)));
+        foreach (Transform child in root)
+            if (!dressing.placed.Contains(child.name)) dressing.placed.Add(child.name);
+        EditorUtility.SetDirty(dressing);
+        return dressing;
+    }
+
+    /// <summary>True when prop `id` was placed once and has since been deleted by hand: tools leave it out.</summary>
+    public static bool IsDeleted(Scene scene, string id) =>
+        PropsRoot(scene).Find(id) == null && Record(scene).placed.Contains(id);
+
+    /// <summary>True when prop `id` needs no placing: it's there (maybe moved by hand) or was deleted by hand.</summary>
+    public static bool IsPlaced(Scene scene, string id) => PropsRoot(scene).Find(id) != null || IsDeleted(scene, id);
 
     /// <summary>
     /// Puts an instance of `prefab` named `id` under the props root at `position` (world) facing `yaw` degrees.
     /// An existing child with that id is kept where it is (it may have been nudged by hand) unless `replace`.
+    /// Returns null, placing nothing, for a prop deleted by hand.
     /// </summary>
     public static GameObject Place(Scene scene, string id, GameObject prefab, Vector3 position, float yaw, bool replace = false)
     {
         var root = PropsRoot(scene);
         var old = root.Find(id);
+        if (old == null && IsDeleted(scene, id)) { Debug.Log($"School props: {id} was deleted by hand; not placed again."); return null; }
         if (old != null && !replace) return old.gameObject;
         if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
         var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
@@ -228,8 +267,38 @@ public static class SchoolKit
         go.transform.SetParent(root, true);
         go.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
         Undo.RegisterCreatedObjectUndo(go, "Place school prop");
+        var dressing = Record(scene);
+        if (!dressing.placed.Contains(id))
+        {
+            Undo.RecordObject(dressing, "Place school prop");
+            dressing.placed.Add(id);
+            EditorUtility.SetDirty(dressing);
+        }
         Physics.SyncTransforms();
         return go;
+    }
+
+    /// <summary>Moves an existing prop to `position` / `yaw`; false (nothing done) when it isn't there.</summary>
+    public static bool Move(Scene scene, string id, Vector3 position, float yaw)
+    {
+        var t = PropsRoot(scene).Find(id);
+        if (t == null) return false;
+        Undo.RecordObject(t, "Move school prop");
+        t.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
+        Physics.SyncTransforms();
+        return true;
+    }
+
+    /// <summary>Removes prop `id` for good: deleted now and remembered as deleted, so no tool places it again.</summary>
+    public static void Retire(Scene scene, string id)
+    {
+        var dressing = Record(scene);
+        var t = PropsRoot(scene).Find(id);
+        if (t != null) Undo.DestroyObjectImmediate(t.gameObject);
+        if (dressing.placed.Contains(id)) return;
+        Undo.RecordObject(dressing, "Retire school prop");
+        dressing.placed.Add(id);
+        EditorUtility.SetDirty(dressing);
     }
 
     /// <summary>

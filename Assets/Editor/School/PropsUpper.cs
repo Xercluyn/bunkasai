@@ -161,7 +161,7 @@ public static class PropsUpper
         {
             if (IsPlaced(scene, it.id)) continue;
             var go = Place(scene, it.id, it.prefab, spot + rot * new Vector3(it.x, 0f, it.z) * M, yaw + it.yaw);
-            Debug.Log($"{Title}: placed {it.id} ({group}, near {near}) at {go.transform.position}.");
+            if (go != null) Debug.Log($"{Title}: placed {it.id} ({group}, near {near}) at {go.transform.position}.");
         }
     }
 

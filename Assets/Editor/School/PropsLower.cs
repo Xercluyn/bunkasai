@@ -161,6 +161,7 @@ public static class PropsLower
     {
         var old = PropsRoot(ctx.scene).Find(id);
         if (old != null) { Debug.Log($"{Title} F{ctx.floor}: {id} already placed, kept where it is."); return old; }
+        if (IsDeleted(ctx.scene, id)) { Debug.Log($"{Title} F{ctx.floor}: {id} was deleted by hand; not placed again."); return null; }
         float y = yaw ?? at.yaw;
         var p = Find(ctx, at, size, y, minDist);
         if (p == null) { Debug.LogWarning($"{Title} F{ctx.floor}: no free spot for {id} near '{at.name}'."); return null; }
