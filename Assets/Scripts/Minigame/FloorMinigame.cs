@@ -184,14 +184,13 @@ public class FloorMinigame : MonoBehaviour
         restartPlayBtn.onClick.AddListener(StartGame);   // リスタート: new shuffle, timer and taps reset
         passBtn.onClick.AddListener(() => { if (state == State.Paused) Resume(); else Pause(); });   // 一時停止 / 続ける
 
-        var foot = UiKit.Label(wrap, "", 18, UiKit.Muted, TextAnchor.MiddleCenter, false);
-        foot.resizeTextForBestFit = true;   // the pad line is longer
-        foot.resizeTextMinSize = 14;
-        foot.resizeTextMaxSize = 18;
-        GamepadInput.Bind(foot, () => GamepadInput.T("「↑」を3枚見つけよう！", "Find three \"↑\" cards!",
-            $"スティックで選んで {GamepadInput.South} でめくる　一時停止：{GamepadInput.MenuName}",
-            $"Stick to choose, {GamepadInput.South} to flip   Pause: {GamepadInput.MenuName}"));
-        UiKit.Place(foot.rectTransform, 0f, actionsY + 46f + 10f, W, 24f);
+        var foot = ButtonHints.Row(wrap, UiKit.Muted, TextAnchor.MiddleCenter,
+            ButtonHints.Keys("「↑」を3枚見つけよう！", "Find three \"↑\" cards!"),
+            ButtonHints.Keys("めくる", "Flip", ButtonHints.Click),
+            ButtonHints.OnPad("選ぶ", "Choose", ButtonHints.Pad.Stick),
+            ButtonHints.OnPad("めくる", "Flip", ButtonHints.Pad.South),
+            ButtonHints.OnPad("一時停止", "Pause", ButtonHints.Pad.Menu));
+        UiKit.Place(foot, 0f, actionsY + 46f + 10f, W, 26f);
 
         BuildOverlays(root);
 
@@ -244,10 +243,9 @@ public class FloorMinigame : MonoBehaviour
             (L.T("へ〜", "!"), UiKit.Accent, UiKit.AccentShadow));
         var rules = Column(start, "Rules", 8f);
         Rule(rules, "↑", UiKit.Good, L.T("「↑」のカードを3枚見つけよう！", "Find the three \"↑\" cards!"));
-        Rule(rules, "✕", UiKit.Bad, L.T("違うカードは「?」に戻ります。場所を覚えよう！", "Wrong cards turn back to \"?\". Remember where they are!"));
-        Rule(rules, MAX_TAPS.ToString(), UiKit.Accent, L.T($"押せるのは{MAX_TAPS}回まで。", $"You can tap up to {MAX_TAPS} times."));
-        Rule(rules, ((int)TOTAL_TIME).ToString(), UiKit.Bad, L.T($"制限時間は{(int)TOTAL_TIME}秒。急げ！", $"You have {(int)TOTAL_TIME} seconds. Hurry!"));
-        Rule(rules, "II", UiKit.Accent, L.T("「一時停止」で止めて、「続ける」で再開！", "\"Pause\" stops the game, \"Continue\" resumes it!"));
+        Rule(rules, "✕", UiKit.Bad, L.T("違うカードは戻るよ。場所を覚えよう！", "Wrong cards flip back. Remember them!"));
+        Rule(rules, MAX_TAPS.ToString(), UiKit.Accent, L.T($"めくれるのは{MAX_TAPS}回まで", $"Only {MAX_TAPS} taps"));
+        Rule(rules, ((int)TOTAL_TIME).ToString(), UiKit.Bad, L.T($"制限時間は{(int)TOTAL_TIME}秒！", $"{(int)TOTAL_TIME} seconds!"));
         var startBtn = UiKit.MainButton(start, L.T("スタート！", "Start!"), out _);
         startBtn.onClick.AddListener(StartGame);
         GamepadInput.SetDefault(startBtn, GamepadInput.OverlayPriority);
@@ -281,7 +279,7 @@ public class FloorMinigame : MonoBehaviour
         passTime = Stat(passStats, L.T("残り時間", "TIME LEFT"), L.T("0.0秒", "0.0s"));
         passScore = Stat(passStats, L.T("発見数", "FOUND"), "0/3");
         passTaps = Stat(passStats, L.T("残り回数", "TAPS LEFT"), "7/7");
-        Reason(pass, L.T("ゲームを一時停止しました。「続ける」で止めた所から再開します。", "The game is paused. \"Continue\" picks up where you left off."));
+        Reason(pass, L.T("一時停止中。「続ける」で再開！", "Paused. \"Continue\" to resume."));
         var continueBtn = UiKit.MainButton(pass, L.T("続ける ▶", "Continue ▶"), out _);
         continueBtn.onClick.AddListener(Resume);
         GamepadInput.SetDefault(continueBtn, GamepadInput.OverlayPriority);
@@ -756,8 +754,8 @@ public class FloorMinigame : MonoBehaviour
             loseReason.text = result == "time" ? L.T("時間切れ", "Time's up") : L.T("回数切れ", "Out of taps");
             loseScore.text = score + "/3";
             loseNote.text = result == "time"
-                ? L.T($"{(int)TOTAL_TIME}秒が経過しました。もう一度挑戦しよう！", $"{(int)TOTAL_TIME} seconds are up. Try again!")
-                : L.T($"{MAX_TAPS}回押し切りました。もう一度挑戦しよう！", $"You used all {MAX_TAPS} taps. Try again!");
+                ? L.T("時間切れ！もう一度！", "Out of time. Try again!")
+                : L.T("回数切れ！もう一度！", "Out of taps. Try again!");
             // show where every arrow was
             endTimer = StartCoroutine(Delay(result == "time" ? 0.15f : FLIP + 0.35f, () =>
             {

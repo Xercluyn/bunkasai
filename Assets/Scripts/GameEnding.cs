@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -47,7 +48,7 @@ public class GameEnding : MonoBehaviour
         panel = dim.gameObject;
         panelGroup = panel.AddComponent<CanvasGroup>();
         box = UiKit.Box("Panel", dim.transform, UiKit.Panel, 24f, UiKit.Accent, 3f).rectTransform;
-        UiKit.Center(box, 640f, 330f);
+        UiKit.Center(box, 640f, 356f);
         // one line of title, up to two of text: both shrink rather than run into what's below
         title = UiKit.Fit(UiKit.Display(UiKit.Label(box, "", 56, UiKit.Accent)), 56, 30);
         UiKit.HardShadow(title, UiKit.AccentShadow, 5f);
@@ -59,9 +60,26 @@ public class GameEnding : MonoBehaviour
         again.onClick.AddListener(Restart);
         GamepadInput.SetDefault(again, GamepadInput.MenuPriority);   // the pad lands here when the panel opens
         var stay = UiKit.SubButton(box, L.T("このまま見て回る", "Keep exploring"), out var stayText);
-        UiKit.Place((RectTransform)stay.transform, 330f, 233f, Mathf.Max(220f, stayText.preferredWidth + 48f), 46f);
+        float stayW = Mathf.Max(220f, stayText.preferredWidth + 48f);
+        UiKit.Place((RectTransform)stay.transform, 330f, 233f, stayW, 46f);
         stay.onClick.AddListener(Close);
+        // each choice's own button, under it: Y / Enter for the menu, B / Esc to stay
+        UiKit.Place(ButtonHints.Row(box, UiKit.Muted, TextAnchor.MiddleCenter,
+            ButtonHints.Of("", "", new[] { "Enter" }, ButtonHints.Pad.North)), 90f, 296f, 220f, 26f);
+        UiKit.Place(ButtonHints.Row(box, UiKit.Muted, TextAnchor.MiddleCenter,
+            ButtonHints.Of("", "", new[] { "Esc" }, ButtonHints.Pad.East)), 330f, 296f, stayW, 26f);
         panel.SetActive(false);
+    }
+
+    // the choices' own buttons, once the panel has popped in (A / × presses whichever button is selected)
+    void Update()
+    {
+        if (!panel.activeSelf || panelGroup.alpha < 1f) return;
+        var kb = Keyboard.current;
+        if (GamepadInput.NorthPressed || (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)))
+            Restart();
+        else if (GamepadInput.BackPressed || (kb != null && kb.escapeKey.wasPressedThisFrame))
+            Close();
     }
 
     IEnumerator Start()
@@ -78,12 +96,12 @@ public class GameEnding : MonoBehaviour
         {
             string at = FloorLabel();
             title.text = L.T("クリア！", "Cleared!");
-            text.text = L.T($"おめでとう！{at}のクエストをクリアしました。", $"Congratulations! You cleared the quest on {at}.");
+            text.text = L.T($"{at}のクエストをクリアしたよ！", $"Quest on {at} cleared!");
         }
         else
         {
             title.text = L.T("全フロアクリア！", "All Floors Clear!");
-            text.text = L.T("おめでとう！学園祭のすべてのクエストをクリアしました。", "Congratulations! You cleared every quest of the school festival.");
+            text.text = L.T("学園祭のクエストをぜんぶクリア！", "You cleared every festival quest!");
         }
         yield return new WaitForSecondsRealtime(delay);
         while (QuestBanner.Celebrating || FloorPauseMenu.Open) yield return null;

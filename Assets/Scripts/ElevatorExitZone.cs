@@ -43,7 +43,7 @@ public class ElevatorExitZone : ElevatorPlayZone
         {
             if (Time.unscaledTime < nextReminder) return;   // mashing E doesn't stack reminders
             nextReminder = Time.unscaledTime + 2f;
-            Toast.Show(L.T("まずはこの階のクエストをクリアしよう！", "Clear this floor's quest first!"), UiKit.Bad);   // buzzes Wrong itself
+            Toast.Show(L.T("先にクエストをクリアしよう！", "Clear the quest first!"), UiKit.Bad);   // buzzes Wrong itself
             return;
         }
         if (!Application.CanStreamedLevelBeLoaded(nextFloorScene))

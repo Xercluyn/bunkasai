@@ -43,13 +43,13 @@ public class TicketVendingZone : ElevatorPlayZone
             GameProgress.Yen -= price;
             GameProgress.ClearQuest(Quest);   // QuestBanner switches to クエストクリア！
             audioSource.PlayOneShot(sfxGood);
-            Toast.Show(L.T("３階へのチケットを購入しました！エレベーターで３階へ行こう！",
-                "You bought a ticket to 3F! Take the elevator up to the 3rd floor!"), UiKit.Good);
+            Toast.Show(L.T("チケットGET！エレベーターで３階へ！",
+                "Ticket bought! Take the elevator to 3F!"), UiKit.Good);
         }
         else
         {
-            Toast.Show(L.T($"お金が足りません（¥{GameProgress.Yen:#,0} / ¥{price:#,0}）。アーケードで稼ごう！",
-                $"Not enough money (¥{GameProgress.Yen:#,0} / ¥{price:#,0}). Earn some at the arcade!"), UiKit.Bad);
+            Toast.Show(L.T($"お金が足りない（¥{GameProgress.Yen:#,0} / ¥{price:#,0}）。ゲームで稼ごう！",
+                $"Not enough money (¥{GameProgress.Yen:#,0} / ¥{price:#,0}). Earn more in the game!"), UiKit.Bad);
         }
     }
 }

@@ -81,25 +81,25 @@ public class FourthFloorGame : MonoBehaviour
 
     /* ---------- data.js messages ---------- */
     static string Title => L.T("読祭 マッチングゲーム！", "Yomisai Matching Game!");
-    static string MsgInstruction => GamepadInput.T("カードを、やっている学科の屋台へ！（ドラッグ、またはカードをタップ → 屋台をタップ）",
-        "Bring each card to the department that runs it! (drag it, or click a card, then a department)",
-        $"カードを、やっている学科の屋台へ！（スティックでカードを選んで {GamepadInput.South} → 屋台を選んで {GamepadInput.South}）",
-        $"Bring each card to the department that runs it! (stick to a card, {GamepadInput.South}, then to a department, {GamepadInput.South})");
-    static string MsgProgressLabel => L.T("せいかいの数：", "Correctly placed:");
-    static string MsgSelected => L.T("「{food}」をえらんだよ。どの屋台かな？", "You picked \"{food}\". Which department is it?");
+    static string MsgInstruction => GamepadInput.T("カードを正しい学科の屋台へ！（ドラッグ／カード → 屋台）",
+        "Match each card to its department! (drag, or card → stall)",
+        $"カードを正しい学科の屋台へ！（{GamepadInput.South} でカード → 屋台）",
+        $"Match each card to its department! ({GamepadInput.South}: card → stall)");
+    static string MsgProgressLabel => L.T("せいかい：", "Correct:");
+    static string MsgSelected => L.T("「{food}」はどの屋台？", "\"{food}\": which department?");
     static string MsgPickCardFirst => L.T("先にカードをえらんでね", "Pick a card first");
-    static string MsgBoothFull => L.T("{dept}の屋台はもうかんせい！ ✓ ほかの屋台にためしてね", "{dept} is already done! ✓ Try another one");
+    static string MsgBoothFull => L.T("{dept}はもうかんせい ✓", "{dept} is done ✓");
     static string[] MsgCorrect => L.English
-        ? new[] { "Correct! {food} is at {dept}!", "Nice! {dept}'s {food}!", "Spot on! You can try {food} at {dept}!" }
-        : new[] { "せいかい！ {food}は{dept}だよ！", "ナイス！ {dept}の{food}！", "ぴったり！ {food}は{dept}で体験できるよ！" };
+        ? new[] { "Correct! {food}: {dept}!", "Nice! {dept}'s {food}!", "Spot on! {food}: {dept}!" }
+        : new[] { "せいかい！ {food}は{dept}！", "ナイス！ {dept}の{food}！", "ぴったり！ {food}は{dept}！" };
     static string[] MsgWrong => L.English
-        ? new[] { "Not that one, try again!", "So close! Try again!", "Hmm, which department could it be? Try again!" }
-        : new[] { "ちがうよ、もう一度！", "おしい！ もう一度ためしてね。", "うーん、どこの屋台かな？ もう一度！" };
-    static string MsgHint => L.T("ヒント：ピカピカ光っている屋台を見てみて！", "Hint: look at the department that's glowing!");
-    static string MsgCongratsTitle => L.T("ぜんぶ せいかい！ おめでとう！", "All correct! Congratulations!");
-    static string MsgCongratsText => L.T("すべての屋台が正しいカードでそろったよ！", "Every department has its right card!");
-    static string MsgCongratsHint => L.T("もうすぐフロアに戻るよ", "Heading back to the floor…");
-    static string MsgAllDone => L.T("ぜんぶ せいかい！ おめでとう！", "All correct! Congratulations!");   // shown between two 🎉
+        ? new[] { "Not that one!", "So close! Try again!", "Hmm, try again!" }
+        : new[] { "ちがうよ、もう一度！", "おしい！ もう一度！", "うーん、もう一度！" };
+    static string MsgHint => L.T("ヒント：光っている屋台！", "Hint: the glowing one!");
+    static string MsgCongratsTitle => L.T("ぜんぶ せいかい！", "All correct!");
+    static string MsgCongratsText => L.T("ぜんぶの屋台がそろった！", "Every stall is matched!");
+    static string MsgCongratsHint => L.T("フロアに戻るよ…", "Back to the floor…");
+    static string MsgAllDone => L.T("ぜんぶ せいかい！", "All correct!");   // shown between two 🎉
 
     // style.css :root, recoloured to the IT department's navy / white / cyan (UiKit); the greens stay for "correct"
     static readonly Color Night = UiKit.Bg2, NightDeep = UiKit.Bg, Brand = UiKit.CardBackA, BrandDeep = UiKit.Accent2Shadow,
@@ -183,13 +183,12 @@ public class FourthFloorGame : MonoBehaviour
         // untimed, so no countdown: the card just covers the game until スタート！
         MinigameKit.HowToPlay(canvasRoot, "マッチングゲーム", "Matching Game", new[]
         {
-            ("カードを、その出し物をやっている学科の屋台へドラッグしよう", "Drag each card to the stall of the department that runs it"),
             GamepadInput.UsingPad
-                ? ($"パッド：スティックでカードを選んで {GamepadInput.South} → 屋台を選んで {GamepadInput.South}",
-                   $"Pad: stick to a card and press {GamepadInput.South}, then to a stall and press {GamepadInput.South}")
-                : ("タップでもOK：カードをタップ → 屋台をタップ", "Or tap a card, then tap a stall"),
-            ("まちがえたら、正しい屋台がピカピカ光ってヒントになるよ", "Wrong stall? The right one glows as a hint"),
-            ($"{booths.Count}つの屋台をぜんぶうめたらクリア！", $"Fill all {booths.Count} stalls to clear!"),
+                ? ($"カードを正しい学科の屋台へ（{GamepadInput.South} でカード → 屋台）",
+                   $"Put each card on its department's stall ({GamepadInput.South}: card → stall)")
+                : ("カードを正しい学科の屋台へドラッグ", "Drag each card to its department's stall"),
+            ("まちがえたら正しい屋台が光るよ", "Wrong? The right stall glows"),
+            ($"{booths.Count}つの屋台をうめたらクリア！", $"Fill all {booths.Count} stalls to win!"),
         }, null, 1.5f);
     }
 
@@ -323,6 +322,16 @@ public class FourthFloorGame : MonoBehaviour
         brt.anchoredPosition = new Vector2(28f, 12f);
         brt.sizeDelta = new Vector2(backText.preferredWidth + 48f, 56f);
         back.onClick.AddListener(Leave);
+
+        // the controls as buttons, centred under the page
+        var hints = ButtonHints.Row(canvasRoot, UiKit.Muted, TextAnchor.MiddleCenter,
+            ButtonHints.Keys("カードを屋台へ", "A card to a stall", ButtonHints.Drag),
+            ButtonHints.Keys("カード → 屋台", "A card, then a stall", ButtonHints.Click),
+            ButtonHints.OnPad("選ぶ", "Choose", ButtonHints.Pad.Stick),
+            ButtonHints.OnPad("カード → 屋台", "A card, then a stall", ButtonHints.Pad.South));
+        hints.anchorMin = hints.anchorMax = hints.pivot = new Vector2(0.5f, 0f);
+        hints.anchoredPosition = new Vector2(0f, 18f);
+        hints.sizeDelta = new Vector2(1000f, 44f);
 
         BuildCongrats();
     }

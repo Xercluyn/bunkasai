@@ -20,6 +20,7 @@ public class QuestGuide : MonoBehaviour
 
     const float ArrowHalf = 26f;   // half the edge arrow (46) at the top of its pulse
     const float LabelGap = 8f;     // space between the edge arrow and its label
+    const float MarkerTop = 84f;   // the marker's label top above its target point (34 + 34 tall + 6 bob + 10 room)
 
     RectTransform canvasRect, marker, markerBob, edge, edgeLabel, hintRect;
     Text markerText, edgeText, hintText;
@@ -109,14 +110,22 @@ public class QuestGuide : MonoBehaviour
         if (behind) local = -local;   // mirrored when behind the camera
 
         const float margin = 56f;
-        bool onScreen = !behind && Mathf.Abs(local.x) < half.x - margin && Mathf.Abs(local.y) < half.y - margin;
+        // the camera looks down on the floor, so far targets sit high on the screen: the marker only shows while
+        // its label still fits under the top edge, else the edge arrow takes over
+        bool onScreen = !behind && Mathf.Abs(local.x) < half.x - margin &&
+                        local.y > -half.y + margin && local.y < half.y - MarkerTop;
         if (onScreen)
         {
             marker.gameObject.SetActive(true);
             marker.anchoredPosition = local;
             markerBob.anchoredPosition = new Vector2(0f, 6f * Mathf.Sin(Time.unscaledTime * 4f));
             markerText.text = MarkerLine(kind, zone) + "  " + Metres(world);
-            ((RectTransform)markerText.transform.parent).sizeDelta = new Vector2(markerText.preferredWidth + 28f, 34f);
+            var pill = (RectTransform)markerText.transform.parent;
+            float w = markerText.preferredWidth + 28f;
+            pill.sizeDelta = new Vector2(w, 34f);
+            // near a side edge the label slides inwards, the ▼ stays on the target
+            float over = Mathf.Max(0f, Mathf.Abs(local.x) + w * 0.5f - (half.x - 8f));
+            pill.anchoredPosition = new Vector2(-Mathf.Sign(local.x) * over, 34f);
         }
         else
         {
@@ -260,8 +269,8 @@ public class QuestGuide : MonoBehaviour
     {
         switch (kind)
         {
-            case Kind.Ticket: return L.T("次：自動販売機でチケットを買おう", "Next: buy the ticket at the vending machine");
-            case Kind.Elevator: return L.T("次：エレベーターで上の階へ", "Next: take the elevator up");
+            case Kind.Ticket: return L.T("次：自販機でチケットを買おう", "Next: buy the ticket");
+            case Kind.Elevator: return L.T("次：エレベーターで上へ", "Next: take the elevator up");
             case Kind.Game:
                 bool needsMoney = zones.OfType<TicketVendingZone>().Any(z => z.isActiveAndEnabled);
                 return needsMoney ? L.T("次：ゲームで ¥3,000 集めよう", "Next: earn ¥3,000 in the game")

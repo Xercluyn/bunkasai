@@ -141,7 +141,7 @@ public class FloorPauseMenu : MonoBehaviour
     }
 
     // the ride, the ending panel and a zone leaving for its minigame keep the screen
-    static bool CanOpen => !ElevatorRide.Busy && !ThirdPersonCamera.panelOpen && !ElevatorPlayZone.Leaving;
+    static bool CanOpen => !ElevatorRide.Busy && !ThirdPersonCamera.panelOpen && !ElevatorPlayZone.Leaving && !PlayerLock.JustReleased;
 
     void Show()
     {
@@ -248,7 +248,7 @@ public class FloorPauseMenu : MonoBehaviour
         langText.text = L.English ? "日本語" : "English";   // the language it switches to
         restartText.text = armedRestart != null ? L.T("もう一度で最初から", "Again to restart") : L.T("↻ 最初から", "↻ Restart");
         menuText.text = armedMenu != null ? L.T("もう一度でメニューへ", "Again for menu") : L.T("メインメニューへ", "Main menu");
-        hintText.text = L.T("Esc でゲームに戻る", "Esc to return to the game");
+        hintText.text = L.T("Esc でゲームに戻る", "Esc: back to the game");
         Fill(volumeBars, VolumeLevel);
         Fill(lookBars, LookLevel + 1);
 

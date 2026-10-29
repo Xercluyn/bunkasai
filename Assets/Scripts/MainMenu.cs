@@ -388,12 +388,12 @@ public class MainMenu : MonoBehaviour
             titleLines[i].fontSize = L.English ? 48 : 68;
         }
         textPad = GamepadInput.UsingPad;
-        subtitle.text = GamepadInput.T("ビルの階をクリックして遊ぶフロアを選ぼう", "Click a floor of the building to play it",
-            "スティック → でビルの階を選ぼう", "Push the stick → to pick a floor of the building");
+        subtitle.text = GamepadInput.T("階をクリックして選ぼう", "Click a floor to play it",
+            "スティック → で階を選ぼう", "Stick → to pick a floor");
         runLabel.text = L.T("▶ 1階から5階まで遊ぶ", "▶ Play floors 1 to 5");
-        hintText.text = GamepadInput.T("右のビルの階をクリックすると\nそのフロアだけ遊べるよ", "Click a floor of the building\nto play just that floor",
-            $"→ でビルへ、↑↓ で階を選んで {GamepadInput.South}\n言語の切り替え：{GamepadInput.North}",
-            $"→ to the building, ↑↓ for a floor, {GamepadInput.South} to play\nLanguage: {GamepadInput.North}");
+        hintText.text = GamepadInput.T("ビルの階をクリックで\nその階だけ遊べるよ", "Click a floor\nto play just that one",
+            $"→ ↑↓ で階を選んで {GamepadInput.South}\n言語：{GamepadInput.North}",
+            $"→ ↑↓ pick a floor, {GamepadInput.South} play\nLanguage: {GamepadInput.North}");
         for (int i = 0; i < 5; i++)
         {
             floors[i].name.text = L.T((i + 1) + "階", (i + 1) + "F");
@@ -412,9 +412,9 @@ public class MainMenu : MonoBehaviour
         if (hover == 0) return;
         infoNumber.text = hover.ToString();
         infoFloor.text = GamepadInput.T($"{hover}階 · クリックでスタート", $"{hover}F · click to start",
-            $"{hover}階 · {GamepadInput.South} でスタート　← で戻る", $"{hover}F · {GamepadInput.South} to start   ← back");
+            $"{hover}階 · {GamepadInput.South} スタート　← 戻る", $"{hover}F · {GamepadInput.South} start   ← back");
         infoGame.text = L.T(FloorGames[hover - 1].ja, FloorGames[hover - 1].en);
-        infoNote.text = L.T("このフロアのクエストをクリアしたらゲームクリア！", "Clear this floor's quest to win the game!");
+        infoNote.text = L.T("クエストをクリアしたら勝ち！", "Clear the quest to win!");
     }
 
     /* ---------- per frame ---------- */

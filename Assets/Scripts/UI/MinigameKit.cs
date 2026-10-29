@@ -73,7 +73,8 @@ public static class MinigameKit
             ruleTexts[i] = t;
         }
 
-        var hint = UiKit.Label(panel, "", Mathf.RoundToInt(15 * scale), UiKit.Muted, TextAnchor.MiddleCenter, false);
+        var hint = UiKit.Rect("Keys", panel);   // the start buttons, drawn by ButtonHints below
+        hint.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f * scale;
         var button = UiKit.MainButton(panel, "", out var buttonText);
         buttonText.fontSize = Mathf.RoundToInt(24 * scale);
         button.GetComponent<LayoutElement>().preferredHeight = 60f * scale;
@@ -88,8 +89,9 @@ public static class MinigameKit
             buttonText.text = L.T(buttonJa, buttonEn);
         };
         card.write();
-        GamepadInput.Bind(hint, () => GamepadInput.T("Space / Enter でもスタート", "Space / Enter also starts",
-            $"{GamepadInput.South} ボタンでスタート", $"Press {GamepadInput.South} to start"));
+        var keys = ButtonHints.Row(hint.transform, UiKit.Muted, TextAnchor.MiddleCenter,
+            ButtonHints.Of("スタート", "Start", new[] { "Space", "Enter" }, ButtonHints.Pad.South));
+        UiKit.Stretch(keys);
         button.onClick.AddListener(card.Close);
         GamepadInput.SetDefault(button, GamepadInput.CardPriority);
         return dim.gameObject;
@@ -185,11 +187,9 @@ public static class MinigameKit
         holder.anchoredPosition = new Vector2(0f, 18f * scale);
         holder.sizeDelta = new Vector2(420f * scale, 44f * scale);
         holder.SetAsLastSibling();
-        var label = UiKit.Label(holder, "", Mathf.RoundToInt(18 * scale), UiKit.Fg);
-        GamepadInput.Bind(label, () => GamepadInput.T("クリック / Space で次へ", "Click / Space to continue",
-            $"{GamepadInput.South} ボタンで次へ", $"Press {GamepadInput.South} to continue"));
-        UiKit.HardShadow(label, UiKit.WithAlpha(UiKit.PanelShadow, 0.8f), 2f * scale);
-        UiKit.Place(label.rectTransform, 0f, 0f, 420f * scale, 24f * scale);
+        var label = ButtonHints.Row(holder, UiKit.Fg, TextAnchor.MiddleCenter,
+            ButtonHints.Of("次へ", "Continue", new[] { ButtonHints.Click, "Space" }, ButtonHints.Pad.South));
+        UiKit.Place(label, 0f, 0f, 420f * scale, 24f * scale);
         var track = UiKit.Box("Track", holder, UiKit.WithAlpha(UiKit.Dim, 0.7f), 4f * scale);
         UiKit.Place(track.rectTransform, 0f, 30f * scale, 420f * scale, 8f * scale);
         var fill = UiKit.Box("Fill", track.transform, UiKit.Accent, 4f * scale).rectTransform;

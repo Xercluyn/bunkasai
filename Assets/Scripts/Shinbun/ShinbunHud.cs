@@ -276,8 +276,8 @@ public class ShinbunHud
         UiKit.Headline(card.transform, 34,
             (L.T("新聞", "Newspaper"), UiKit.Accent, UiKit.AccentShadow),
             (L.T("配達ミッション", " Delivery Mission"), UiKit.Fg, UiKit.PanelShadow));
-        UiKit.Label(card.transform, L.T("まずは飛行機から着地の練習！そのあとエージェントは廊下を自動で走ります。ドアの色を見て新聞を届けよう！",
-            "First, a practice landing from the plane! Then the agent runs down the hallway by itself. Watch the door colours and deliver the papers!"),
+        UiKit.Label(card.transform, L.T("着地の練習のあと、廊下を自動で走るよ。ドアに新聞を届けよう！",
+            "Practice a landing, then the agent runs on its own. Deliver papers to the doors!"),
             19, UiKit.Muted, TextAnchor.MiddleCenter, false);
 
         var row = UiKit.Rect("Doors", card.transform);
@@ -286,17 +286,17 @@ public class ShinbunHud
         h.childControlWidth = h.childControlHeight = true;
         h.childForceExpandWidth = true;
         h.childForceExpandHeight = false;
-        DoorCard(row, Green, L.T("緑のドア", "Green door"), L.T("緑のリングが重なったら\n新聞を投げ入れよう！", "Throw the paper in\nwhen the green rings meet!"));
-        DoorCard(row, Red, L.T("赤のドア", "Red door"), L.T("赤いリングはトラップ！\n投げずにスルーしよう", "Red ring = trap!\nRun past, don't throw"));
-        DoorCard(row, Yellow, L.T("黄色のドア", "Yellow door"), L.T("ふつうの部屋。\nなにも起きない", "An ordinary room.\nNothing happens"));
+        DoorCard(row, Green, L.T("緑のドア", "Green door"), L.T("リングが重なったら\n投げる！", "Throw when\nthe rings meet!"));
+        DoorCard(row, Red, L.T("赤のドア", "Red door"), L.T("トラップ！\n投げないで", "Trap!\nDon't throw"));
+        DoorCard(row, Yellow, L.T("黄色のドア", "Yellow door"), L.T("ふつうの部屋\n（なにもしない）", "Ordinary room\n(do nothing)"));
 
         string accent = "#" + ColorUtility.ToHtmlStringRGB(UiKit.Accent);
         var throwHelp = UiKit.Label(card.transform, "", 18, UiKit.Fg, TextAnchor.MiddleCenter, false);
         GamepadInput.Bind(throwHelp, () => GamepadInput.T(
-            $"<color={accent}>スペース</color> または <color={accent}>クリック</color> で投げる　/　緑のドアを逃す・早すぎると MISS",
-            $"<color={accent}>Space</color> or <color={accent}>click</color> to throw　/　Missing a green door, or throwing too early, is a MISS",
-            $"<color={accent}>{GamepadInput.South}</color> ボタンで投げる　/　緑のドアを逃す・早すぎると MISS　/　やめる：{GamepadInput.East}",
-            $"<color={accent}>{GamepadInput.South}</color> to throw　/　Missing a green door, or throwing too early, is a MISS　/　Quit: {GamepadInput.East}"));
+            $"<color={accent}>スペース</color> / <color={accent}>クリック</color> で投げる　/　早すぎ・見逃しは MISS",
+            $"<color={accent}>Space</color> / <color={accent}>click</color> to throw　/　Too early or missed = MISS",
+            $"<color={accent}>{GamepadInput.South}</color> で投げる　/　早すぎ・見逃しは MISS　/　やめる：{GamepadInput.East}",
+            $"<color={accent}>{GamepadInput.South}</color> to throw　/　Too early or missed = MISS　/　Quit: {GamepadInput.East}"));
 
         var start = UiKit.MainButton(card.transform, L.T("▶ スタート", "▶ Start"), out _);
         start.onClick.AddListener(() => onStart());

@@ -153,14 +153,14 @@ public class SecondFloorGame : MonoBehaviour
         Hud();
         ShowBest();
         ShowDemo();
-        SetOverlay(L.T("2階ゲーム", "2F Game"), L.T($"↓かタップでフックを落として、お金をつかもう！\n{(int)TIME}秒以内に ¥3,000 集めたらクリア！", $"Press ↓ or tap to drop the hook and grab money!\nCollect ¥3,000 within {(int)TIME} seconds to clear!"),
+        SetOverlay(L.T("2階ゲーム", "2F Game"), L.T($"↓ でフックを落として、お金をつかもう！\n{(int)TIME}秒で ¥3,000 集めたらクリア！", $"Press ↓ to drop the hook and grab money!\nGet ¥3,000 in {(int)TIME} seconds to win!"),
             L.T("スタート！", "Start!"), StartGame, true, false);
         // the start card names the pad's button while the pad is in use
         GamepadInput.Bind(ovText, () => GamepadInput.T(
-            $"↓かタップでフックを落として、お金をつかもう！\n{(int)TIME}秒以内に ¥3,000 集めたらクリア！",
-            $"Press ↓ or tap to drop the hook and grab money!\nCollect ¥3,000 within {(int)TIME} seconds to clear!",
-            $"{GamepadInput.South} ボタンでフックを落として、お金をつかもう！\n{(int)TIME}秒以内に ¥3,000 集めたらクリア！",
-            $"Press {GamepadInput.South} to drop the hook and grab money!\nCollect ¥3,000 within {(int)TIME} seconds to clear!"));
+            $"↓ でフックを落として、お金をつかもう！\n{(int)TIME}秒で ¥3,000 集めたらクリア！",
+            $"Press ↓ to drop the hook and grab money!\nGet ¥3,000 in {(int)TIME} seconds to win!",
+            $"{GamepadInput.South} でフックを落として、お金をつかもう！\n{(int)TIME}秒で ¥3,000 集めたらクリア！",
+            $"Press {GamepadInput.South} to drop the hook and grab money!\nGet ¥3,000 in {(int)TIME} seconds to win!"));
     }
 
     void BuildUi()
@@ -220,16 +220,13 @@ public class SecondFloorGame : MonoBehaviour
 
         // controls
         float cy = stageY + H + 12f;
-        var hint = UiKit.Label(wrap, "", 18, Muted, TextAnchor.MiddleLeft, false);
-        GamepadInput.Bind(hint, () => GamepadInput.T(
-            "発射：↓ / Space / タップ　はなす：↑\n一時停止：P　リスタート：R",
-            "Drop: ↓ / Space / tap   Let go: ↑\nPause: P   Restart: R",
-            $"発射：{GamepadInput.South}　はなす：{GamepadInput.North}\n一時停止：{GamepadInput.MenuName}　リスタート：{GamepadInput.SelectName}",
-            $"Drop: {GamepadInput.South}   Let go: {GamepadInput.North}\nPause: {GamepadInput.MenuName}   Restart: {GamepadInput.SelectName}"));
-        hint.lineSpacing = 1.05f;
-        hint.resizeTextForBestFit = true;   // two lines in 48 px; the English lines are the longer ones
-        hint.resizeTextMinSize = 14;
-        hint.resizeTextMaxSize = 18;
+        // the controls as buttons, two rows left of the on-screen buttons
+        var hint = ButtonHints.Row(wrap, Muted, TextAnchor.MiddleLeft,
+            ButtonHints.Of("発射", "Drop", new[] { "↓", "Space" }, ButtonHints.Pad.South),
+            ButtonHints.Of("はなす", "Let go", new[] { "↑" }, ButtonHints.Pad.North));
+        var hint2 = ButtonHints.Row(wrap, Muted, TextAnchor.MiddleLeft,
+            ButtonHints.Of("一時停止", "Pause", new[] { "P" }, ButtonHints.Pad.Menu),
+            ButtonHints.Of("リスタート", "Restart", new[] { "R" }, ButtonHints.Pad.Select));
         var fire = UiKit.ColorButton(wrap, L.T("発射", "Drop"), UiKit.MainFill, UiKit.Ink, UiKit.MainShadow, 44f, 18, out var fireText);
         pauseBtn = UiKit.ColorButton(wrap, L.T("一時停止", "Pause"), Sub, SubInk, SubShadow, 44f, 18, out pauseText);
         var restart = UiKit.ColorButton(wrap, L.T("リスタート", "Restart"), Sub, SubInk, SubShadow, 44f, 18, out var restartText);
@@ -241,7 +238,8 @@ public class SecondFloorGame : MonoBehaviour
             UiKit.Place((RectTransform)b.transform, x, cy + 2f, bw, 44f);
             x -= 10f;
         }
-        UiKit.Place(hint.rectTransform, 0f, cy, x - 4f, 48f);   // the room left of the buttons
+        UiKit.Place(hint, 0f, cy, x - 4f, 22f);   // the room left of the buttons
+        UiKit.Place(hint2, 0f, cy + 26f, x - 4f, 22f);
         fire.onClick.AddListener(() => { if (!running) { if (overlay.activeSelf) ovAction?.Invoke(); } else Fire(); });
         pauseBtn.onClick.AddListener(TogglePause);
         pauseBtn.interactable = false;
@@ -375,9 +373,9 @@ public class SecondFloorGame : MonoBehaviour
         lv.childForceExpandWidth = lv.childForceExpandHeight = false;
         foreach (var (what, how) in new[]
                  {
-                     (L.T("硬貨（1〜500円）", "Coins (¥1–500)"), L.T("軽くてすぐ戻る", "Light, quick to reel in")), (L.T("千円札", "¥1,000 note"), L.T("そこそこ軽い", "Fairly light")), (L.T("一万円札", "¥10,000 note"), L.T("深いところに… ジャックポット！", "Deep down… JACKPOT!")),
-                     (L.T("石・子ども銀行券", "Rocks, toy notes"), L.T("重くて価値なし", "Heavy and worthless")), (L.T("がま口", "Coin purse"), L.T("中身はお楽しみ", "What's inside? Surprise!")),
-                     (L.T("↑ キー", "↑ key"), L.T("お金ははなして地面に戻す、ガラクタは捨てる", "Lets money drop back; throws junk away"))
+                     (L.T("硬貨（1〜500円）", "Coins (¥1–500)"), L.T("軽くてすぐ戻る", "Light, quick to reel in")), (L.T("千円札", "¥1,000 note"), L.T("そこそこ軽い", "Fairly light")), (L.T("一万円札", "¥10,000 note"), L.T("深い所にある大当たり！", "Deep down. Jackpot!")),
+                     (L.T("石・子ども銀行券", "Rocks, toy notes"), L.T("重くて価値なし", "Heavy and worthless")), (L.T("がま口", "Coin purse"), L.T("中身はお楽しみ", "Surprise inside!")),
+                     (L.T("↑ キー", "↑ key"), L.T("はなす・ガラクタを捨てる", "Let go / toss junk"))
                  })
         {
             var row = UiKit.Rect("Row", lg);
@@ -752,10 +750,8 @@ public class SecondFloorGame : MonoBehaviour
             if (round < GOALS.Length - 1)
             {
                 SetOverlay(L.T("ラウンド" + (round + 1) + " クリア！", "Round " + (round + 1) + " Clear!"),
-                    L.T(used.ToString("0.0", Ja) + " 秒で " + Yen(money) + " 集めました。次のラウンド" + (round + 2) +
-                        "の目標は " + Yen(GOALS[round + 1]) + " です。",
-                        "You collected " + Yen(money) + " in " + used.ToString("0.0", Ja) + "s. The goal for round " + (round + 2) +
-                        " is " + Yen(GOALS[round + 1]) + "."),
+                    L.T("次の目標は " + Yen(GOALS[round + 1]) + "！",
+                        "Next goal: " + Yen(GOALS[round + 1]) + "!"),
                     L.T("ラウンド" + (round + 2) + "へ", "To round " + (round + 2)), () => { round++; BeginRound(); }, false, false);
             }
             else
@@ -769,13 +765,11 @@ public class SecondFloorGame : MonoBehaviour
                     PlayerPrefs.SetFloat(BestKey, totalUsed);
                 }
                 ShowBest();
-                SetOverlay(L.T("おめでとうございます！", "Congratulations!"),
-                    L.T("目標の " + Yen(goal) + " を達成しました！ " + totalUsed.ToString("0.0", Ja) + " 秒で " + Yen(money) +
-                        " 集めました。" + (isBest ? "ベストタイム更新！" : "") +
-                        "\nフロアに戻って、エレベーター近くの自動販売機で３階へのチケットを買おう！",
-                        "You reached the goal of " + Yen(goal) + "! You collected " + Yen(money) + " in " +
-                        totalUsed.ToString("0.0", Ja) + "s." + (isBest ? " New best time!" : "") +
-                        "\nGo back to the floor and buy a ticket to 3F at the vending machine by the elevator!"),
+                SetOverlay(L.T("おめでとう！", "Congratulations!"),
+                    L.T(Yen(money) + " ゲット！" + (isBest ? " ベストタイム！" : "") +
+                        "\n自動販売機で３階へのチケットを買おう！",
+                        "You got " + Yen(money) + "!" + (isBest ? " New best time!" : "") +
+                        "\nBuy the 3F ticket at the vending machine!"),
                     L.T("フロアに戻る", "Back to the floor"), Leave, false, true);
                 Celebrate(false);
                 MinigameKit.ResultThenExit(this, canvasRoot, Leave);   // the game ends by itself
@@ -785,8 +779,8 @@ public class SecondFloorGame : MonoBehaviour
         {
             audioSource.PlayOneShot(Sfx.Bad());
             SetOverlay(time <= 0f ? L.T("タイムアップ", "Time's Up") : L.T("お金が尽きました", "No Money Left"),
-                L.T("目標 " + Yen(goal) + " まであと " + Yen(goal - money) + "でした。もう一回挑戦しよう！",
-                    "You were " + Yen(goal - money) + " short of the " + Yen(goal) + " goal. Try again!"),
+                L.T("あと " + Yen(goal - money) + "！もう一回！",
+                    Yen(goal - money) + " short. Try again!"),
                 L.T("もう一回", "Try Again"), StartGame, false, false);
         }
     }
@@ -797,7 +791,7 @@ public class SecondFloorGame : MonoBehaviour
         if (!running || paused) return;
         paused = true;
         pauseText.text = L.T("再開", "Resume");
-        SetOverlay(L.T("一時停止中", "Paused"), L.T("ゲームは止まっています。再開を押すと続きから始まります。", "The game is paused. Press Resume to carry on."), L.T("再開", "Resume"), ResumeGame, true, false);
+        SetOverlay(L.T("一時停止中", "Paused"), L.T("「再開」で続きから。", "Press Resume to carry on."), L.T("再開", "Resume"), ResumeGame, true, false);
     }
 
     void ResumeGame()

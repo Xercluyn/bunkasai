@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// A short message strip in the lower middle of the screen that fades after a few seconds
-/// (the ticket machine's 「お金が足りません」, the elevator's 「クエストをクリアしてから」). Toast.Show from anywhere;
+/// (the ticket machine's 「お金が足りない」, the elevator's 「クエストをクリアしてから」). Toast.Show from anywhere;
 /// it builds its own canvas the first time in each scene. It pops as it appears (a softer buzz for UiKit.Bad).
 /// </summary>
 public class Toast : MonoBehaviour

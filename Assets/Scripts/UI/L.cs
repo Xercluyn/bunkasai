@@ -37,10 +37,12 @@ public static class L
 
     public static string T(string ja, string en) => English ? en : ja;
 
-    /// <summary>A scene-stored Japanese text in the current language (unchanged if there's no translation).</summary>
+    /// <summary>A scene-stored Japanese text in the current language (unchanged if there's no translation).
+    /// Quest texts also have a shorter Japanese wording, used instead of the one saved in the scene.</summary>
     public static string Tr(string ja)
     {
-        if (!English || string.IsNullOrEmpty(ja)) return ja;
+        if (string.IsNullOrEmpty(ja)) return ja;
+        if (!English) return Short.TryGetValue(ja, out var s) ? s : ja;
         return Table.TryGetValue(ja, out var en) ? en : ja;
     }
 
@@ -62,10 +64,20 @@ public static class L
         ["５階へ"] = "Up to 5F",
         ["チケットを購入"] = "Buy ticket",
         // quests
-        ["エレベーターで2階に行きましょう！"] = "Take the elevator up to the 2nd floor!",
-        ["３階へのチケットを買いましょう！"] = "Buy a ticket to the 3rd floor!",
-        ["建築学科の教室でクイズをクリアしましょう！"] = "Clear the quiz in the Architecture classroom!",
-        ["スタジオでゲームをクリアしましょう！"] = "Clear the game in the studio!",
-        ["ITエンジニア学科の教室でミニゲームをクリアしよう！"] = "Clear the minigame in the IT Engineering classroom!",
+        ["エレベーターで2階に行きましょう！"] = "Ride the elevator to 2F!",
+        ["３階へのチケットを買いましょう！"] = "Buy a ticket to 3F!",
+        ["建築学科の教室でクイズをクリアしましょう！"] = "Clear the Architecture quiz!",
+        ["スタジオでゲームをクリアしましょう！"] = "Clear the studio game!",
+        ["ITエンジニア学科の教室でミニゲームをクリアしよう！"] = "Clear the IT classroom game!",
+    };
+
+    // Shorter Japanese for the quest texts saved in the scenes (keys = the scene text)
+    static readonly Dictionary<string, string> Short = new Dictionary<string, string>
+    {
+        ["エレベーターで2階に行きましょう！"] = "エレベーターで２階へ行こう！",
+        ["３階へのチケットを買いましょう！"] = "３階へのチケットを買おう！",
+        ["建築学科の教室でクイズをクリアしましょう！"] = "建築学科のクイズをクリアしよう！",
+        ["スタジオでゲームをクリアしましょう！"] = "スタジオのゲームをクリアしよう！",
+        ["ITエンジニア学科の教室でミニゲームをクリアしよう！"] = "IT学科のゲームをクリアしよう！",
     };
 }

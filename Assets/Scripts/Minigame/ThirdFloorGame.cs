@@ -9,7 +9,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Unity port of Assets/Minigame/ThirdFloorGame (index.html + script.js + style.css): see an animal, hear its
-/// English name and pick it from three words within 14 seconds; three rounds, two right clears the quiz.
+/// English name and pick it from four words (look-alike animals first) within 7 seconds; five rounds, four right
+/// clears the quiz. A wrong answer or time-out ends that question: no second try.
 /// Opens on the shared how-to-play card and a 3-2-1 countdown (every replay counts down too); the ☰ menu and
 /// its how-to-play card pause the round timer. Builds its whole UI at runtime. The animal pictures come from
 /// EmojiSheet.png (the colour emoji, 6×3 cells of 256 px), the voice from Speech (Windows' system voices) and
@@ -17,24 +18,25 @@ using UnityEngine.UI;
 /// </summary>
 public class ThirdFloorGame : MonoBehaviour
 {
-    // easy mode: 3 questions, 14 s each, 2 right clears it (was 5, 5 s, all 5)
-    const int ROUNDS = 3, PASS = 2;
-    const float TIME = 14f, NEXT = 1.9f;
+    // 5 questions, 7 s each, 4 right clears it; 4 answers, look-alikes first (was 3 / 14 s / 2 right / 3 answers)
+    const int ROUNDS = 5, PASS = 4, CHOICES = 4;
+    const float TIME = 7f, NEXT = 1.6f;
     const int WARN_FROM = 3;   // red timer and a beep each second from here down
 
     [Tooltip("Assets/Minigame/ThirdFloorGame/EmojiSheet.png")]
     public Texture2D emojiSheet;
 
-    [Tooltip("The 3D floor scene this game returns to; its quest is cleared by a perfect score.")]
+    [Tooltip("The 3D floor scene this game returns to; its quest is cleared by a passing score.")]
     [SceneName] public string floorScene = "ThirdFloorScene";
 
     // Emoji sheet cells, left to right, top to bottom
     enum E { Cow, Cat, Mouse, Dog, Chicken, Pig, Horse, Sheep, Duck, Rabbit, Trophy, Seedling, Speaker, Party, Star, Confetti, Sparkles, Glow }
 
-    static readonly (string w, E e)[] POOL =
+    // g: look-alike group (0 farm animals, 1 small pets, 2 birds); wrong answers come from the same group first
+    static readonly (string w, E e, int g)[] POOL =
     {
-        ("Cow", E.Cow), ("Cat", E.Cat), ("Mouse", E.Mouse), ("Dog", E.Dog), ("Chicken", E.Chicken),
-        ("Pig", E.Pig), ("Horse", E.Horse), ("Sheep", E.Sheep), ("Duck", E.Duck), ("Rabbit", E.Rabbit)
+        ("Cow", E.Cow, 0), ("Cat", E.Cat, 1), ("Mouse", E.Mouse, 1), ("Dog", E.Dog, 1), ("Chicken", E.Chicken, 2),
+        ("Pig", E.Pig, 0), ("Horse", E.Horse, 0), ("Sheep", E.Sheep, 0), ("Duck", E.Duck, 2), ("Rabbit", E.Rabbit, 1)
     };
 
     // style.css palette, pulled toward the IT department's navy / white / cyan (UiKit): navy ink, cyan accent
@@ -44,10 +46,10 @@ public class ThirdFloorGame : MonoBehaviour
     static readonly (Color c, Color cd)[] OptColors =
     {
         (UiKit.Hex("#d3f6fc"), UiKit.Hex("#7fd7e8")), (UiKit.Hex("#dce9ff"), UiKit.Hex("#9dbaf0")),
-        (UiKit.Hex("#ffffff"), UiKit.Hex("#b9cbe6"))
+        (UiKit.Hex("#ffffff"), UiKit.Hex("#b9cbe6")), (UiKit.Hex("#e6f3ff"), UiKit.Hex("#a7c8ea"))
     };
 
-    class Question { public string w; public E e; public string res = ""; }
+    class Question { public string w; public E e; public int g; public string res = ""; }
 
     class Opt
     {
@@ -112,10 +114,11 @@ public class ThirdFloorGame : MonoBehaviour
 
     static (string ja, string en)[] Rules() => new[]
     {
-        ("絵を見て、その動物の英語の名前を選ぼう。", "Look at the picture and pick the animal's English name."),
-        ($"問題は{ROUNDS}問。1問{(int)TIME}秒だよ。", $"{ROUNDS} questions, {(int)TIME} seconds each."),
-        ($"{PASS}問正解でクリア！", $"Get {PASS} right to clear it!"),
-        ("絵をタップすると英語が聞けるよ。", "Tap the picture to hear the word."),
+        ("動物の英語名を選ぼう。", "Pick the animal's English name."),
+        ($"全{ROUNDS}問・1問{(int)TIME}秒。", $"{ROUNDS} questions, {(int)TIME} s each."),
+        ($"{PASS}問正解でクリア。", $"Get {PASS} right to clear."),
+        ("答えは1回だけ。", "One try per question."),
+        ("絵をタップで音声。", "Tap the picture to hear it."),
     };
 
     Sprite Cell(E e) => cells[(int)e];
@@ -139,7 +142,7 @@ public class ThirdFloorGame : MonoBehaviour
 
         // header: title card and the ☰ menu button
         var title = Card(column, 0f, 0f, W - 60f, 72f, 26f, 5f);
-        var tt = UiKit.Label(title, L.T("かわいい どうぶつの\nなまえを まなぼう", "Learn the names of\ncute animals"), 21, Ink);
+        var tt = UiKit.Label(title, L.T("どうぶつ えいご クイズ", "Animal English Quiz"), 24, Ink);
         tt.lineSpacing = 1.1f;
         UiKit.Stretch(tt.rectTransform);
         var menuBtn = Pressable(column, W - 50f, 8f, 50f, 55f, Color.white, Ledge, 18f, 5f, "☰", 24, Ink, out _, out _, out _);
@@ -180,15 +183,14 @@ public class ThirdFloorGame : MonoBehaviour
         tnum = UiKit.Label(timerFace.transform, ((int)TIME).ToString(), 28, Ink);
         UiKit.Stretch(tnum.rectTransform);
 
-        var hint = UiKit.Label(quiz, "", 18, Ink2);
-        GamepadInput.Bind(hint, () => GamepadInput.T(
-            "絵をタップして音を聞こう。正しい答えを選んでね。", "Tap the picture to hear it. Pick the right answer!",
-            $"{GamepadInput.West} で音を聞こう。スティックで選んで {GamepadInput.South}　メニュー：{GamepadInput.MenuName}",
-            $"{GamepadInput.West}: hear it.  Stick + {GamepadInput.South}: answer.  Menu: {GamepadInput.MenuName}"));
-        hint.resizeTextForBestFit = true;   // the English line is long: shrink rather than clip
-        hint.resizeTextMinSize = 15;
-        hint.resizeTextMaxSize = 18;
-        UiKit.Place(hint.rectTransform, 0f, 162f, W, 28f);
+        var hint = ButtonHints.Row(quiz, Ink2, TextAnchor.MiddleCenter,
+            ButtonHints.Keys("聞く・答える", "Hear · answer", ButtonHints.Click),
+            ButtonHints.Keys("メニュー", "Menu", ButtonHints.RightClick),
+            ButtonHints.OnPad("聞く", "Hear", ButtonHints.Pad.West),
+            ButtonHints.OnPad("選ぶ", "Choose", ButtonHints.Pad.Stick),
+            ButtonHints.OnPad("答える", "Answer", ButtonHints.Pad.South),
+            ButtonHints.OnPad("メニュー", "Menu", ButtonHints.Pad.Menu));
+        UiKit.Place(hint, 0f, 163f, W, 26f);
 
         // picture card: sun, animal, speaker
         var pic = Card(quiz, 0f, 200f, W, 262f, 36f, 8f);
@@ -223,7 +225,7 @@ public class ThirdFloorGame : MonoBehaviour
         trt.anchoredPosition = new Vector2(0f, -60f);
         trt.sizeDelta = new Vector2(150f, 150f);
         endTitle = UiKit.Label(endCard, "", 42, Ink);
-        endTitle.resizeTextForBestFit = true;   // 「ざんねん…もう一回！」 / "So close, try again!" are wide
+        endTitle.resizeTextForBestFit = true;   // a long title shrinks instead of clipping
         endTitle.resizeTextMinSize = 26;
         endTitle.resizeTextMaxSize = 42;
         Top(endTitle.rectTransform, 230f, 56f, W - 40f);
@@ -233,12 +235,12 @@ public class ThirdFloorGame : MonoBehaviour
         endMsg.resizeTextMinSize = 15;
         endMsg.resizeTextMaxSize = 19;
         Top(endMsg.rectTransform, 296f, 90f, W - 60f);
-        var again = Pressable(endCard, 0f, 0f, 260f, 56f, Accent, UiKit.AccentShadow, 28f, 6f, L.T("もう一度あそぶ", "Play again"), 22, UiKit.Ink, out _, out _, out _);
+        var again = Pressable(endCard, 0f, 0f, 260f, 56f, Accent, UiKit.AccentShadow, 28f, 6f, L.T("もう一度", "Play again"), 22, UiKit.Ink, out _, out _, out _);
         Top((RectTransform)again.transform, 400f, 50f, 260f);
         again.onClick.AddListener(Begin);
         againBtn = again.gameObject;
         GamepadInput.SetDefault(again, GamepadInput.OverlayPriority);
-        var home = Pressable(endCard, 0f, 0f, 260f, 56f, Ok, UiKit.Hex("#33a874"), 28f, 6f, L.T("フロアに戻る", "Back to the floor"), 22, Color.white, out _, out _, out _);
+        var home = Pressable(endCard, 0f, 0f, 260f, 56f, Ok, UiKit.Hex("#33a874"), 28f, 6f, L.T("フロアへ戻る", "Back to floor"), 22, Color.white, out _, out _, out _);
         Top((RectTransform)home.transform, 474f, 50f, 260f);
         home.onClick.AddListener(Leave);
         homeBtn = home.gameObject;
@@ -338,9 +340,9 @@ public class ThirdFloorGame : MonoBehaviour
         menu.pivot = new Vector2(0f, 1f);
         menu.sizeDelta = new Vector2(220f, 4 * 46f + 12f);
         UiKit.HardShadow(box, Ledge, 6f);
-        MenuItem(L.T("もう一度 きく", "Hear it again"), 0, out _, () => PlaySound());
-        MenuItem(L.T("おとを OFFにする", "Sound OFF"), 1, out muteLbl, ToggleMute);
-        MenuItem(L.T("はじめから", "Start over"), 2, out _, () => { Speech.Stop(); Begin(); });
+        MenuItem(L.T("もう一度聞く", "Hear again"), 0, out _, () => PlaySound());
+        MenuItem(L.T("音 OFF", "Sound off"), 1, out muteLbl, ToggleMute);
+        MenuItem(L.T("最初から", "Restart"), 2, out _, () => { Speech.Stop(); Begin(); });
         MenuItem(L.T("あそびかた", "How to play"), 3, out _, ShowHelp);
         // the stick goes up and down the four rows only, never to the quiz behind the menu
         var items = menu.GetComponentsInChildren<Button>(true);
@@ -432,9 +434,9 @@ public class ThirdFloorGame : MonoBehaviour
     void ToggleMute()
     {
         muted = !muted;
-        muteLbl.text = muted ? L.T("おとを ONにする", "Sound ON") : L.T("おとを OFFにする", "Sound OFF");
+        muteLbl.text = muted ? L.T("音 ON", "Sound on") : L.T("音 OFF", "Sound off");
         if (muted) Speech.Stop();
-        Toast.Show(muted ? L.T("おとを けしたよ", "Sound is off") : L.T("おとを ONにしたよ", "Sound is on"), UiKit.Fg);
+        Toast.Show(muted ? L.T("音 OFF", "Sound off") : L.T("音 ON", "Sound on"), UiKit.Fg);
     }
 
     /* ---------- speech ---------- */
@@ -527,7 +529,7 @@ public class ThirdFloorGame : MonoBehaviour
     {
         gen++;   // cancels pending next() calls from the last game
         timing = held = false;
-        q = Shuffle(POOL).Take(ROUNDS).Select(a => new Question { w = a.w, e = a.e }).ToList();
+        q = Shuffle(POOL).Take(ROUNDS).Select(a => new Question { w = a.w, e = a.e, g = a.g }).ToList();
         idx = 0;
         score = 0;
         locked = false;
@@ -550,12 +552,15 @@ public class ThirdFloorGame : MonoBehaviour
 
         foreach (var o in opts) Destroy(o.root.gameObject);
         opts.Clear();
-        var wrong = Shuffle(POOL.Where(p => p.w != cur.w)).Take(2).Select(p => p.w);
+        // look-alikes (same group) first, then any others
+        var wrong = Shuffle(POOL.Where(p => p.w != cur.w)).OrderBy(p => p.g == cur.g ? 0 : 1)
+            .Take(CHOICES - 1).Select(p => p.w);
         int i = 0;
+        float bw = (optsBox.sizeDelta.x - 12f) / 2f;   // 2 × 2 grid
         foreach (var w in Shuffle(wrong.Prepend(cur.w)))
         {
             var (c, cd) = OptColors[i];
-            var b = Pressable(optsBox, 0f, i * 66f, optsBox.sizeDelta.x, 56f, c, cd, 24f, 7f, w, 30, Ink, out var text, out var top, out var ledge);
+            var b = Pressable(optsBox, (i % 2) * (bw + 12f), (i / 2) * 82f, bw, 72f, c, cd, 24f, 7f, w, 30, Ink, out var text, out var top, out var ledge);
             var o = new Opt { w = w, root = (RectTransform)b.transform, top = top, ledge = ledge, text = text, index = i };
             b.onClick.AddListener(() => Choose(o, cur));
             if (i == 0) GamepadInput.SetDefault(b, GamepadInput.BoardPriority);   // the pad starts on the top answer
@@ -633,16 +638,15 @@ public class ThirdFloorGame : MonoBehaviour
         Dots();
         quiz.gameObject.SetActive(false);
         end.gameObject.SetActive(true);
-        bool perfect = score >= PASS;   // cleared
+        bool perfect = score >= PASS;   // cleared (PASS of ROUNDS, not necessarily all)
         homeBtn.SetActive(perfect);
         againBtn.SetActive(!perfect);   // a clear leaves on its own
         if (perfect)
         {
             GameProgress.ClearQuest(floorScene);   // the floor's QuestBanner shows クエストクリア！
             trophy.sprite = Cell(E.Trophy);
-            endTitle.text = L.T("やったね！", "Congratulations!");
-            endMsg.text = L.T($"おめでとう！{ROUNDS}問中{score}問正解！クイズクリア！ ({score} / {ROUNDS})",
-                $"Well done! {score} of {ROUNDS} right. Quiz cleared! ({score} / {ROUNDS})");
+            endTitle.text = L.T("クリア！", "Cleared!");
+            endMsg.text = L.T($"{ROUNDS}問中{score}問正解！", $"{score} of {ROUNDS} right!");
             Confetti();
             sfx.PlayOneShot(Sfx.Win());
             Say("Congratulations!");
@@ -651,9 +655,9 @@ public class ThirdFloorGame : MonoBehaviour
         else
         {
             trophy.sprite = Cell(E.Seedling);
-            endTitle.text = L.T("ざんねん…もう一回！", "So close, try again!");
-            endMsg.text = L.T($"{ROUNDS}問中{score}問正解。{PASS}問正解でクリアだよ。もう一度がんばろう！",
-                $"{score} of {ROUNDS} right. Get {PASS} right to clear it. Try again!");
+            endTitle.text = L.T("ざんねん！", "So close!");
+            endMsg.text = L.T($"{ROUNDS}問中{score}問正解。\n{PASS}問正解でクリア。",
+                $"{score} of {ROUNDS} right.\nGet {PASS} right to clear.");
             sfx.PlayOneShot(Sfx.Bad());
             Say("So close!");
             SayJa("もう一度がんばろう。", "Let's try again.");
@@ -696,7 +700,7 @@ public class ThirdFloorGame : MonoBehaviour
         var es = UnityEngine.EventSystems.EventSystem.current;
         if (es != null && es.currentSelectedGameObject != null && !GamepadInput.UsingPad) es.SetSelectedGameObject(null);
 
-        // timer: 14 → 0 in whole seconds, ring shrinking smoothly; red with a beep a second over the last 3
+        // timer: 7 → 0 in whole seconds, ring shrinking smoothly; red with a beep a second over the last 3
         float left = timing ? Mathf.Max(0f, TIME - (Time.time - timerStart)) : frozenLeft;
         if (timing)
         {

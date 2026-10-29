@@ -362,8 +362,8 @@ public class ShinbunGame : MonoBehaviour
         // Jump: fall onto the pad; press as the ring closes to land cleanly
         agentT.SetParent(null, true);
         agentT.rotation = Quaternion.LookRotation(level.runDir);
-        hud.Caption(GamepadInput.T("練習：緑のリングが重なったら スペース か クリック で着地！", "Practice: press Space or click when the green rings meet to land!",
-            $"練習：緑のリングが重なったら {GamepadInput.South} ボタンで着地！", $"Practice: press {GamepadInput.South} when the green rings meet to land!"));
+        hud.Caption(GamepadInput.T("練習：リングが重なったら スペース！", "Practice: Space when the rings meet!",
+            $"練習：リングが重なったら {GamepadInput.South}！", $"Practice: {GamepadInput.South} when the rings meet!"));
         const float gravity = 30f, maxFall = 40f;
         float v = 0f;
         bool judged = false;
@@ -392,7 +392,7 @@ public class ShinbunGame : MonoBehaviour
         hud.HidePrompt();
         hud.Caption("");
         // Only practice: a missed landing just gets a friendly word, no MISS sound
-        if (!judged) hud.Pop(L.T("着地OK！本番もこの調子", "Landed! Same again for real"), UiKit.Fg);
+        if (!judged) hud.Pop(L.T("着地OK！", "Landed!"), UiKit.Fg);
 
         Play("Land");
         for (float t = 0f; t < 1.3f; t += Time.deltaTime)
@@ -613,9 +613,9 @@ public class ShinbunGame : MonoBehaviour
         // Stepping into the extraction zone triggers the pick-up
         extracted = true;
         audioSource.PlayOneShot(sfxGood);
-        hud.Pop(L.T("脱出ゾーン到達！", "Extraction zone reached!"), UiKit.Good);
-        hud.Caption(GamepadInput.T("迎えの飛行機が来るよ！（スペースでスキップ）", "Here comes the pick-up plane! (Space to skip)",
-            $"迎えの飛行機が来るよ！（{GamepadInput.South} でスキップ）", $"Here comes the pick-up plane! ({GamepadInput.South} to skip)"));
+        hud.Pop(L.T("脱出ゾーン到達！", "Extraction zone!"), UiKit.Good);
+        hud.Caption(GamepadInput.T("迎えが来たよ！（スペースでスキップ）", "Your ride is here! (Space: skip)",
+            $"迎えが来たよ！（{GamepadInput.South} でスキップ）", $"Your ride is here! ({GamepadInput.South}: skip)"));
 
         // Low angle from the helipad floor, looking up at the agent and the sky
         Vector3 low = pad + (level.cameraSide * 5f - level.runDir * 4f + Vector3.up * 0.4f) * S;

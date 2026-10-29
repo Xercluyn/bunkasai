@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Third-person camera (PUBG-style): follows the player from behind, over the right shoulder.
+/// Third-person camera: follows the player from behind and above, looking down so the floor around them shows.
 /// The mouse orbits it around the character and it pulls in when a wall is in the way. It never turns
 /// by itself: WASD moves relative to the camera, so a camera that followed the character's facing
 /// would keep turning A/D strafes into circles.
@@ -14,18 +14,30 @@ public class ThirdPersonCamera : MonoBehaviour
     [Tooltip("Character to follow. Defaults to the object with PlayerMovement.")]
     public Transform target;
 
+    // Far back and from above, so the floor around the small (scale 0.8) onigiri shows; the character stays
+    // near the middle of the screen, clear of the corner panels and the prompt at the bottom
+    const float WideDistance = 3.2f, WidePivotHeight = 1.1f, WideShoulderOffset = 0.1f;
+    const float WideMinPitch = -20f, WideMaxPitch = 70f, WideStartPitch = 28f, WideFieldOfView = 65f;
+
     [Header("Framing (multiples of the character's height)")]
-    public float distance = 1.6f;
-    public float pivotHeight = 0.9f;
-    public float shoulderOffset = 0.25f;
+    public float distance = WideDistance;
+    public float pivotHeight = WidePivotHeight;
+    public float shoulderOffset = WideShoulderOffset;
 
     [Header("Look")]
-    public float minPitch = -35f;
-    public float maxPitch = 60f;
-    public float startPitch = 12f;
+    public float minPitch = WideMinPitch;
+    public float maxPitch = WideMaxPitch;
+    public float startPitch = WideStartPitch;
+    [Tooltip("Vertical field of view set on the camera at Start. 0 keeps the Camera's own.")]
+    public float fieldOfView = WideFieldOfView;
 
     [Tooltip("Layers the camera can't pass through.")]
     public LayerMask obstacleMask = ~0;
+
+    // 0 in scenes saved with the old close, over-the-shoulder framing (1.6 / 0.9 / 0.25, pitch 12); UpgradeFraming
+    // moves those to the wide view once, so the floors need no setup tool run
+    const int FramingVersion = 1;
+    [SerializeField, HideInInspector] int framingVersion;
 
     /// <summary>Set while a panel that must be clicked is open (the ending): frees the cursor.</summary>
     public static bool panelOpen;
@@ -41,6 +53,23 @@ public class ThirdPersonCamera : MonoBehaviour
     Collider[] targetColliders;
     Camera cam;
 
+    void Reset() => framingVersion = FramingVersion;   // a new component already has the wide defaults
+    void OnValidate() => UpgradeFraming();
+    void Awake() => UpgradeFraming();
+
+    void UpgradeFraming()
+    {
+        if (framingVersion >= FramingVersion) return;
+        framingVersion = FramingVersion;
+        distance = WideDistance;
+        pivotHeight = WidePivotHeight;
+        shoulderOffset = WideShoulderOffset;
+        minPitch = WideMinPitch;
+        maxPitch = WideMaxPitch;
+        startPitch = WideStartPitch;
+        fieldOfView = WideFieldOfView;
+    }
+
     void Start()
     {
         if (target == null)
@@ -55,6 +84,7 @@ public class ThirdPersonCamera : MonoBehaviour
         if (cc != null) height = cc.height * target.lossyScale.y;
         targetColliders = target.GetComponentsInChildren<Collider>();
         cam = GetComponent<Camera>();
+        if (cam != null && fieldOfView > 0f) cam.fieldOfView = fieldOfView;
 
         yaw = target.eulerAngles.y;
         pitch = startPitch;
