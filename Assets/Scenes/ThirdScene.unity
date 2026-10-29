@@ -253,15 +253,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: f08321d841531ce48a262b30fca1c636, type: 3}
       propertyPath: m_LocalScale.x
-      value: 70
+      value: 0.8
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f08321d841531ce48a262b30fca1c636, type: 3}
       propertyPath: m_LocalScale.y
-      value: 70
+      value: 0.8
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f08321d841531ce48a262b30fca1c636, type: 3}
       propertyPath: m_LocalScale.z
-      value: 70
+      value: 0.8
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f08321d841531ce48a262b30fca1c636, type: 3}
       propertyPath: m_LocalPosition.x
@@ -269,7 +269,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f08321d841531ce48a262b30fca1c636, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.0000059604645
+      value: 0.011055589
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f08321d841531ce48a262b30fca1c636, type: 3}
       propertyPath: m_LocalPosition.z
@@ -1678,8 +1678,8 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 2.1888847
-  far clip plane: 7296.2817
+  near clip plane: 0.7292273
+  far clip plane: 7292.273
   field of view: 60
   orthographic: 0
   orthographic size: 5
