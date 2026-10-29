@@ -29,6 +29,25 @@ public static class FloorPlayerSetup
     [MenuItem("Tools/Elevator Game/Setup Player On This Floor", false, 1)]
     static void SetupPlayer() => Setup(true);
 
+    // After the character model is replaced: every floor's player re-sized, re-animated and showing the model's
+    // own materials, each floor saved
+    [MenuItem("Tools/Elevator Game/Setup Player On All Floors", false, 1)]
+    static void SetupPlayerAllFloors() => EditorKit.ForFloors("Setup Player On All Floors", 1, 5, (scene, _) =>
+    {
+        if (!Setup(false)) { Debug.LogWarning($"{scene.name}: couldn't set up the player (no building found)."); return false; }
+        if (CharacterAnimationSetup.HasOwnMaterials(ModelPath)) ResetMaterials(FindCharacter(scene));
+        return true;
+    });
+
+    // Drops material overrides on the player's renderers (from older models), so the model's own materials show
+    static void ResetMaterials(GameObject character)
+    {
+        if (character == null) return;
+        foreach (var r in character.GetComponentsInChildren<Renderer>(true))
+            if (PrefabUtility.IsPartOfPrefabInstance(r) && PrefabUtility.GetObjectOverrides(character).Any(o => o.instanceObject == r))
+                PrefabUtility.RevertObjectOverride(r, InteractionMode.AutomatedAction);
+    }
+
     [MenuItem("Tools/Elevator Game/Set Up This Floor (All)", false, 0)]
     static void SetupAll()
     {
@@ -180,10 +199,14 @@ public static class FloorPlayerSetup
             go.transform.SetParent(old.transform.parent, false);
             go.transform.SetPositionAndRotation(old.transform.position, old.transform.rotation);
             go.transform.SetSiblingIndex(old.transform.GetSiblingIndex());
-            CharacterAnimationSetup.CopyMaterials(old, go);
-            // Mixamo can drop the colours, so restore them from the unrigged model
-            var source = AssetDatabase.LoadAssetAtPath<GameObject>(UnriggedModelPath);
-            if (source != null) CharacterAnimationSetup.CopyMaterials(source, go);
+            // A model with its own (extracted) materials keeps them. Otherwise reuse the old character's, and
+            // restore Mixamo's dropped colours from the unrigged model
+            if (!CharacterAnimationSetup.HasOwnMaterials(ModelPath))
+            {
+                CharacterAnimationSetup.CopyMaterials(old, go);
+                var source = AssetDatabase.LoadAssetAtPath<GameObject>(UnriggedModelPath);
+                if (source != null) CharacterAnimationSetup.CopyMaterials(source, go);
+            }
             Undo.RegisterCreatedObjectUndo(go, Title);
             Undo.DestroyObjectImmediate(old);
         }

@@ -199,7 +199,9 @@ public class PlayerMovement : MonoBehaviour
         float bottom = c.y - height * 0.5f;
         // Humanoid clips put the feet on the origin; skinned-mesh bounds are padded below the feet,
         // which would rest the capsule on the floor and hold the character up.
-        if (animator != null && animator.isHuman) bottom = 0f;
+        // A Generic rig exported with its origin at the feet gets the same padding; a bottom well below the origin
+        // means the origin is elsewhere, so the bounds are trusted then
+        if (animator != null && (animator.isHuman || (bottom < 0f && bottom > -0.15f * height))) bottom = 0f;
 
         // Keep the capsule's bottom a little above the feet so it never rests on the floor
         // (its skin width would hold the feet up); GroundDelta keeps the feet on the ground instead.
