@@ -41,7 +41,7 @@ public class FloorMinigame : MonoBehaviour
         public CanvasGroup faceGroup;
         public UiPointerState pointer;
         public bool flipped, good, bad, ghost, disabled, hasArrow;
-        public float angle, lift, shadowDown = 6f;
+        public float angle, lift, shadowDown = 6f, grow = 1f;
         public Coroutine anim;
     }
 
@@ -605,20 +605,22 @@ public class FloorMinigame : MonoBehaviour
     void ApplyCard(Card c, bool instant)
     {
         bool showFace = c.angle > 90f;
-        c.inner.localScale = new Vector3(Mathf.Max(0.001f, Mathf.Abs(Mathf.Cos(c.angle * Mathf.Deg2Rad))), 1f, 1f);
         c.coverSide.gameObject.SetActive(!showFace);
         c.faceSide.gameObject.SetActive(showFace);
 
         // .card:not([disabled]):not(.flipped):hover / :active on the cover
         bool live = !c.disabled && !c.flipped;
         bool hover = live && c.pointer.Highlighted;
-        c.focus.enabled = c.pointer.selected;
+        c.focus.enabled = c.pointer.selected || hover;
         bool press = live && c.pointer.pressed;
         float liftTarget = press ? -2f : hover ? 4f : 0f;
         float shadowTarget = press ? 3f : hover ? 10f : 6f;
         float k = instant ? 1f : 1f - Mathf.Exp(-Time.deltaTime / 0.06f);   // ~.18s transition
         c.lift = Mathf.Lerp(c.lift, liftTarget, k);
         c.shadowDown = Mathf.Lerp(c.shadowDown, shadowTarget, k);
+        // the flip squeezes x; a hovered card also grows a little about its centre
+        c.grow = Mathf.Lerp(c.grow, hover && !press ? 1.06f : 1f, k);
+        c.inner.localScale = new Vector3(Mathf.Max(0.001f, Mathf.Abs(Mathf.Cos(c.angle * Mathf.Deg2Rad))) * c.grow, c.grow, 1f);
         c.coverSide.anchoredPosition = new Vector2(0f, c.lift);
         c.coverShadow.rectTransform.anchoredPosition = new Vector2(0f, -c.shadowDown);
         c.coverRing.enabled = hover && !press;

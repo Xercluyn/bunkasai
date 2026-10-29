@@ -412,7 +412,6 @@ MonoBehaviour:
   - loungeChair6
   - loungeChair7
   - loungeChair8
-  - '#posters_size_v2'
   adopted: 1
 --- !u!4 &556293412
 Transform:
@@ -908,15 +907,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ThirdPersonCamera
   target: {fileID: 0}
-  distance: 1.6
-  pivotHeight: 0.9
-  shoulderOffset: 0.25
-  minPitch: -35
-  maxPitch: 60
-  startPitch: 12
+  distance: 3.2
+  pivotHeight: 1.1
+  shoulderOffset: 0.1
+  minPitch: -20
+  maxPitch: 70
+  startPitch: 28
+  fieldOfView: 65
   obstacleMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  framingVersion: 1
 --- !u!114 &2078769744
 MonoBehaviour:
   m_ObjectHideFlags: 0

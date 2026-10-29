@@ -81,6 +81,7 @@ public class ElevatorPlayZone : MonoBehaviour
             UiKit.Place(badge.rectTransform, 12f, 10f, 34f, 34f);
             keyBadge = UiKit.Label(badge.transform, "E", 20, UiKit.MainFill);
             UiKit.Stretch(keyBadge.rectTransform);
+            playButton.GetComponent<UiPressFeedback>().AddSwap(badge, keyBadge);   // inverts with the button
             labelText.rectTransform.offsetMin = new Vector2(56f, 0f);
             labelText.rectTransform.offsetMax = new Vector2(-20f, 0f);
 

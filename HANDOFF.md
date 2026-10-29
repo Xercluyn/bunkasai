@@ -145,18 +145,12 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
 - **Over the 800-line limit (runtime, not split yet):** `SecondFloorGame.cs` 1392, `FourthFloorGame.cs` 1053, `FloorMinigame.cs` 889. Split them after the play-test. Every editor file is under 800.
 - **Still to do:** in Unity, re-run Dress School (All Floors) and check with `git status` that the scenes don't change. Then merge the branch.
 
-## Done 2026-10-29: 5F ending and festival posters (not run in Unity yet)
+## Done 2026-10-29: 5F ending (not run in Unity yet)
 - **5F ending** (`ShinbunGame.Ending`, as in GAMEPLAY.txt), skippable with Space, click or Esc:
   - a pulsing extraction ring on the far helipad that triggers the pick-up;
   - the plane hooks the agent;
   - a cut to a low angle from the helipad deck as the plane climbs away.
   - It always plays. `quickFinish` now only swaps the results screen for the short goal card.
-- **Festival posters** (`School/FestivalPosters.cs`; School > Steps > Hang Festival Posters, also run by Dress School):
-  - **Assets:** `Assets/Models/School/festival_poster.fbx` (from bunkasai_asset/levels_asset/poster.fbx) and `Assets/Textures/School/festival_poster.jpeg`. The FBX's `Material` and `Material.001` are remapped to `FestivalPoster.mat` (the picture) and `FestivalPosterFrame.mat`.
-  - **Per floor, along the spawn → zones route:** up to 4 wall posters (Cube.003), 2 floor stands (Cube.002) and 2 ceiling banners (Plane and Plane.001 back to back).
-  - **Sizes** are set from the player's height.
-  - **Ids** are `f{n}_poster_{wall|stand|banner}_{k}`, kept or left out like the other props.
-  - **Check:** that posters aren't mirrored or upside down. The face direction comes from the picture faces' normals.
 
 ## Done 2026-10-29 (afternoon): new character, gamepad hints, camera, shorter texts
 - **New player character: Onimaru,** a Blender onigiri rigged and animated by the user. Commit `f38847e`.
@@ -180,7 +174,14 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
   - The five scene-saved quest texts are shortened when shown, through a short-Japanese table in `L.cs` (`L.Tr`). The keys are still the exact Japanese saved in the scenes.
 - **3F quiz is harder:** 5 questions, 4 right to clear, 7 s each, and 4 choices in a 2×2 grid. Wrong answers come from similar animals (farm, pets, birds). One try per question.
 - **Not tried in Unity yet:** all of the above apart from the character swap. Check that the 1F/4F cards, the 3F 2×2 grid and the button rows fit on screen.
-- **Untracked duplicates on the old PC:** `Assets/poster.fbx`, `Assets/festival_poster.jpeg` and `Assets/Materials/festival_poster.mat` are byte copies of the tracked `Assets/Models/School/festival_poster.fbx` and `Assets/Textures/School/festival_poster.jpeg`. Nothing uses them, so they can be deleted. They are not needed on a new PC.
+
+## Done 2026-10-29 (evening): hover contrast, quieter HUD
+- **Button hover:** `UiPressFeedback.AddSwap(fill, ink)` swaps a button's fill and text colours on hover or pad selection, and the face grows to 1.07 (`hoverScale`; `hoverFx = false` turns it off). A colour the game sets itself becomes the new resting colour, so armed / right / wrong states still show.
+  - Used by the UiKit buttons, the E prompt, 3F options / menu rows / picture and 2F Reset.
+  - 4F stalls and cards glow amber (`HoverGlow`) on hover and stalls grow; 1F cards show their halo and grow.
+- **Quest panel** (`QuestBanner`): 380 wide (`QuestBanner.CornerW`, also used by QuestGuide's 次： line), smaller type. It is at full strength for 5 s after it slides in or changes, then rests at 75%; the glow pulses bring it back up.
+- **Controls guide** (`PlayerMovement`): 240 wide, folds down after 6 s on the move, rests at 55% (full for the first 4 s and 2 s after a pad / keyboard switch).
+- **Removed again:** the festival posters (tool, model, texture, materials, prefabs and every placed poster) and the voice guide.
 
 ## Not done yet / next steps
 1. **Play-test everything.** None of today's polish pass has run in Unity yet; it was only compile-checked. Watch for:

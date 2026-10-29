@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -5,13 +6,14 @@ using UnityEngine.UI;
 /// <summary>
 /// Button feel from style.css: the face sinks and its hard shadow shrinks while pressed,
 /// the border can change colour on hover, and a disabled button fades to 40%.
+/// Hovered (mouse) or selected (pad), the face grows a little and swapped fill / ink pairs trade colours.
 /// A click sounds on press and a faint tick when the pointer moves onto an enabled button.
 /// </summary>
 [RequireComponent(typeof(UiPointerState))]
 [RequireComponent(typeof(CanvasGroup))]
 public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler, ISelectHandler, ISubmitHandler
 {
-    const float SelectedScale = 1.06f;   // a gamepad-selected button stands out a little
+    const float BlendSpeed = 12f;
     public RectTransform face;
     public Button button;
     public Shadow shadow;
@@ -22,11 +24,21 @@ public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnter
     public Color borderNormal = UiKit.Line;
     public Color borderHover = UiKit.Accent;
 
+    public float hoverScale = 1.07f;
+    public bool hoverFx = true;   // off: no grow, no colour swap
+
     [Range(0f, 1f)] public float clickVolume = 0.8f;
     [Range(0f, 1f)] public float hoverVolume = 0.25f;
 
     UiPointerState pointer;
     CanvasGroup group;
+    Vector2 home;
+    bool homeSet;
+    float blend, eased;
+
+    // one graphic of a fill / ink pair: base is its resting colour, last what this component wrote
+    class Tone { public Graphic g; public Color baseC, last; }
+    readonly List<(Tone fill, Tone ink)> swaps = new List<(Tone, Tone)>();
 
     // sweeping across a row of buttons ticks once, not once per button
     static float lastHover = -1f;
@@ -41,6 +53,15 @@ public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnter
     }
 
     bool On => button == null || button.interactable;
+
+    /// <summary>On hover the fill takes the ink's colour and the ink the fill's (a see-through fill gives Bg ink).
+    /// A colour the game writes later becomes the new resting colour.</summary>
+    public void AddSwap(Graphic fill, Graphic ink)
+    {
+        if (fill == null || ink == null) return;
+        swaps.Add((new Tone { g = fill, baseC = fill.color, last = fill.color },
+                   new Tone { g = ink, baseC = ink.color, last = ink.color }));
+    }
 
     public void OnPointerDown(PointerEventData e)
     {
@@ -74,11 +95,37 @@ public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnter
     {
         bool on = On;
         bool down = on && pointer.pressed;
+        bool lit = on && hoverFx && pointer.Highlighted;
 
-        if (face != null) face.anchoredPosition = new Vector2(0f, down ? -depth : 0f);
+        if (!on || !hoverFx) blend = 0f;   // disabled or locked: snap back, never blend
+        else blend = Mathf.MoveTowards(blend, lit ? 1f : 0f, BlendSpeed * Time.unscaledDeltaTime);
+        eased = Mathf.SmoothStep(0f, 1f, blend);
+
+        if (face != null)
+        {
+            if (!homeSet) { home = face.anchoredPosition; homeSet = true; }
+            float s = Mathf.Lerp(1f, hoverScale, eased);
+            // grow about the centre even when the pivot sits at a corner
+            Vector2 grow = Vector2.Scale(face.pivot - new Vector2(0.5f, 0.5f), face.rect.size) * (s - 1f);
+            face.anchoredPosition = home + grow + new Vector2(0f, down ? -depth : 0f);
+            face.localScale = Vector3.one * s;
+        }
         if (shadow != null) shadow.effectDistance = new Vector2(0f, down ? -(shadowDepth - depth) : -shadowDepth);
         if (border != null) border.color = on && pointer.Highlighted ? borderHover : borderNormal;
-        if (face != null) face.localScale = Vector3.one * (on && pointer.selected ? SelectedScale : 1f);
+        foreach (var (fill, ink) in swaps) Blend(fill, ink);
         group.alpha = on ? 1f : 0.4f;
     }
+
+    void Blend(Tone fill, Tone ink)
+    {
+        if (fill.g == null || ink.g == null) return;
+        if (fill.g.color != fill.last) fill.baseC = fill.g.color;
+        if (ink.g.color != ink.last) ink.baseC = ink.g.color;
+        Color fillHover = Opaque(ink.baseC);
+        Color inkHover = fill.baseC.a < 0.5f ? UiKit.Bg : Opaque(fill.baseC);
+        fill.g.color = fill.last = Color.Lerp(fill.baseC, fillHover, eased);
+        ink.g.color = ink.last = Color.Lerp(ink.baseC, inkHover, eased);
+    }
+
+    static Color Opaque(Color c) => new Color(c.r, c.g, c.b, 1f);
 }

@@ -11,6 +11,8 @@ using UnityEngine.UI;
 /// Once the quest is cleared (GameProgress.ClearQuest with this scene's name), クエストクリア！ stamps in instead,
 /// with a ring burst, confetti and a 「3階のクエスト達成」 ribbon, and the corner panel turns green.
 /// The player stays still (PlayerLock) from the start of the intro or celebration until the corner panel slides in.
+/// The panel stays at full strength for a few seconds after it arrives or changes, then rests at 75% (glow pulses
+/// bring it back up).
 /// Add it with Tools > Elevator Game > Add Quest Banner.
 /// </summary>
 public class QuestBanner : MonoBehaviour
@@ -47,8 +49,12 @@ public class QuestBanner : MonoBehaviour
     LayoutElement badgeSize;
     Image cornerBorder, stripe, attention;
     Coroutine nudge;
+    CanvasGroup panelGroup;
+    float loudUntil;   // the panel is at full strength until then (unscaled time), else QuietAlpha
 
-    const float CornerW = 500f;
+    /// <summary>Width of the corner quest panel; QuestGuide's 次： line matches it.</summary>
+    public const float CornerW = 380f;
+    const float LoudFor = 5f, QuietAlpha = 0.75f, QuietSpeed = 2f;
 
     /// <summary>Bottom edge of the corner quest panel (1280×720 canvas units from the top), for the guide's
     /// 次： line under it. 0 while there is no panel.</summary>
@@ -111,50 +117,52 @@ public class QuestBanner : MonoBehaviour
         // so it isn't overlooked; it never takes clicks.
         corner = Layer("Quest", canvas.transform);
         attention = UiKit.Img("Attention", corner.transform, UiKit.Glow, Color.clear);
-        var panel = UiKit.Box("Panel", corner.transform, UiKit.WithAlpha(UiKit.Bg2, 0.94f), 14f, UiKit.Accent, 3f);
+        var panel = UiKit.Box("Panel", corner.transform, UiKit.WithAlpha(UiKit.Bg2, 0.94f), 11f, UiKit.Accent, 2.5f);
         cornerBorder = panel;
         cornerPanel = panel.rectTransform;
         UiKit.Place(cornerPanel, 16f, 16f, CornerW, 0f);
-        UiKit.HardShadow(panel, UiKit.WithAlpha(UiKit.PanelShadow, 0.6f), 5f).useGraphicAlpha = false;
+        UiKit.HardShadow(panel, UiKit.WithAlpha(UiKit.PanelShadow, 0.6f), 4f).useGraphicAlpha = false;
+        panelGroup = panel.gameObject.AddComponent<CanvasGroup>();   // the quiet fade; the glow is a sibling
+        panelGroup.blocksRaycasts = false;
         var v = panel.gameObject.AddComponent<VerticalLayoutGroup>();
-        v.padding = new RectOffset(28, 20, 12, 16);
-        v.spacing = 6f;
+        v.padding = new RectOffset(22, 16, 9, 12);
+        v.spacing = 5f;
         v.childControlWidth = v.childControlHeight = true;
         v.childForceExpandWidth = true;
         v.childForceExpandHeight = false;
         panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        stripe = UiKit.Box("Stripe", cornerPanel, UiKit.Accent, 3f);
+        stripe = UiKit.Box("Stripe", cornerPanel, UiKit.Accent, 2.5f);
         stripe.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
         var srt = stripe.rectTransform;
         srt.anchorMin = new Vector2(0f, 0f);
         srt.anchorMax = new Vector2(0f, 1f);
         srt.pivot = new Vector2(0f, 0.5f);
-        srt.offsetMin = new Vector2(10f, 14f);
-        srt.offsetMax = new Vector2(16f, -14f);
+        srt.offsetMin = new Vector2(8f, 11f);
+        srt.offsetMax = new Vector2(13f, -11f);
 
         // header: [2階] QUEST
         var header = UiKit.Rect("Header", cornerPanel);
         var h = header.gameObject.AddComponent<HorizontalLayoutGroup>();
-        h.spacing = 10f;
+        h.spacing = 8f;
         h.childAlignment = TextAnchor.MiddleLeft;
         h.childControlWidth = h.childControlHeight = true;
         h.childForceExpandWidth = h.childForceExpandHeight = false;
-        header.gameObject.AddComponent<LayoutElement>().preferredHeight = 32f;
-        var b = UiKit.Box("Floor", header, UiKit.Accent, 8f);
+        header.gameObject.AddComponent<LayoutElement>().preferredHeight = 26f;
+        var b = UiKit.Box("Floor", header, UiKit.Accent, 6f);
         badge = b.rectTransform;
         badgeSize = b.gameObject.AddComponent<LayoutElement>();
-        badgeSize.preferredHeight = 30f;
-        badgeText = UiKit.Display(UiKit.Label(badge, "", 18, UiKit.Ink));
+        badgeSize.preferredHeight = 24f;
+        badgeText = UiKit.Display(UiKit.Label(badge, "", 15, UiKit.Ink));
         badgeText.horizontalOverflow = HorizontalWrapMode.Overflow;
         UiKit.Stretch(badgeText.rectTransform);
-        cornerTitle = UiKit.Label(header, "", 20, UiKit.Accent, TextAnchor.MiddleLeft);
+        cornerTitle = UiKit.Label(header, "", 16, UiKit.Accent, TextAnchor.MiddleLeft);
         cornerTitle.horizontalOverflow = HorizontalWrapMode.Overflow;
         cornerTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-        cornerText = UiKit.Label(cornerPanel, questText, 26, UiKit.Fg, TextAnchor.UpperLeft);
+        cornerText = UiKit.Label(cornerPanel, questText, 20, UiKit.Fg, TextAnchor.UpperLeft);
         cornerText.lineSpacing = 1.05f;
-        UiKit.HardShadow(cornerText, UiKit.WithAlpha(UiKit.PanelShadow, 0.6f), 2f);
+        UiKit.HardShadow(cornerText, UiKit.WithAlpha(UiKit.PanelShadow, 0.6f), 1.5f);
 
         Apply(GameProgress.IsQuestCleared(Quest));
         intro.alpha = 0f;
@@ -178,7 +186,12 @@ public class QuestBanner : MonoBehaviour
         a.anchorMin = a.anchorMax = a.pivot = new Vector2(0f, 1f);
         a.anchoredPosition = cornerPanel.anchoredPosition + new Vector2(-30f, 30f);
         a.sizeDelta = cornerPanel.rect.size + new Vector2(60f, 60f);
+        // full strength while something is new, then it rests quieter
+        float target = Time.unscaledTime < loudUntil ? 1f : QuietAlpha;
+        panelGroup.alpha = Mathf.MoveTowards(panelGroup.alpha, target, QuietSpeed * Time.unscaledDeltaTime);
     }
+
+    void Loud(float seconds) => loudUntil = Mathf.Max(loudUntil, Time.unscaledTime + seconds);
 
     void Redraw() => Apply(cleared);   // the language was switched
 
@@ -242,7 +255,7 @@ public class QuestBanner : MonoBehaviour
         kicker.text = L.T("クエスト", "QUEST");
         badge.gameObject.SetActive(floorNumber > 0);
         badgeText.text = FloorName;
-        badgeSize.preferredWidth = badgeText.preferredWidth + 20f;
+        badgeSize.preferredWidth = badgeText.preferredWidth + 16f;
         cornerTitle.text = done ? L.T("クエスト　✓ クリア！", "QUEST　✓ CLEAR!") : L.T("クエスト", "QUEST");
         cornerText.text = L.Tr(questText);
         Color c = done ? UiKit.Good : UiKit.Accent;
@@ -251,6 +264,7 @@ public class QuestBanner : MonoBehaviour
         stripe.color = c;
         ((Image)badge.GetComponent<Image>()).color = c;
         cornerText.color = done ? UiKit.Muted : UiKit.Fg;
+        Loud(LoudFor);
     }
 
     // Unscaled time, so a paused game doesn't freeze the banner. Mid-level the corner stays put.
@@ -317,6 +331,7 @@ public class QuestBanner : MonoBehaviour
             cornerPanel.anchoredPosition = home;
             cornerPanel.localScale = Vector3.one;
         }
+        Loud(LoudFor);
         if (nudge != null) StopCoroutine(nudge);
         nudge = StartCoroutine(Nudge());
     }
@@ -379,7 +394,11 @@ public class QuestBanner : MonoBehaviour
             stamp.localScale = new Vector3(sc.x, sc.y, 1f);
             stamp.localEulerAngles = new Vector3(0f, 0f, Mathf.Lerp(6f, 2f, k));   // z is anticlockwise: tilted up
             bigGroup.alpha = Mathf.Clamp01(k / 0.45f);
-            if (!played && k >= 0.45f) { audioSource.PlayOneShot(sfxWin); played = true; }
+            if (!played && k >= 0.45f)
+            {
+                audioSource.PlayOneShot(sfxWin);
+                played = true;
+            }
 
             float r = Mathf.Clamp01((t - 0.2f) / 0.7f);
             ring.localScale = Vector3.one * Mathf.Lerp(0.2f, 2.6f, UiKit.EaseOut(r));
@@ -481,6 +500,7 @@ public class QuestBanner : MonoBehaviour
                     float s = Mathf.Sin(t / 0.8f * Mathf.PI);
                     var c = cleared ? UiKit.Good : UiKit.Accent;
                     attention.color = new Color(c.r, c.g, c.b, 0.55f * s);
+                    Loud(1.2f);
                     if (pulses == 3 && i == 0) cornerPanel.localScale = Vector3.one * (1f + 0.06f * s);
                     yield return null;
                 }

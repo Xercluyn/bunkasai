@@ -209,6 +209,9 @@ public class SecondFloorGame : MonoBehaviour
         resetText.resizeTextMinSize = 14;
         resetText.resizeTextMaxSize = 16;
         UiKit.Stretch(resetText.rectTransform, 2f);
+        var resetFx = resetBg.gameObject.AddComponent<UiPressFeedback>();
+        resetFx.face = resetText.rectTransform; resetFx.button = resetBtn; resetFx.depth = 1f;
+        resetFx.AddSwap(resetBg, resetText);   // ResetLook's armed colours become the new resting pair
 
         // stage
         const float stageY = hudY + statH + 10f;

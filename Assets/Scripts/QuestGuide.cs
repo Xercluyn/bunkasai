@@ -70,11 +70,11 @@ public class QuestGuide : MonoBehaviour
         // "next" line under the quest panel (upper left)
         var hb = UiKit.Box("Next", canvasRect, UiKit.WithAlpha(UiKit.Bg2, 0.88f), 12f, UiKit.Accent, 2f);
         var hrt = hb.rectTransform;
-        UiKit.Place(hrt, 16f, 118f, 500f, 42f);
+        UiKit.Place(hrt, 16f, 118f, QuestBanner.CornerW, 36f);
         hintRect = hrt;
-        hintText = UiKit.Fit(UiKit.Label(hrt, "", 20, UiKit.Accent, TextAnchor.MiddleLeft), 20, 14);   // one line
+        hintText = UiKit.Fit(UiKit.Label(hrt, "", 17, UiKit.Accent, TextAnchor.MiddleLeft), 17, 12);   // one line
         UiKit.Stretch(hintText.rectTransform, 4f);
-        hintText.rectTransform.offsetMin = new Vector2(14f, 2f);
+        hintText.rectTransform.offsetMin = new Vector2(12f, 2f);
         hint = hb.gameObject;
 
         foreach (var g in canvasRect.GetComponentsInChildren<Graphic>()) g.raycastTarget = false;   // never blocks clicks
@@ -162,13 +162,13 @@ public class QuestGuide : MonoBehaviour
         }
     }
 
-    // The quest panel and the 次： line under it (upper left: 16..516 across, down to the line's bottom), in this
+    // The quest panel and the 次： line under it (upper left: 16..16 + CornerW across, down to the line's bottom), in this
     // canvas's centred coordinates; empty before the panel exists
     Rect QuestCorner(Vector2 half)
     {
         if (QuestBanner.CornerBottom <= 0f) return Rect.zero;
         float bottom = hint.activeSelf ? -hintRect.anchoredPosition.y + hintRect.rect.height : QuestBanner.CornerBottom;
-        return Rect.MinMaxRect(-half.x + 16f, half.y - bottom, -half.x + 516f, half.y - 16f);
+        return Rect.MinMaxRect(-half.x + 16f, half.y - bottom, -half.x + 16f + QuestBanner.CornerW, half.y - 16f);
     }
 
     // The controls guide (upper right) in this canvas's coordinates; empty without one

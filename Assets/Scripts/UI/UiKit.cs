@@ -360,6 +360,7 @@ public static class UiKit
         fx.depth = 4f;
         text = Display(Label(face, label, 20, Ink));
         Stretch(text.rectTransform);
+        fx.AddSwap(bg, text);
         return button;
     }
 
@@ -377,6 +378,7 @@ public static class UiKit
         fx.borderHover = Accent;
         text = Label(face, label, 18, Fg);
         Stretch(text.rectTransform);
+        fx.AddSwap(bg.transform.Find("Fill").GetComponent<Image>(), text);
         return button;
     }
 
@@ -392,6 +394,7 @@ public static class UiKit
         fx.depth = 2f;
         text = Label(face, label, fontSize, ink);
         Stretch(text.rectTransform);
+        fx.AddSwap(bg, text);
         return button;
     }
 

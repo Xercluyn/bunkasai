@@ -104,7 +104,8 @@ public class FourthFloorGame : MonoBehaviour
     // style.css :root, recoloured to the IT department's navy / white / cyan (UiKit); the greens stay for "correct"
     static readonly Color Night = UiKit.Bg2, NightDeep = UiKit.Bg, Brand = UiKit.CardBackA, BrandDeep = UiKit.Accent2Shadow,
         Accent = UiKit.Accent, Paper = UiKit.Fg, Ink = UiKit.CardInk,
-        OkC = UiKit.Hex("#2E9E5B"), Mint = UiKit.Hex("#7CFFB2"), Done = UiKit.Hex("#3DDC84");
+        OkC = UiKit.Hex("#2E9E5B"), Mint = UiKit.Hex("#7CFFB2"), Done = UiKit.Hex("#3DDC84"),
+        HoverGlow = UiKit.Hex("#FFC94D");   // warm amber hover, against the cyan selection
 
     /* ---------- the page at 1920 px wide (CSS px = canvas units), enlarged to fill a 1080 p screen ---------- */
     const float ScreenW = 1920f, ScreenH = 1080f;
@@ -1055,6 +1056,7 @@ public class FourthFloorGame : MonoBehaviour
                 float t = 2.8f - (b.hintUntil - Time.time);                // hintPulse: 0.9 s, three times
                 if (t < 2.7f) scale = 1f + 0.05f * Mathf.Sin((t % 0.9f) / 0.9f * Mathf.PI);
             }
+            else if (hover) scale = 1.05f;
             b.body.localScale = Vector3.Lerp(b.body.localScale, Vector3.one * scale, k);
             b.body.anchoredPosition = new Vector2(Shake(b.shakeUntil), Mathf.Lerp(b.body.anchoredPosition.y, lift, k));
 
@@ -1067,6 +1069,7 @@ public class FourthFloorGame : MonoBehaviour
             }
             else if (hint) glow = Accent;
             else if (ready) glow = Accent;
+            else if (hover) glow = HoverGlow;
             else if (b.complete) glow = new Color(Done.r, Done.g, Done.b, 0.67f);
             else if (hasSelection) glow = new Color(Accent.r, Accent.g, Accent.b, 0.6f);
             b.glow.color = Color.Lerp(b.glow.color, glow, k);
@@ -1086,7 +1089,7 @@ public class FourthFloorGame : MonoBehaviour
             if (hover && c.root.GetSiblingIndex() != c.root.parent.childCount - 1) c.root.SetAsLastSibling();
             float zoom = hover ? CardHoverZoom : sel ? 1.07f : 1f;
             c.face.localScale = Vector3.Lerp(c.face.localScale, Vector3.one * zoom, k);
-            c.glow.color = sel ? Accent : Color.clear;
+            c.glow.color = sel ? Accent : hover ? HoverGlow : Color.clear;
         }
     }
 }

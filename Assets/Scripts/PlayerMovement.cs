@@ -115,7 +115,9 @@ public class PlayerMovement : MonoBehaviour
     float movedFor;          // seconds spent moving; the guide folds down after CollapseAfter
     bool guideCollapsed;
     bool guidePad;           // the guide shows the gamepad's buttons
-    const float CollapseAfter = 10f, GuideWidth = 290f;
+    CanvasGroup guideGroup;  // rests at GuideQuiet; full strength at first and just after a pad / keyboard switch
+    float guideLoudUntil;
+    const float CollapseAfter = 6f, GuideWidth = 240f, GuideQuiet = 0.55f, GuideFirst = 4f, GuideSwitch = 2f;
     // rich-text colours for the guide: keys in white, what they do in the muted blue
     static readonly string KeyInk = "#" + ColorUtility.ToHtmlStringRGB(UiKit.Fg), HelpInk = "#" + ColorUtility.ToHtmlStringRGB(UiKit.Muted);
 
@@ -131,18 +133,21 @@ public class PlayerMovement : MonoBehaviour
         rt.anchoredPosition = new Vector2(-16f, -16f);
         rt.sizeDelta = new Vector2(GuideWidth, 0f);
         var v = panel.gameObject.AddComponent<VerticalLayoutGroup>();
-        v.padding = new RectOffset(16, 16, 10, 12);
-        v.spacing = 3f;
+        v.padding = new RectOffset(12, 12, 8, 10);
+        v.spacing = 2f;
         v.childControlWidth = v.childControlHeight = true;
         v.childForceExpandWidth = true;
         v.childForceExpandHeight = false;
         panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         panel.raycastTarget = false;
+        guideGroup = panel.gameObject.AddComponent<CanvasGroup>();
+        guideGroup.blocksRaycasts = false;
+        guideLoudUntil = Time.unscaledTime + GuideFirst;
 
-        guideTitle = UiKit.Label(panel.transform, "", 15, UiKit.Accent, TextAnchor.MiddleLeft);
+        guideTitle = UiKit.Label(panel.transform, "", 13, UiKit.Accent, TextAnchor.MiddleLeft);
         guideLines = new Text[4];
         for (int i = 0; i < guideLines.Length; i++)
-            guideLines[i] = UiKit.Label(panel.transform, "", 18, UiKit.Fg, TextAnchor.MiddleLeft);
+            guideLines[i] = UiKit.Label(panel.transform, "", 15, UiKit.Fg, TextAnchor.MiddleLeft);
         WriteGuide();
         L.Changed += WriteGuide;
     }
@@ -158,7 +163,7 @@ public class PlayerMovement : MonoBehaviour
             for (int i = 0; i < guideLines.Length - 1; i++) guideLines[i].gameObject.SetActive(false);
             var last = guideLines[guideLines.Length - 1];
             last.text = $"<color={KeyInk}>{menuKey}</color><color={HelpInk}>: {L.T("メニュー", "Menu")}</color>";
-            guidePanel.sizeDelta = new Vector2(last.preferredWidth + 34f, 0f);
+            guidePanel.sizeDelta = new Vector2(last.preferredWidth + 26f, 0f);
             return;
         }
         guideTitle.text = L.T("操作方法", "CONTROLS");
@@ -181,11 +186,18 @@ public class PlayerMovement : MonoBehaviour
             guideLines[i].text = $"<color={KeyInk}>{lines[i].Item1}</color>　<color={HelpInk}>{lines[i].Item2}</color>";
     }
 
-    // after a while on the move the player knows the controls: fold the guide down to its Esc line
+    // after a while on the move the player knows the controls: fold the guide down to its Esc line. It rests
+    // dimmed so the eye stays on the quest.
     void UpdateGuide()
     {
         if (guidePanel == null) return;
-        if (guidePad != GamepadInput.UsingPad) WriteGuide();   // switched between the pad and keyboard + mouse
+        if (guidePad != GamepadInput.UsingPad)   // switched between the pad and keyboard + mouse
+        {
+            WriteGuide();
+            guideLoudUntil = Mathf.Max(guideLoudUntil, Time.unscaledTime + GuideSwitch);
+        }
+        float target = Time.unscaledTime < guideLoudUntil ? 1f : GuideQuiet;
+        guideGroup.alpha = Mathf.MoveTowards(guideGroup.alpha, target, 2f * Time.unscaledDeltaTime);
         if (guideCollapsed) return;
         if (running) movedFor += Time.deltaTime;
         if (movedFor < CollapseAfter) return;

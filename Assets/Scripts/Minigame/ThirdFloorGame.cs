@@ -200,6 +200,8 @@ public class ThirdFloorGame : MonoBehaviour
         picBtn.transition = Selectable.Transition.None;
         picBtn.targetGraphic = picHit;
         picBtn.onClick.AddListener(PlaySound);
+        var picFx = picBtn.gameObject.AddComponent<UiPressFeedback>();
+        picFx.face = pic; picFx.button = picBtn; picFx.depth = 0f; picFx.hoverScale = 1.03f;
         UiKit.Center(UiKit.Img("SunHalo", pic, UiKit.Circle, UiKit.Hex("#f4fcff")).rectTransform, 240f, 240f);
         UiKit.Center(UiKit.Img("Sun", pic, UiKit.Circle, Sun).rectTransform, 134f, 134f);
         emoji = UiKit.Img("Animal", pic, null, Color.white);
@@ -296,6 +298,7 @@ public class ThirdFloorGame : MonoBehaviour
         fx.shadow = ledgeShadow;
         fx.shadowDepth = depth;
         fx.depth = depth * 0.45f;
+        fx.AddSwap(top, text);
         return button;
     }
 
@@ -363,17 +366,16 @@ public class ThirdFloorGame : MonoBehaviour
         row.raycastTarget = true;
         UiKit.Place(row.rectTransform, 6f, 6f + i * 46f, 208f, 44f);
         var b = row.gameObject.AddComponent<Button>();
-        var colors = b.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = Bg2;
-        colors.pressedColor = Bg1;
-        colors.selectedColor = Bg2;   // shows the gamepad's choice (a click's selection is dropped at once)
-        b.colors = colors;
+        b.transition = Selectable.Transition.None;
         b.targetGraphic = row;
         b.onClick.AddListener(() => { CloseMenu(); action(); });
         if (i == 0) GamepadInput.SetDefault(b, GamepadInput.MenuPriority);
         text = UiKit.Label(row.transform, label, 18, Ink, TextAnchor.MiddleLeft);
         UiKit.Place(text.rectTransform, 14f, 0f, 190f, 44f);
+        // hover or the pad's choice inverts the row (a click's selection is dropped at once)
+        var fx = row.gameObject.AddComponent<UiPressFeedback>();
+        fx.face = text.rectTransform; fx.button = b; fx.depth = 1f;
+        fx.AddSwap(row, text);
     }
 
     /* ---------- menu, help (both pause the round timer) ---------- */
@@ -575,7 +577,10 @@ public class ThirdFloorGame : MonoBehaviour
     {
         // buttons stay enabled-looking (style.css doesn't fade them); `locked` ignores further clicks
         foreach (var o in opts)
+        {
+            o.root.GetComponent<UiPressFeedback>().hoverFx = false;   // right / wrong colours stay readable
             if (o.w == cur.w) SetOpt(o, true, false);
+        }
     }
 
     void TimeUp(Question cur)
