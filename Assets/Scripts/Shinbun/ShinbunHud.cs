@@ -275,7 +275,7 @@ public class ShinbunHud
 
         UiKit.Headline(card.transform, 34,
             (L.T("新聞", "Newspaper"), UiKit.Accent, UiKit.AccentShadow),
-            (L.T("配達ミッション", " Delivery Mission"), UiKit.Fg, UiKit.PanelShadow));
+            (L.T("配達ラン", " Delivery Run"), UiKit.Fg, UiKit.PanelShadow));
         UiKit.Label(card.transform, L.T("着地の練習のあと、廊下を自動で走るよ。ドアに新聞を届けよう！",
             "Practice a landing, then the agent runs on its own. Deliver papers to the doors!"),
             19, UiKit.Muted, TextAnchor.MiddleCenter, false);

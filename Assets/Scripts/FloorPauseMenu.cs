@@ -52,12 +52,12 @@ public class FloorPauseMenu : MonoBehaviour
     GameObject root, resumeButton;
     CanvasGroup group;
     RectTransform box, menuButton, restartButton;
-    Text title, resumeText, volumeLabel, lookLabel, langText, restartText, menuText, hintText;
+    Text title, resumeText, volumeLabel, lookLabel, langText, restartText, menuText, quitText, hintText;
     Image[] volumeBars, lookBars;
-    Coroutine armedRestart, armedMenu, pop;
+    Coroutine armedRestart, armedMenu, armedQuit, pop;
     bool canRestart;
 
-    const float W = 560f, H = 470f;
+    const float W = 560f, H = 526f;
 
     void Awake()
     {
@@ -102,8 +102,12 @@ public class FloorPauseMenu : MonoBehaviour
         menuButton = (RectTransform)menu.transform;
         menu.onClick.AddListener(PressMenu);
 
+        var quit = UiKit.SubButton(box, "", out quitText);
+        UiKit.Place((RectTransform)quit.transform, (W - 300f) * 0.5f, 418f, 300f, 46f);
+        quit.onClick.AddListener(PressQuit);
+
         hintText = UiKit.Label(box, "", 15, UiKit.Muted, TextAnchor.MiddleCenter, false);
-        UiKit.Place(hintText.rectTransform, 0f, 424f, W, 24f);
+        UiKit.Place(hintText.rectTransform, 0f, 480f, W, 24f);
 
         root.SetActive(false);
         Write();
@@ -248,6 +252,7 @@ public class FloorPauseMenu : MonoBehaviour
         langText.text = L.English ? "日本語" : "English";   // the language it switches to
         restartText.text = armedRestart != null ? L.T("もう一度で最初から", "Again to restart") : L.T("↻ 最初から", "↻ Restart");
         menuText.text = armedMenu != null ? L.T("もう一度でメニューへ", "Again for menu") : L.T("メインメニューへ", "Main menu");
+        quitText.text = armedQuit != null ? L.T("もう一度で終了", "Again to quit") : L.T("ゲームを終了", "Quit game");
         hintText.text = L.T("Esc でゲームに戻る", "Esc: back to the game");
         Fill(volumeBars, VolumeLevel);
         Fill(lookBars, LookLevel + 1);
@@ -293,6 +298,17 @@ public class FloorPauseMenu : MonoBehaviour
         GameProgress.ToMenu();
     }
 
+    void PressQuit()
+    {
+        if (armedQuit == null)
+        {
+            armedQuit = StartCoroutine(ArmQuit());
+            Write();
+            return;
+        }
+        GameProgress.Quit();
+    }
+
     IEnumerator Arm(bool restart)
     {
         yield return new WaitForSecondsRealtime(3f);
@@ -301,10 +317,18 @@ public class FloorPauseMenu : MonoBehaviour
         Write();
     }
 
+    IEnumerator ArmQuit()
+    {
+        yield return new WaitForSecondsRealtime(3f);
+        armedQuit = null;
+        Write();
+    }
+
     void Disarm()
     {
         if (armedRestart != null) StopCoroutine(armedRestart);
         if (armedMenu != null) StopCoroutine(armedMenu);
-        armedRestart = armedMenu = null;
+        if (armedQuit != null) StopCoroutine(armedQuit);
+        armedRestart = armedMenu = armedQuit = null;
     }
 }

@@ -12,7 +12,7 @@ using UnityEngine.UI;
 /// quest wins the game, see GameEnding). On the left: the title, 「1階から5階まで遊ぶ」 for the full run, and a card
 /// describing the floor under the pointer. A string of cyan and white lights swings across the top. Everything plays in
 /// on opening: the title drops in line by line and the building rises. English / 日本語 in the corner switches
-/// the language. Every visit starts a fresh session. Pointing at a floor blips (each floor a little higher) and
+/// the language; 終了 beside it closes the game (pressed twice). Every visit starts a fresh session. Pointing at a floor blips (each floor a little higher) and
 /// choosing one whooshes. With a gamepad, A / × on 「1階から5階まで遊ぶ」 starts the run, → moves onto the building,
 /// ↑ ↓ pick a floor and A / × plays it, ← or B / ○ goes back, and Y / △ switches the language.
 /// Everything is built at runtime, so the scene only needs a camera and this component
@@ -41,8 +41,8 @@ public class MainMenu : MonoBehaviour
         Car = UiKit.Accent, Ground = UiKit.Hex("#07122c");
     // floor labels: the game line wraps at LabelGameW, and labels keep ScreenMargin inside the screen edges
     const float LabelW = 170f, LabelH = 84f, LabelGameW = 160f, ScreenMargin = 12f;
-    // the left column's width (full-run button and floor card); the language button, upper right
-    const float CardW = 480f, LangW = 150f, LangH = 44f, LangRight = 24f, LangBottom = 24f;
+    // the left column's width (full-run button and floor card); the language button, lower right, with Quit beside it
+    const float CardW = 480f, LangW = 150f, LangH = 44f, LangRight = 24f, LangBottom = 24f, QuitW = 150f, QuitGap = 12f;
 
     class Floor
     {
@@ -83,7 +83,8 @@ public class MainMenu : MonoBehaviour
     float carY, opened, rise, lastBlip;
     bool leaving;
 
-    Text subtitle, runLabel, hintText, infoNumber, infoFloor, infoGame, infoNote, langText;
+    Text subtitle, runLabel, hintText, infoNumber, infoFloor, infoGame, infoNote, langText, quitText;
+    Coroutine armedQuit;   // 終了 asks once more for 3 s
     GameObject info, hint;
     Image cardBorder, pulse;
     RectTransform labelLayer, pulseRt;
@@ -210,10 +211,10 @@ public class MainMenu : MonoBehaviour
         carY = car.localPosition.y;
     }
 
-    // A cube with its own colour (an instance of the default material, so no shader lookups)
+    // A cube with its own colour (an instance of the URP runtime material, so no shader lookups)
     static Renderer Box(string name, Transform parent, Vector3 pos, Vector3 size, Color color)
     {
-        var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        var go = Primitives.Make(PrimitiveType.Cube);
         go.name = name;
         if (parent != null) go.transform.SetParent(parent, false);
         go.transform.localPosition = pos;
@@ -332,6 +333,34 @@ public class MainMenu : MonoBehaviour
         langText.fontSize = 17;
         lang.onClick.AddListener(L.Toggle);
         lang.navigation = new Navigation { mode = Navigation.Mode.None };   // the pad switches language with Y / △
+
+        // quit, left of the language button: the first press asks again, the second closes the game
+        var quit = UiKit.SubButton(root, "", out quitText);
+        var qrt = (RectTransform)quit.transform;
+        qrt.anchorMin = qrt.anchorMax = qrt.pivot = new Vector2(1f, 0f);
+        qrt.anchoredPosition = new Vector2(-LangRight - LangW - QuitGap, LangBottom);
+        qrt.sizeDelta = new Vector2(QuitW, LangH);
+        quitText.fontSize = 17;
+        quit.onClick.AddListener(PressQuit);
+        quit.navigation = new Navigation { mode = Navigation.Mode.None };
+    }
+
+    void PressQuit()
+    {
+        if (armedQuit == null)
+        {
+            armedQuit = StartCoroutine(ArmQuit());
+            Write();
+            return;
+        }
+        GameProgress.Quit();
+    }
+
+    IEnumerator ArmQuit()
+    {
+        yield return new WaitForSecondsRealtime(3f);
+        armedQuit = null;
+        Write();
     }
 
     // Twelve cyan and white lights on a cable across the top, each swinging from its cord and glowing
@@ -401,6 +430,7 @@ public class MainMenu : MonoBehaviour
         }
         langText.text = (L.English ? "日本語" : "English") +   // the language it switches to
                         (textPad ? $" ({GamepadInput.North})" : "");
+        quitText.text = armedQuit != null ? L.T("もう一度で終了", "Again to quit") : L.T("終了", "Quit");
         ShowInfo();
     }
 
@@ -512,8 +542,8 @@ public class MainMenu : MonoBehaviour
             column = Mathf.Max(column, sp.x * scale);
             float y = Mathf.Clamp(sp.y * scale, ScreenMargin + half, area.height - ScreenMargin - half);
             float right = area.width - ScreenMargin;
-            if (y - half < LangBottom + LangH + ScreenMargin)   // in the button's rows: stay left of it
-                right = area.width - LangRight - LangW - ScreenMargin;
+            if (y - half < LangBottom + LangH + ScreenMargin)   // in the buttons' rows: stay left of Quit and English
+                right = area.width - LangRight - LangW - QuitGap - QuitW - ScreenMargin;
             limit = Mathf.Min(limit, right - w);
         }
         return Mathf.Min(column, limit);

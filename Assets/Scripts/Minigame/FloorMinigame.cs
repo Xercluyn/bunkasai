@@ -143,9 +143,7 @@ public class FloorMinigame : MonoBehaviour
 
         // header
         var header = UiKit.Headline(wrap, 34,
-            (L.T("ようこそ！", "Welcome to"), UiKit.Accent, UiKit.AccentShadow),
-            (L.T("1階ゲーム", " the 1F Game"), UiKit.Accent2, UiKit.Accent2Shadow),
-            (L.T("へ〜", "!"), UiKit.Accent, UiKit.AccentShadow));
+            (L.T("エレベーターボタン探し", "Elevator Button Hunt"), UiKit.Accent2, UiKit.Accent2Shadow));
         UiKit.Place(header, 0f, 0f, W, 40f);
 
         // HUD
@@ -238,8 +236,8 @@ public class FloorMinigame : MonoBehaviour
         // Start screen
         var start = Overlay(root, "StartScreen", out startScreen);
         UiKit.Headline(start, 38, (L.T("ようこそ！", "Welcome to"), UiKit.Accent, UiKit.AccentShadow));
-        UiKit.Headline(start, 38,
-            (L.T("1階ゲーム", " the 1F Game"), UiKit.Accent2, UiKit.Accent2Shadow),
+        UiKit.Headline(start, 34,   // the long name on its own line, a little smaller
+            (L.T("エレベーターボタン探し", "Elevator Button Hunt"), UiKit.Accent2, UiKit.Accent2Shadow),
             (L.T("へ〜", "!"), UiKit.Accent, UiKit.AccentShadow));
         var rules = Column(start, "Rules", 8f);
         Rule(rules, "↑", UiKit.Good, L.T("「↑」のカードを3枚見つけよう！", "Find the three \"↑\" cards!"));

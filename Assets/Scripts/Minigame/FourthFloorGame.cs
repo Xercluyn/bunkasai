@@ -80,7 +80,7 @@ public class FourthFloorGame : MonoBehaviour
     };
 
     /* ---------- data.js messages ---------- */
-    static string Title => L.T("読祭 マッチングゲーム！", "Yomisai Matching Game!");
+    static string Title => L.T("読祭 どの学科の出し物？", "Yomisai: Which Department's Booth?");
     static string MsgInstruction => GamepadInput.T("カードを正しい学科の屋台へ！（ドラッグ／カード → 屋台）",
         "Match each card to its department! (drag, or card → stall)",
         $"カードを正しい学科の屋台へ！（{GamepadInput.South} でカード → 屋台）",
@@ -182,7 +182,7 @@ public class FourthFloorGame : MonoBehaviour
         UiKit.EnsureEventSystem();
         Init();
         // untimed, so no countdown: the card just covers the game until スタート！
-        MinigameKit.HowToPlay(canvasRoot, "マッチングゲーム", "Matching Game", new[]
+        MinigameKit.HowToPlay(canvasRoot, "どの学科の出し物？", "Which Department's Booth?", new[]
         {
             GamepadInput.UsingPad
                 ? ($"カードを正しい学科の屋台へ（{GamepadInput.South} でカード → 屋台）",
@@ -379,7 +379,10 @@ public class FourthFloorGame : MonoBehaviour
         tt.horizontalOverflow = HorizontalWrapMode.Overflow;
         UiKit.HardShadow(tt, BrandDeep, 2f).effectDistance = new Vector2(2f, -2f);
         UiKit.Stretch(tt.rectTransform);
-        UiKit.Place(title.rectTransform, 0f, GameTop, tt.preferredWidth + 44f + 8f, TopbarH);
+        // as wide as the title, but never into the progress on the right (a longer title shrinks instead)
+        const float TitleMaxW = GameW - 580f - 32f;
+        if (tt.preferredWidth + 52f > TitleMaxW) tt.fontSize = Mathf.FloorToInt(52f * (TitleMaxW - 52f) / tt.preferredWidth);
+        UiKit.Place(title.rectTransform, 0f, GameTop, Mathf.Min(tt.preferredWidth + 44f + 8f, TitleMaxW), TopbarH);
         title.rectTransform.localEulerAngles = new Vector3(0f, 0f, 1.2f);
         UiKit.HardShadow(title, new Color(0f, 0f, 0f, 0.44f), 6f).useGraphicAlpha = false;
 

@@ -51,6 +51,8 @@ public static class MinigameKit
 
         var kicker = UiKit.Label(panel, "", Mathf.RoundToInt(18 * scale), UiKit.Accent2);
         var title = UiKit.Display(UiKit.Label(panel, "", Mathf.RoundToInt(44 * scale), UiKit.Accent));
+        UiKit.Fit(title, Mathf.RoundToInt(44 * scale), Mathf.RoundToInt(26 * scale));   // a long name shrinks onto one line
+        title.gameObject.AddComponent<LayoutElement>().preferredHeight = 56f * scale;
         UiKit.HardShadow(title, UiKit.AccentShadow, 4f * scale);
 
         var ruleTexts = new Text[rules.Length];

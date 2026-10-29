@@ -104,7 +104,7 @@ public class ThirdFloorGame : MonoBehaviour
         // nothing runs until the how-to-play card is closed and the countdown is over
         quiz.gameObject.SetActive(false);
         intro = true;
-        MinigameKit.HowToPlay(canvasRoot, "どうぶつ えいご クイズ", "Animal English Quiz", Rules(), () =>
+        MinigameKit.HowToPlay(canvasRoot, "動物名クイズ（英語）", "Animal Names Quiz (English)", Rules(), () =>
         {
             intro = false;
             Begin();
@@ -142,7 +142,7 @@ public class ThirdFloorGame : MonoBehaviour
 
         // header: title card and the ☰ menu button
         var title = Card(column, 0f, 0f, W - 60f, 72f, 26f, 5f);
-        var tt = UiKit.Label(title, L.T("どうぶつ えいご クイズ", "Animal English Quiz"), 24, Ink);
+        var tt = UiKit.Label(title, L.T("動物名クイズ（英語）", "Animal Names Quiz (English)"), 24, Ink);
         tt.lineSpacing = 1.1f;
         UiKit.Stretch(tt.rectTransform);
         var menuBtn = Pressable(column, W - 50f, 8f, 50f, 55f, Color.white, Ledge, 18f, 5f, "☰", 24, Ink, out _, out _, out _);
@@ -410,7 +410,7 @@ public class ThirdFloorGame : MonoBehaviour
     {
         helpOpen = true;
         HoldTimer();
-        MinigameKit.HowToPlay(canvasRoot, "どうぶつ えいご クイズ", "Animal English Quiz", Rules(), () =>
+        MinigameKit.HowToPlay(canvasRoot, "動物名クイズ（英語）", "Animal Names Quiz (English)", Rules(), () =>
         {
             helpOpen = false;
             ReleaseTimer();

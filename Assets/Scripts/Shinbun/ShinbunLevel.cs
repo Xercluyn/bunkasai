@@ -127,7 +127,7 @@ public class ShinbunLevel
 
     void Block(string name, Material material, float x0, float x1, float y0, float y1, float z0, float z1)
     {
-        var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        var go = Primitives.Make(PrimitiveType.Cube);
         go.name = name;
         UnityEngine.Object.Destroy(go.GetComponent<Collider>());
         go.transform.SetParent(root, false);

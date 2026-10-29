@@ -72,4 +72,14 @@ public static class GameProgress
         else
             UnityEngine.SceneManagement.SceneManager.LoadScene(0);
     }
+
+    /// <summary>Closes the game (in the editor: stops Play Mode).</summary>
+    public static void Quit()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
 }

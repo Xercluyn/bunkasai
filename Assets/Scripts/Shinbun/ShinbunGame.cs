@@ -242,7 +242,7 @@ public class ShinbunGame : MonoBehaviour
         r.sharedMaterial = skylineMaterial;
         r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
-        var ground = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        var ground = Primitives.Make(PrimitiveType.Quad);
         ground.name = "City Ground";
         Destroy(ground.GetComponent<Collider>());
         ground.transform.SetParent(skyline, false);
@@ -523,7 +523,7 @@ public class ShinbunGame : MonoBehaviour
     IEnumerator ThrowPaper(Vector3 target)
     {
         yield return new WaitForSeconds(0.25f);
-        var paper = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        var paper = Primitives.Make(PrimitiveType.Cube);
         paper.name = "Newspaper";
         Destroy(paper.GetComponent<Collider>());
         paper.transform.localScale = new Vector3(0.4f, 0.08f, 0.3f) * S;
@@ -550,7 +550,7 @@ public class ShinbunGame : MonoBehaviour
     // The glowing ring on the far helipad the run heads for; it pulses until the agent reaches it
     void SpawnExtractionZone()
     {
-        var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        var ring = Primitives.Make(PrimitiveType.Cylinder, true);
         ring.name = "Extraction Zone";
         Destroy(ring.GetComponent<Collider>());
         extraction = ring.transform;

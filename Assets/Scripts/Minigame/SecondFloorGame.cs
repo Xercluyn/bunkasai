@@ -153,7 +153,7 @@ public class SecondFloorGame : MonoBehaviour
         Hud();
         ShowBest();
         ShowDemo();
-        SetOverlay(L.T("2階ゲーム", "2F Game"), L.T($"↓ でフックを落として、お金をつかもう！\n{(int)TIME}秒で ¥3,000 集めたらクリア！", $"Press ↓ to drop the hook and grab money!\nGet ¥3,000 in {(int)TIME} seconds to win!"),
+        SetOverlay(L.T("お金つかみフック", "Money-Grab Hook"), L.T($"↓ でフックを落として、お金をつかもう！\n{(int)TIME}秒で ¥3,000 集めたらクリア！", $"Press ↓ to drop the hook and grab money!\nGet ¥3,000 in {(int)TIME} seconds to win!"),
             L.T("スタート！", "Start!"), StartGame, true, false);
         // the start card names the pad's button while the pad is in use
         GamepadInput.Bind(ovText, () => GamepadInput.T(

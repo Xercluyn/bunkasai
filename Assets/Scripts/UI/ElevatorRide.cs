@@ -15,11 +15,11 @@ public class ElevatorRide : MonoBehaviour
     /// <summary>What each floor's game is, first floor first.</summary>
     public static readonly (string ja, string en)[] FloorGames =
     {
-        ("エレベーターのボタンゲーム", "Elevator button game"),
-        ("コインを集めてチケットを買おう", "Collect coins, buy a ticket"),
-        ("建築学科の動物クイズ", "Animal quiz"),
-        ("スタジオの屋台マッチング", "Stall matching game"),
-        ("新聞配達ラン", "Newspaper run"),
+        ("エレベーターボタン探し", "Elevator Button Hunt"),
+        ("お金つかみフック", "Money-Grab Hook"),
+        ("動物名クイズ（英語）", "Animal Names Quiz (English)"),
+        ("どの学科の出し物？", "Which Department's Booth?"),
+        ("新聞配達ラン", "Newspaper Delivery Run"),
     };
 
     /// <summary>True from the doors closing until they have opened again.</summary>
