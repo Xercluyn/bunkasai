@@ -29,6 +29,12 @@ public class GameEnding : MonoBehaviour
     /// <summary>The floor it belongs to (a runtime one is created in the active scene).</summary>
     [System.NonSerialized] public string floor;
 
+    /// <summary>True while the end panel is up (the menu theme comes back under it).</summary>
+    public static bool Showing { get; private set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void NewPlay() => Showing = false;
+
     GameObject panel;
     CanvasGroup panelGroup;
     RectTransform box;
@@ -106,6 +112,7 @@ public class GameEnding : MonoBehaviour
         yield return new WaitForSecondsRealtime(delay);
         while (QuestBanner.Celebrating || FloorPauseMenu.Open) yield return null;
         panel.SetActive(true);
+        Showing = true;
         ThirdPersonCamera.panelOpen = true;   // free the mouse so the buttons can be clicked
         PlayerLock.Set(this, true);
 
@@ -124,6 +131,7 @@ public class GameEnding : MonoBehaviour
     void Close()
     {
         panel.SetActive(false);
+        Showing = false;
         ThirdPersonCamera.panelOpen = false;
         PlayerLock.Set(this, false);
     }
@@ -138,6 +146,7 @@ public class GameEnding : MonoBehaviour
 
     void Restart()
     {
+        // Showing stays on until this scene goes (OnDestroy), so the menu theme carries straight into the menu
         ThirdPersonCamera.panelOpen = false;
         PlayerLock.Set(this, false);
         // no quests, no money: a new game from the menu (or the first floor if there's no menu)
@@ -156,6 +165,7 @@ public class GameEnding : MonoBehaviour
 
     void OnDestroy()
     {
+        Showing = false;
         ThirdPersonCamera.panelOpen = false;
         PlayerLock.Set(this, false);
     }
