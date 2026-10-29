@@ -87,21 +87,22 @@ public static class EditorKit
     }
 
     /// <summary>Opens floors `from`..`to` in turn, runs `apply` and saves each, then reopens what was open.</summary>
-    public static void ForFloors(string title, int from, int to, Action<Scene, int> apply) =>
+    public static bool ForFloors(string title, int from, int to, Action<Scene, int> apply) =>
         ForFloors(title, from, to, (scene, n) => { apply(scene, n); return true; });
 
     /// <summary>Same, saving only the floors where `apply` returns true (it changed something).</summary>
-    public static void ForFloors(string title, int from, int to, Func<Scene, int, bool> apply) =>
+    public static bool ForFloors(string title, int from, int to, Func<Scene, int, bool> apply) =>
         ForScenes(title, Enumerable.Range(from, to - from + 1).Select(SceneLinks.Floor), (scene, key) => apply(scene, (int)key + 1));
 
     /// <summary>
     /// Opens each scene of `keys` in turn and runs `apply`, saving it when that returns true, then reopens the
-    /// scenes that were open. Missing scenes are skipped with a warning.
+    /// scenes that were open. Missing scenes are skipped with a warning. False when it didn't run (Play mode, or
+    /// the save prompt was cancelled).
     /// </summary>
-    public static void ForScenes(string title, IEnumerable<SceneLinks.Key> keys, Func<Scene, SceneLinks.Key, bool> apply)
+    public static bool ForScenes(string title, IEnumerable<SceneLinks.Key> keys, Func<Scene, SceneLinks.Key, bool> apply)
     {
-        if (!NotPlaying(title)) return;
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+        if (!NotPlaying(title)) return false;
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return false;
         var setup = EditorSceneManager.GetSceneManagerSetup();
         try
         {
@@ -120,6 +121,7 @@ public static class EditorKit
             if (setup.Length > 0 && setup.All(s => !string.IsNullOrEmpty(s.path))) EditorSceneManager.RestoreSceneManagerSetup(setup);
             else Debug.Log($"{title}: the scene you started from was never saved, so the last scene stays open.");
         }
+        return true;
     }
 
     // ---------- the building ----------

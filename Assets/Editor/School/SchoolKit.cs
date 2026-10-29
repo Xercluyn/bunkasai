@@ -382,7 +382,7 @@ public static class SchoolKit
         Physics.SyncTransforms();
         const float lift = 0.3f, shrink = 0.1f;
         var half = Vector3.Scale(box.size, t.lossyScale) * 0.5f;
-        half = new Vector3(half.x - shrink, half.y - lift * 0.5f, half.z - shrink);
+        half = new Vector3(Mathf.Max(0.05f, half.x - shrink), Mathf.Max(0.05f, half.y - lift * 0.5f), Mathf.Max(0.05f, half.z - shrink));
         var center = t.TransformPoint(box.center) + Vector3.up * (lift * 0.5f);
         var found = new Collider[32];
         int n = scene.GetPhysicsScene().OverlapBox(center, half, found, t.rotation, ~0, QueryTriggerInteraction.Ignore);

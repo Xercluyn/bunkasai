@@ -119,7 +119,7 @@ public static class MinigameSetup
     {
         const string title = "Set Up Elevators On All Floors";
         var done = new System.Collections.Generic.List<string>();
-        EditorKit.ForFloors(title, 1, 4, (scene, n) =>
+        bool ran = EditorKit.ForFloors(title, 1, 4, (scene, n) =>
         {
             if (!AddElevatorPlayZoneIfElevator())
             {
@@ -135,6 +135,7 @@ public static class MinigameSetup
             done.Add(scene.name);
             return true;
         });
+        if (!ran) return;
         EditorUtility.DisplayDialog(title,
             done.Count > 0 ? "Elevators set up and saved on: " + string.Join(", ", done) + "." : "No floor with an elevator was found.", "OK");
     }

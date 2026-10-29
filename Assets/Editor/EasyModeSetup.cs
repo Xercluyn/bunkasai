@@ -24,12 +24,13 @@ public static class EasyModeSetup
     {
         var report = new List<string>();
         var keys = Enumerable.Range(1, 5).Select(SceneLinks.Floor).Append(SceneLinks.Key.Floor5Game);
-        ForScenes(Title, keys, (scene, key) =>
+        bool ran = ForScenes(Title, keys, (scene, key) =>
         {
             var applied = key == SceneLinks.Key.Floor5Game ? TuneShinbun(scene) : TuneFloor(scene, (int)key + 1);
             if (applied.Count > 0) report.Add($"• {scene.name}: " + string.Join("; ", applied));
             return applied.Count > 0;
         });
+        if (!ran) return;
 
         string message = report.Count > 0 ? "Saved:\n\n" + string.Join("\n", report) : "Nothing to change.";
         Debug.Log($"{Title} — " + message);

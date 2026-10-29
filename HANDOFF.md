@@ -5,7 +5,7 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
 ## Setting up on a new PC
 1. Unity Hub → install **Unity 6000.6.4f1** → *Add project from disk* → this folder. The first open rebuilds `Library` (5–15 min).
 2. Run **Tools > Elevator Game > Reimport Game Fonts** once (fallback fonts for ▶ ✓ ↻).
-3. Run **Tools > Elevator Game > Apply Easy Mode** once and save; this writes the easier values into the scenes (see "Not done yet").
+3. Run **Tools > Elevator Game > Apply Difficulty Values** once (it saves the scenes itself); this writes the tuned values into the scenes (see "Not done yet").
 4. Open `Assets/Scenes/MainMenu.unity` → Play.
 
 ## The game in one paragraph
@@ -70,7 +70,7 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
 1. Close Wall Gaps on ThirdScene. It was never run there.
 2. Make Walls Double-Sided (All Floors).
 3. Set Up This Floor on each floor, to bake the near clip.
-4. Apply Easy Mode, to write the new 5F values into ShinbunArcade.
+4. Apply Difficulty Values (was Apply Easy Mode), to write the new 5F values into ShinbunArcade.
 5. Outline Interactables / the floor setups, if the camera background colours in the scenes still look old.
 
 ## Done 2026-10-28 (third session): the floors look like the real campus
@@ -110,7 +110,7 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
   - a silver laptop per seat in the itSign room (40) and a black one per seat in the ArcadeBox room (54);
   - care moved to the left (north) and CE to the right (south) of the shared room, each moved once.
 - **Deleted props stay deleted:** `SchoolDressing.placed` records every id ever placed. Ids missing from `SchoolProps` were deleted by hand and are never placed again. To bring one back, remove its id from the list. One-off moves are recorded as `#step` entries, so re-runs keep your hand nudges.
-- **Run:** Dress School (All Floors), or Recolour Furniture plus **Arrange Rooms (3F, 5F)**.
+- **Run:** Dress School (All Floors), or Recolour Furniture plus **Arrange Rooms** (now under School > Steps).
 
 ## Done 2026-10-29: second layout pass
 - Sign text uses the depth-tested `Assets/Shaders/WorldText.shader`, so it no longer shows through walls.
@@ -121,37 +121,28 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
   - paperwork, rulers and study models on 9 tables (`f3_deco_*`);
   - `apron_short` shelves between the rows are hidden, and the ones at the back are painted white.
 - 5F: `AlleyCutter` removes two wall panels (z −45.83 and z −20.39, x −171..−150). That connects the corridor, through the closed pocket, to the hallway behind the elevators. The source images are in `Assets/Problems`.
-- Menu: **Arrange Rooms (2F, 3F, 5F)**. Dress School runs it too.
+- Menu: **Arrange Rooms**. Dress School runs it too.
 
-## Next: editor-tools refactor (planned, not started)
-The user wants Tools > Elevator Game tidied up: combine the overlaps and drop the redundant parts, **without losing any function** they use to set up buildings, characters, floors and minigames. Review afterwards.
-
-Duplicate helpers known so far, each to be merged into one home (e.g. a shared `Assets/Editor/EditorKit.cs`):
-- **`EnsureFolder`:** in `WallGapCloser.cs`, `WallDoubleSider.cs` and `School/SchoolKit.cs`.
-- **"Open each floor, apply, save, restore" loops:** `WallDoubleSider.MakeAllDoubleSided`, `SchoolKit.ForFloors` and every "(All Floors)" menu. Use `SchoolKit.ForFloors` everywhere.
-- **Building-root lookups:** `AlleyCutter.BuildingRoots` and `SchoolKit.FindInBuilding`. Both should call `FloorPlayerSetup.BuildingRoots`.
-- **Hiding FBX children:** `SchoolLayout3F.Hide` and `AlleyCutter.HideInHole`.
-- **Ground raycasts:** `SchoolLayout3F.Ground`, the one in SchoolLayout5F, `PropsUpper.FloorSpot`, PropsLower's floor height and `IndoorLightingSetup.DropToFloor`.
-- **Overlap checks:** `SchoolLayout3F.CheckOverlap` and the one in SchoolLayout5F.
-- **Material helpers:** PropsUpper `A`/`H`, PropsLower `M` and `SchoolKit.Mat`/`Accent`.
-- **Mesh save-in-place and "(2s)" naming:** ShellDresser, WallDoubleSider, WallGapCloser and AlleyCutter.
-
-Menu tidy-up, keeping every function reachable:
-- **School menus:** `School/Dress School (This Floor / All Floors)` on top, with the individual steps under `School/Steps/…`.
-- **Arrange step:** fold Arrange 2F/3F/5F and Cut 5F Alley into Arrange Rooms.
-- **Place School Props:** merge the 1F-3F and 4F-5F items into one.
-- **Easy Mode:** rename "Apply Easy Mode". It now writes the *harder* 5F values, so call it e.g. "Apply Difficulty Values".
-- **Old helpers:** check whether `FourthFloorArtWatcher` and any helpers that use the old scene names are still needed.
-
-Runtime scripts:
-- Keep `FloorMenuButton` and `LevelOneMenu`, the empty shells that scenes reference.
-- Check the big files (`SecondFloorGame.cs`, and `PropsUpper.cs` at about 700 lines) against the 800-line limit.
-
-Process for the next session:
-1. Inventory every `[MenuItem]` and who calls what. Both inventory subagents were stopped this session before they finished.
-2. Refactor in small commits, running `Tools/compile.ps1` after each.
-3. Run the code-reviewer subagent.
-4. Re-run Dress School in Unity and check that the scenes don't change.
+## Done 2026-10-29: editor-tools refactor (branch `editor-tools-refactor`)
+- **`Assets/Editor/EditorKit.cs`** is the one home for the shared editor helpers:
+  - `EnsureFolder`, `FileName`, `GeneratedFolder`, `IsGenerated`, `IsModelMesh`, `SaveMesh` (save in place), `StripTags` ("(2s)" and tag naming);
+  - `NotPlaying`, `OnOpenFloor`, `ForFloors`, `ForScenes` (open each scene, apply, save only if changed, restore what was open);
+  - `BuildingRoots(scene)`, `FindInBuilding`, `OutlinedFilters`, `All<T>`, `Hide`, `RendererBounds`, `PathOf`.
+- **`SchoolKit`** keeps the school-only helpers, plus the merged `Ground`, `PlayerFloorY`, `OverlapsWith`, `HexMat` and `V`. `SchoolKit.FloorOf` is gone (use `SceneLinks.FloorOf`).
+- Make Walls Double-Sided (All Floors), Set Up Elevators On All Floors and the difficulty tool now use `ForFloors` / `ForScenes`.
+- **Two small deliberate differences:**
+  - 5F Arrange Rooms checks overlaps with the 3F box (`OverlapsWith`).
+  - PropsUpper's anchor height uses `PlayerFloorY`.
+  - Both only matter on a scene that hasn't been dressed yet: 5F layout is a one-off `Once` step, and placed groups are skipped.
+- **Menu:** top-level names are unchanged (runtime messages quote them). Priorities add separators: floor setup · zones · quests · minigame scenes · walls · School · character · project.
+  - **School:** Dress School (This Floor / All Floors) on top; everything else under **School > Steps**: Dress Floor Surfaces, Recolour Furniture, List Floor Materials, Place School Props (one item for all floors), Arrange Rooms (2F door, 3F rooms, 5F rooms and the 5F alley), Repaint Textures.
+  - **Apply Easy Mode** is now **Apply Difficulty Values**.
+- **Kept on purpose:**
+  - `FourthFloorArtWatcher`: it re-links the 4F images when the PNGs are replaced.
+  - `SceneLinks` former names: Fix Scene Links needs them.
+  - `IndoorLightingSetup.DropToFloor`: it measures a distance with back faces, which is not a floor-height lookup.
+- **Over the 800-line limit (runtime, not split yet):** `SecondFloorGame.cs` 1392, `FourthFloorGame.cs` 1053, `FloorMinigame.cs` 889. Split them after the play-test. Every editor file is under 800.
+- **Still to do:** in Unity, re-run Dress School (All Floors) and check with `git status` that the scenes don't change. Then merge the branch.
 
 ## Not done yet / next steps
 1. **Play-test everything.** None of today's polish pass has run in Unity yet; it was only compile-checked. Watch for:
@@ -161,7 +152,7 @@ Process for the next session:
    - each minigame going how-to → 3-2-1 → play → result → back to its floor;
    - 2F yen counted once at the ticket machine;
    - text clipping in English.
-2. **Apply Easy Mode** (menu tool) and save the scenes. The floor banners still hold 2.5 / 2 s in the saved scenes; 5F is already clamped in code.
+2. **Apply Difficulty Values** (menu tool; it saves the scenes). The floor banners still hold 2.5 / 2 s in the saved scenes; 5F is already clamped in code.
 3. The four new scripts were committed without `.meta` files (Unity wasn't refreshed). Unity creates them on first open. Commit those `.meta` files afterwards.
 4. Optional follow-ups the subagents suggested:
    - a cancellable `MinigameKit.Countdown` (games currently block restart during 3-2-1);
@@ -169,7 +160,7 @@ Process for the next session:
 
 ## Working conventions (for Claude or anyone)
 - **The Unity editor stays open while working.** Scene changes are made as **Tools > Elevator Game** menu tools (`Assets/Editor/*.cs`), not by hand-editing open `.unity` files.
-- **Compile without Unity** using Unity's bundled Roslyn:
+- **Compile without Unity** with `powershell -File Tools/compile.ps1` (works from any clone path), which uses Unity's bundled Roslyn:
   - `Editor/Data/DotNetSdk/dotnet.exe` + `sdk/8.0.318/Roslyn/bincore/csc.dll`
   - references and defines from `Assembly-CSharp(.Editor).csproj`
   - sources split by `/Editor/`
