@@ -7,7 +7,7 @@ using static EditorKit;
 using static SchoolKit;
 
 /// <summary>
-/// Tools > Elevator Game > School > Add 2F Reception Door: adds one of the floor's own dark grey doors (copied
+/// Arrange Rooms on 2F (Tools > Elevator Game > School > Steps > Arrange Rooms): adds one of the floor's own dark grey doors (copied
 /// from the FBX door nearest the reception counter) flush against the wall the counter backs onto, about 1 m
 /// past whichever end of the counter has free wall, facing the room like the counter. The door prefab is rebuilt
 /// each run; the placed door is kept where it is once placed, and stays out if deleted by hand.
@@ -23,20 +23,13 @@ public static class SchoolLayout2F
     // A wall-door's size range in world units (the 2F doors are about 5.0 wide × 9.5 tall)
     const float MinHeight = 7f, MaxHeight = 12f, MinWidth = 3f, MaxWidth = 7.5f;
 
-    [MenuItem("Tools/Elevator Game/School/" + Title)]
-    static void Menu() => OnOpenFloor(Title, (scene, floor) =>
-    {
-        if (floor != 2) { Debug.Log($"{Title}: only 2F has the reception door, nothing to do on floor {floor}."); return; }
-        Apply(scene, floor);
-    });
-
     /// <summary>Adds the door beside floor 2's reception counter (no-op for other floors).</summary>
     internal static void Apply(Scene scene, int floor)
     {
         if (floor != 2) return;
         if (IsDeleted(scene, DoorId)) { Debug.Log($"{Title}: {DoorId} was deleted by hand; not placed again."); return; }
         var counter = PropsRoot(scene).Find("f2_counter");
-        if (counter == null) { Debug.LogWarning($"{Title}: no f2_counter under the props root. Run Tools > Elevator Game > School > Place School Props first."); return; }
+        if (counter == null) { Debug.LogWarning($"{Title}: no f2_counter under the props root. Run Tools > Elevator Game > School > Steps > Place School Props first."); return; }
         var counterBox = counter.GetComponent<BoxCollider>();
         if (counterBox == null) { Debug.LogWarning($"{Title}: f2_counter has no box collider to measure it by."); return; }
 

@@ -59,7 +59,7 @@ public static class SceneLinks
 
     /* ---------- keeping [SceneName] fields and Build Settings in step ---------- */
 
-    [MenuItem("Tools/Elevator Game/Fix Scene Links")]
+    [MenuItem("Tools/Elevator Game/Fix Scene Links", false, 142)]
     static void FixAll()
     {
         // every name a scene has had → what it's called now

@@ -19,7 +19,7 @@ public static class InteractableOutlineSetup
     const string Title = "Outline Interactables";
     static readonly string[] Keywords = { "elevator", "arcade" };
 
-    [MenuItem("Tools/Elevator Game/Outline Interactables")]
+    [MenuItem("Tools/Elevator Game/Outline Interactables", false, 5)]
     static void OutlineAll() => OutlineAllZones(true);
 
     internal static void OutlineAllZones(bool dialogs)

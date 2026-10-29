@@ -14,7 +14,7 @@ public static class MinigameSetup
     static string MinigameName => SceneLinks.Name(SceneLinks.Key.Floor1Game);
     const string ElevatorLabel = "２階へ";
 
-    [MenuItem("Tools/Elevator Game/Create Minigame Scene")]
+    [MenuItem("Tools/Elevator Game/Create Minigame Scene", false, 60)]
     static void CreateMinigameScene()
     {
         if (AssetDatabase.LoadAssetAtPath<SceneAsset>(MinigamePath) != null &&
@@ -59,7 +59,7 @@ public static class MinigameSetup
     // elevator goes up once the floor's quest is cleared; floor 5 is the top. Floors are told apart by scene GUID.
     static readonly string[] UpLabel = { "", "２階へ", "３階へ", "４階へ", "５階へ" };   // by the floor you are on
 
-    [MenuItem("Tools/Elevator Game/Add Elevator Play Zone")]
+    [MenuItem("Tools/Elevator Game/Add Elevator Play Zone", false, 20)]
     static void AddElevatorPlayZone()
     {
         var active = SceneManager.GetActiveScene();
@@ -87,7 +87,7 @@ public static class MinigameSetup
     const string FirstFloorQuest = "エレベーターで2階に行きましょう！";
 
     // Level 1's quest banner: big text that fades away, then pinned in the upper-left corner
-    [MenuItem("Tools/Elevator Game/Set Up First Floor Quest")]
+    [MenuItem("Tools/Elevator Game/Set Up First Floor Quest", false, 40)]
     static void SetUpFirstFloorQuest()
     {
         var scene = SceneManager.GetActiveScene();
@@ -271,7 +271,7 @@ public static class MinigameSetup
         AddToBuildSettings(SceneLinks.Path(SceneLinks.Key.Floor2));
     }
 
-    [MenuItem("Tools/Elevator Game/Add Third-Person Camera")]
+    [MenuItem("Tools/Elevator Game/Add Third-Person Camera", false, 3)]
     static void AddThirdPersonCamera()
     {
         var cam = Camera.main != null ? Camera.main : Object.FindAnyObjectByType<Camera>();
@@ -286,7 +286,7 @@ public static class MinigameSetup
         Debug.Log("ThirdPersonCamera is on " + cam.name + ". Save the scene.");
     }
 
-    [MenuItem("Tools/Elevator Game/Add Quest Banner")]
+    [MenuItem("Tools/Elevator Game/Add Quest Banner", false, 23)]
     static void AddQuestBanner()
     {
         var existing = Object.FindAnyObjectByType<QuestBanner>();

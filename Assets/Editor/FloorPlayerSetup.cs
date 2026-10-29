@@ -26,10 +26,10 @@ public static class FloorPlayerSetup
     const float CharacterToCeiling = 0.58f;    // character height / ceiling height (the fifth floor's)
     const float NearClip = 0.1f, FarClip = 1000f;   // camera clip planes for a FloorHeight tall character
 
-    [MenuItem("Tools/Elevator Game/Setup Player On This Floor")]
+    [MenuItem("Tools/Elevator Game/Setup Player On This Floor", false, 1)]
     static void SetupPlayer() => Setup(true);
 
-    [MenuItem("Tools/Elevator Game/Set Up This Floor (All)")]
+    [MenuItem("Tools/Elevator Game/Set Up This Floor (All)", false, 0)]
     static void SetupAll()
     {
         if (!Setup(true)) return;
@@ -131,7 +131,7 @@ public static class FloorPlayerSetup
         return best;
     }
 
-    [MenuItem("Tools/Elevator Game/Setup Building (Collision + Thick Walls)")]
+    [MenuItem("Tools/Elevator Game/Setup Building (Collision + Thick Walls)", false, 2)]
     static void AddBuildingCollision()
     {
         var scene = SceneManager.GetActiveScene();

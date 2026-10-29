@@ -19,7 +19,7 @@ public static class WallGapCloser
     const float ReachOfHeight = 0.2f;
     const string Title = "Close Wall Gaps";
 
-    [MenuItem("Tools/Elevator Game/Close Wall Gaps")]
+    [MenuItem("Tools/Elevator Game/Close Wall Gaps", false, 80)]
     static void CloseGaps()
     {
         var scene = SceneManager.GetActiveScene();

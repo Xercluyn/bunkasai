@@ -7,7 +7,7 @@ using static EditorKit;
 using static SchoolKit;
 
 /// <summary>
-/// Tools > Elevator Game > School > Place School Props, floors 1–3: the 1F lobby (floor guide, salmon wall,
+/// Tools > Elevator Game > School > Steps > Place School Props, floors 1–3: the 1F lobby (floor guide, salmon wall,
 /// tactile strip, door mat, umbrella stand, rail, exit sign), the 2F reception + library (counter with glass,
 /// carpet runner, bookshelves, reading table, sign) and the 3F architecture rooms (drafting tables + stools,
 /// rolling whiteboard, PC desks, a model on a plinth, a steel cabinet). Prefabs are rebuilt on every run;
@@ -17,13 +17,6 @@ public static class PropsLower
 {
     const string Title = "Place School Props";
     const float M = SchoolPalette.WorldPerMetre;
-
-    [MenuItem("Tools/Elevator Game/School/" + Title)]
-    static void Menu() => OnOpenFloor(Title, (scene, floor) =>
-    {
-        if (floor > 3) { Debug.Log($"{Title}: floor {floor} is dressed by PropsUpper, nothing to do here."); return; }
-        Apply(scene, floor);
-    });
 
     /// <summary>Builds and places floor 1–3's props (no-op for other floors).</summary>
     internal static void Apply(Scene scene, int floor)

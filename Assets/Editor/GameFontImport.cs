@@ -30,7 +30,7 @@ public class GameFontImport : AssetPostprocessor
         }
     }
 
-    [MenuItem("Tools/Elevator Game/Reimport Game Fonts")]
+    [MenuItem("Tools/Elevator Game/Reimport Game Fonts", false, 143)]
     static void Reimport()
     {
         // Zen Maru first, so Dela can reference it as its fallback

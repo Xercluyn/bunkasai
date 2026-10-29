@@ -7,7 +7,7 @@ using UnityEngine;
 /// The greyscale detail textures the school materials are tinted from (Assets/Textures/School/(kind).png).
 /// Each one is painted on first use, 512x512 and seamless (periodic noise, wrap-around seams), centred on light
 /// grey so the material's _BaseColor gives the hue. Painting is deterministic (fixed seeds).
-/// Tools > Elevator Game > School > Repaint Textures paints them all again.
+/// Tools > Elevator Game > School > Steps > Repaint Textures paints them all again.
 /// </summary>
 public static class SchoolTextures
 {
@@ -26,7 +26,7 @@ public static class SchoolTextures
         return AssetDatabase.LoadAssetAtPath<Texture2D>(PathOf(kind));
     }
 
-    [MenuItem("Tools/Elevator Game/School/Repaint Textures")]
+    [MenuItem("Tools/Elevator Game/School/Steps/Repaint Textures", false, 150)]
     static void RepaintAll()
     {
         int count = 0;

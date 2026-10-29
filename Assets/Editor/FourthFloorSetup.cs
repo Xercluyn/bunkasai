@@ -31,7 +31,7 @@ public static class FourthFloorSetup
     static readonly Vector3 ConsoleCentre = new Vector3(0.7228f, 0.2965f, 0.3790f);
     static readonly Vector3 ConsoleSize = new Vector3(0.207f, 0.0236f, 0.1335f);
 
-    [MenuItem("Tools/Elevator Game/Create Fourth Floor Game Scene")]
+    [MenuItem("Tools/Elevator Game/Create Fourth Floor Game Scene", false, 63)]
     static void CreateGameScene()
     {
         if (AssetDatabase.LoadAssetAtPath<SceneAsset>(GameScenePath) != null &&
@@ -118,7 +118,7 @@ public static class FourthFloorSetup
     }
 
     /// <summary>Puts the images folder's sprites into the game scene's FourthFloorGame (after the PNGs were replaced).</summary>
-    [MenuItem("Tools/Elevator Game/Refresh Fourth Floor Game Art")]
+    [MenuItem("Tools/Elevator Game/Refresh Fourth Floor Game Art", false, 64)]
     internal static void RefreshArt()
     {
         if (!SceneLinks.Exists(SceneLinks.Key.Floor4Game)) return;
@@ -142,7 +142,7 @@ public static class FourthFloorSetup
         Debug.Log($"{GameSceneName}: {art.Count} images from {ImagesPath} set on the matching game.");
     }
 
-    [MenuItem("Tools/Elevator Game/" + Title)]
+    [MenuItem("Tools/Elevator Game/" + Title, false, 43)]
     static void AddZone()
     {
         var scene = SceneManager.GetActiveScene();

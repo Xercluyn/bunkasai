@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Tools > Elevator Game > School > Cut 5F Alley.
+/// Arrange Rooms on 5F, after the laptops (Tools > Elevator Game > School > Steps > Arrange Rooms).
 /// Opens an alley from the 5F corridor, just east of the elevator hall, to the hallway behind the elevators. That
 /// hallway (x −171.15..−150.29, running north from z −20.39, door.035 on its east wall) dead-ends 25 units short of
 /// the corridor; between them is a closed pocket (x −171.15..−127.59, z −45.83..−20.39, floor and ceiling but no
@@ -45,9 +45,6 @@ public static class AlleyCutter
     {
         Box(new Vector3(-150.29f, 0f, -45.83f), new Vector3(-150.29f, 20.14f, -20.39f)),
     };
-
-    [MenuItem("Tools/Elevator Game/School/Cut 5F Alley")]
-    static void CutOpen() => EditorKit.OnOpenFloor(Title, Apply);
 
     /// <summary>Cuts the alley into floor 5's shell; nothing for other floors or an already cut shell.</summary>
     internal static void Apply(Scene scene, int floor)

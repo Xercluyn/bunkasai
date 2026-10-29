@@ -31,7 +31,7 @@ public static class ShinbunSetup
         ("Hang", "Jump To Freehang", false, false),
     };
 
-    [MenuItem("Tools/Elevator Game/Create Shinbun Arcade Scene")]
+    [MenuItem("Tools/Elevator Game/Create Shinbun Arcade Scene", false, 65)]
     static void CreateScene()
     {
         if (!AssetDatabase.IsValidFolder(Art))
@@ -123,14 +123,14 @@ public static class ShinbunSetup
         return mat;
     }
 
-    [MenuItem("Tools/Elevator Game/Add Arcade Play Zone")]
+    [MenuItem("Tools/Elevator Game/Add Arcade Play Zone", false, 22)]
     static void AddArcadeZone()
     {
         if (!AddArcadeZoneIfArcade())
             EditorUtility.DisplayDialog("Add Arcade Play Zone", "Couldn't find the arcade box (an object with \"arcade\" in its name) in the open scene.", "OK");
     }
 
-    [MenuItem("Tools/Elevator Game/Add Ending To Fifth Floor")]
+    [MenuItem("Tools/Elevator Game/Add Ending To Fifth Floor", false, 24)]
     static void AddEndingMenu()
     {
         if (!AddEndingIfFifthFloor())

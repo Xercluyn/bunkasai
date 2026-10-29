@@ -24,7 +24,7 @@ public static class ThirdFloorSetup
     const string QuestText = "建築学科の教室でクイズをクリアしましょう！";
     const string Title = "Set Up Third Floor Quest";
 
-    [MenuItem("Tools/Elevator Game/Create Third Floor Game Scene")]
+    [MenuItem("Tools/Elevator Game/Create Third Floor Game Scene", false, 62)]
     static void CreateGameScene()
     {
         if (AssetDatabase.LoadAssetAtPath<SceneAsset>(GameScenePath) != null &&
@@ -80,7 +80,7 @@ public static class ThirdFloorSetup
         return AssetDatabase.LoadAssetAtPath<Texture2D>(SheetPath);
     }
 
-    [MenuItem("Tools/Elevator Game/Set Up Third Floor Quest")]
+    [MenuItem("Tools/Elevator Game/Set Up Third Floor Quest", false, 42)]
     static void SetUpQuest()
     {
         var scene = SceneManager.GetActiveScene();

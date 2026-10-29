@@ -55,7 +55,7 @@ public static class IndoorLightingSetup
     // 1F lobby downlights on the bronze ceiling, 2F/4F neutral, 3F/5F cool bright classrooms
     static Mood MoodOf(int floor) => floor == 1 ? WarmLobby : floor == 2 || floor == 4 ? Neutral : Cool;
 
-    [MenuItem("Tools/Elevator Game/Fix Indoor Lighting")]
+    [MenuItem("Tools/Elevator Game/Fix Indoor Lighting", false, 4)]
     internal static void Fix()
     {
         var scene = SceneManager.GetActiveScene();

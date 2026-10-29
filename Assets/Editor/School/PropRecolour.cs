@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Tools > Elevator Game > School > Recolour Furniture.
+/// Tools > Elevator Game > School > Steps > Recolour Furniture.
 /// The floor models' furniture uses the colours it was exported with. This swaps those embedded materials (matched
 /// by name, ignoring ".001"-style suffixes and "pasted__" prefixes) for school materials in the real campus colours,
 /// one set per floor (F{floor}_furn_key). The shell (floor, walls, ceiling), outline hulls, the elevator, doors and the
@@ -107,13 +107,13 @@ public static class PropRecolour
 
     static string AccentHex(int floor, string key) => "#" + ColorUtility.ToHtmlStringRGB(SchoolPalette.Accent(floor, key));
 
-    [MenuItem("Tools/Elevator Game/School/Recolour Furniture")]
+    [MenuItem("Tools/Elevator Game/School/Steps/Recolour Furniture", false, 120)]
     static void RecolourOpen() => EditorKit.OnOpenFloor(Title, Apply);
 
-    [MenuItem("Tools/Elevator Game/School/Recolour Furniture (All Floors)")]
+    [MenuItem("Tools/Elevator Game/School/Steps/Recolour Furniture (All Floors)", false, 121)]
     static void RecolourAll() => EditorKit.ForFloors(Title, 1, 5, Apply);
 
-    [MenuItem("Tools/Elevator Game/School/List Floor Materials")]
+    [MenuItem("Tools/Elevator Game/School/Steps/List Floor Materials", false, 122)]
     static void ListMaterials()
     {
         var scene = SceneManager.GetActiveScene();

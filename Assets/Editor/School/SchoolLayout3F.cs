@@ -9,7 +9,7 @@ using static EditorKit;
 using static SchoolKit;
 
 /// <summary>
-/// Tools > Elevator Game > School > Arrange 3F Rooms: lays out the 3F architecture rooms like the real ones.
+/// Arrange Rooms on 3F (Tools > Elevator Game > School > Steps > Arrange Rooms): lays out the 3F architecture rooms like the real ones.
 /// The room in front of the architecture class swaps its merged FBX desk block for 17 PC desks on the old desk
 /// spots; the architecture class swaps its loose paper desks for 5 rows of short drafting tables joined end to
 /// end in the middle of the room (stools on the south side, everyone facing the north wall, wide aisles both
@@ -52,13 +52,6 @@ public static class SchoolLayout3F
     static readonly Regex PaperDesk = new Regex(@"^paper(\.\d+)?$", RegexOptions.IgnoreCase);
     static readonly Regex DeskLeg = new Regex(@"^leg2(\.\d+)?$", RegexOptions.IgnoreCase);
     static readonly Regex ModelShelf = new Regex(@"^apron_short(\.\d+)?$", RegexOptions.IgnoreCase);
-
-    [MenuItem("Tools/Elevator Game/School/" + Title)]
-    static void Menu() => OnOpenFloor(Title, (scene, floor) =>
-    {
-        if (floor != 3) { Debug.Log($"{Title}: only 3F has a layout, nothing to do on floor {floor}."); return; }
-        Apply(scene, floor);
-    });
 
     // What one run did, for the summary line
     sealed class Report
@@ -107,7 +100,7 @@ public static class SchoolLayout3F
     static GameObject LoadPrefab(string name)
     {
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabFolder}/{name}.prefab");
-        if (prefab == null) Debug.LogWarning($"{Title}: {PrefabFolder}/{name}.prefab is missing. Run Tools > Elevator Game > School > Place School Props first.");
+        if (prefab == null) Debug.LogWarning($"{Title}: {PrefabFolder}/{name}.prefab is missing. Run Tools > Elevator Game > School > Steps > Place School Props first.");
         return prefab;
     }
 

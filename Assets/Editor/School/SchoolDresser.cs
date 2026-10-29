@@ -1,28 +1,37 @@
 using UnityEditor;
 using UnityEngine.SceneManagement;
+using static EditorKit;
 
 /// <summary>
-/// Tools > Elevator Game > Dress School: dresses a floor like the real campus in one go: textured floor,
+/// Tools > Elevator Game > School > Dress School: dresses a floor like the real campus in one go: textured floor,
 /// walls, ceiling and pillars (ShellDresser), furniture recoloured to the facility photos (PropRecolour),
 /// campus props placed and kept where you moved them (PropsLower 1F–3F, PropsUpper 4F–5F), the fixed room
-/// layouts (SchoolLayout3F / 5F), then the floor's light mood (Fix Indoor Lighting). Every step is safe to run
-/// again, and props deleted by hand are never placed again. Run Make Walls Double-Sided first.
+/// layouts (SchoolLayout2F / 3F / 5F and the 5F alley), then the floor's light mood (Fix Indoor Lighting). Every
+/// step is safe to run again, and props deleted by hand are never placed again. Run Make Walls Double-Sided first.
+/// The single steps are under School > Steps.
 /// </summary>
 public static class SchoolDresser
 {
     const string Title = "Dress School";
+    const string Steps = "Tools/Elevator Game/School/Steps/";
 
-    [MenuItem("Tools/Elevator Game/School/Dress School (This Floor)")]
-    static void DressOpenFloor() => EditorKit.OnOpenFloor(Title, Dress);
+    [MenuItem("Tools/Elevator Game/School/Dress School (This Floor)", false, 100)]
+    static void DressOpenFloor() => OnOpenFloor(Title, Dress);
 
-    [MenuItem("Tools/Elevator Game/School/Dress School (All Floors)")]
-    static void DressAllFloors() => EditorKit.ForFloors(Title, 1, 5, Dress);
+    [MenuItem("Tools/Elevator Game/School/Dress School (All Floors)", false, 101)]
+    static void DressAllFloors() => ForFloors(Title, 1, 5, Dress);
 
-    [MenuItem("Tools/Elevator Game/School/Place School Props (All Floors)")]
-    static void PlaceAllProps() => EditorKit.ForFloors("Place School Props", 1, 5, PlaceProps);
+    [MenuItem(Steps + "Place School Props (This Floor)", false, 130)]
+    static void PlaceOpenProps() => OnOpenFloor("Place School Props", PlaceProps);
 
-    [MenuItem("Tools/Elevator Game/School/Arrange Rooms (2F, 3F, 5F)")]
-    static void ArrangeRooms() => EditorKit.ForFloors("Arrange Rooms", 2, 5, Arrange);
+    [MenuItem(Steps + "Place School Props (All Floors)", false, 131)]
+    static void PlaceAllProps() => ForFloors("Place School Props", 1, 5, PlaceProps);
+
+    [MenuItem(Steps + "Arrange Rooms (This Floor)", false, 140)]
+    static void ArrangeOpenFloor() => OnOpenFloor("Arrange Rooms", Arrange);
+
+    [MenuItem(Steps + "Arrange Rooms (All Floors)", false, 141)]
+    static void ArrangeRooms() => ForFloors("Arrange Rooms", 2, 5, Arrange);
 
     static void Dress(Scene scene, int floor)
     {
@@ -33,6 +42,7 @@ public static class SchoolDresser
         IndoorLightingSetup.Fix();   // works on the active scene, which is this floor
     }
 
+    // Floors 1–3 are PropsLower's, 4–5 PropsUpper's (each a no-op on the other floors)
     static void PlaceProps(Scene scene, int floor)
     {
         PropsLower.Apply(scene, floor);

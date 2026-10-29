@@ -24,7 +24,7 @@ public static class SecondFloorSetup
     const string QuestText = "３階へのチケットを買いましょう！";
     const string Title = "Set Up Second Floor Quest";
 
-    [MenuItem("Tools/Elevator Game/Create Second Floor Game Scene")]
+    [MenuItem("Tools/Elevator Game/Create Second Floor Game Scene", false, 61)]
     static void CreateGameScene()
     {
         if (AssetDatabase.LoadAssetAtPath<SceneAsset>(GameScenePath) != null &&
@@ -57,7 +57,7 @@ public static class SecondFloorSetup
         if (!string.IsNullOrEmpty(previous)) EditorSceneManager.OpenScene(previous);
     }
 
-    [MenuItem("Tools/Elevator Game/Set Up Second Floor Quest")]
+    [MenuItem("Tools/Elevator Game/Set Up Second Floor Quest", false, 41)]
     static void SetUpQuest()
     {
         var scene = SceneManager.GetActiveScene();

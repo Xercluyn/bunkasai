@@ -8,7 +8,7 @@ using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Tools > Elevator Game > School > Dress Floor Surfaces.
+/// Tools > Elevator Game > School > Steps > Dress Floor Surfaces.
 /// Gives the floor's shell (the one mesh holding floor + walls), its ceilings and its pillars the floor's school
 /// materials (SchoolPalette). Each triangle is sorted by its world-space facing into floor / wall / ceiling
 /// submeshes and gets UVs box-projected from world positions in real metres per texture repeat, so tiles keep
@@ -37,10 +37,10 @@ public static class ShellDresser
         public readonly HashSet<string> names = new HashSet<string>();
     }
 
-    [MenuItem("Tools/Elevator Game/School/Dress Floor Surfaces")]
+    [MenuItem("Tools/Elevator Game/School/Steps/Dress Floor Surfaces", false, 110)]
     static void DressOpen() => EditorKit.OnOpenFloor(Title, Apply);
 
-    [MenuItem("Tools/Elevator Game/School/Dress Floor Surfaces (All Floors)")]
+    [MenuItem("Tools/Elevator Game/School/Steps/Dress Floor Surfaces (All Floors)", false, 111)]
     static void DressAll() => EditorKit.ForFloors(Title, 1, 5, Apply);
 
     /// <summary>Dresses the shell, ceilings and pillars of `scene`, which is floor `floor`.</summary>

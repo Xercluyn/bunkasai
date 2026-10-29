@@ -34,7 +34,7 @@ public static class MenuSetup
         Build();
     }
 
-    [MenuItem("Tools/Elevator Game/" + Title)]
+    [MenuItem("Tools/Elevator Game/" + Title, false, 141)]
     static void Create()
     {
         if (AssetDatabase.LoadAssetAtPath<SceneAsset>(MenuPath) != null &&

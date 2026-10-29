@@ -17,7 +17,7 @@ public static class CharacterAnimationSetup
     const string Folder = "Assets/Animations";
     const string ControllerPath = Folder + "/Player.controller";
 
-    [MenuItem("Tools/Elevator Game/Setup Character Animation")]
+    [MenuItem("Tools/Elevator Game/Setup Character Animation", false, 120)]
     static void Setup()
     {
         string idlePath = FindFbx("idle");
@@ -117,7 +117,7 @@ public static class CharacterAnimationSetup
         AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>()
             .First(c => !c.name.StartsWith("__preview__"));
 
-    [MenuItem("Tools/Elevator Game/Rebuild Character Animator")]
+    [MenuItem("Tools/Elevator Game/Rebuild Character Animator", false, 121)]
     static void RebuildAnimator()
     {
         string idlePath = FindFbx("idle"), walkPath = FindFbx("walk");

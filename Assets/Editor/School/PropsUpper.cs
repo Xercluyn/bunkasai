@@ -7,7 +7,7 @@ using static EditorKit;
 using static SchoolKit;
 
 /// <summary>
-/// Tools > Elevator Game > School > Place School Props (4F-5F): builds the 4F (TV studio, sub-control, power lab) and
+/// Tools > Elevator Game > School > Steps > Place School Props, floors 4–5: builds the 4F (TV studio, sub-control, power lab) and
 /// 5F (care room, clinical engineering, IT room, student lounge) props from primitives, saves them as prefabs and
 /// places each room's set together on one free spot near an anchor object of the building, facing it.
 /// Sizes are real metres (see SchoolKit); a prop's +Z is its front. Placed ids are stable and kept if moved by hand.
@@ -17,13 +17,6 @@ public static class PropsUpper
     const string Title = "Place School Props (4F-5F)";
     const float M = SchoolPalette.WorldPerMetre;
     static readonly string[] StudioAnchor = { "swBtn22" };
-
-    [MenuItem("Tools/Elevator Game/School/" + Title)]
-    static void Menu() => OnOpenFloor(Title, (scene, floor) =>
-    {
-        if (floor < 4) Debug.Log($"{Title}: floor {floor} is dressed by PropsLower (1F-3F); nothing to do here.");
-        else Apply(scene, floor);
-    });
 
     /// <summary>Places the props of floor 4 or 5 in `scene`; does nothing for other floors.</summary>
     internal static void Apply(Scene scene, int floor)

@@ -7,7 +7,7 @@ using static EditorKit;
 using static SchoolKit;
 
 /// <summary>
-/// Tools > Elevator Game > School > Arrange 5F Rooms: puts a laptop on every student seat of the two IT rooms
+/// Arrange Rooms on 5F (Tools > Elevator Game > School > Steps > Arrange Rooms): puts a laptop on every student seat of the two IT rooms
 /// (silver in the room with the IT sign, black in the arcade room), each set on its desk by a raycast, and once per
 /// scene rearranges the care / clinical engineering props into the shared room the way the real one is laid out:
 /// care (介護実習室) on the left (north) of the west entrance, clinical engineering (臨床工学実習室) on the right.
@@ -19,13 +19,6 @@ public static class SchoolLayout5F
     const float M = SchoolPalette.WorldPerMetre;
     const float SeatOffset = 1.8f;           // seats sit ±1.8 units along a desk's long axis
     const float UserSetback = 0.25f * M;     // laptop centre this far in from the user-side desk edge
-
-    [MenuItem("Tools/Elevator Game/School/" + Title)]
-    static void Menu() => OnOpenFloor(Title, (scene, floor) =>
-    {
-        if (floor != 5) Debug.Log($"{Title}: only 5F has these rooms; nothing to do on floor {floor}.");
-        else Apply(scene, floor);
-    });
 
     /// <summary>Places the IT-room laptops and (once) lays out the care / CE room of floor 5; nothing for other floors.</summary>
     internal static void Apply(Scene scene, int floor)
@@ -46,7 +39,7 @@ public static class SchoolLayout5F
         var root = PropsRoot(scene);
         if (!spots.Any(s => root.Find(s.id) != null))
         {
-            Debug.Log($"{Title}: no {room} props yet (run Place School Props first); its layout pass is left for later.");
+            Debug.Log($"{Title}: no {room} props yet (run School > Steps > Place School Props first); its layout pass is left for later.");
             return;
         }
         if (Once(scene, step)) ArrangeRoom(scene, room, spots);
