@@ -59,7 +59,7 @@ public static class IndoorLightingSetup
     internal static void Fix()
     {
         var scene = SceneManager.GetActiveScene();
-        int floor = SchoolKit.FloorOf(scene);
+        int floor = SceneLinks.FloorOf(scene);
         var mood = MoodOf(floor);
         var lights = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Light>(true)).ToList();
         // The building's lamps: area lights still to convert, and point lights from an earlier run (not the studio wash)
@@ -133,7 +133,7 @@ public static class IndoorLightingSetup
         foreach (var old in scene.GetRootGameObjects().Where(r => r.name == WashName))
             Undo.DestroyObjectImmediate(old);
 
-        var anchor = SchoolKit.FindInBuilding(scene, WashAnchor).FirstOrDefault();
+        var anchor = EditorKit.FindInBuilding(scene, WashAnchor).FirstOrDefault();
         if (anchor == null)
         {
             Debug.LogWarning($"{Title}: no '{WashAnchor}' in the building, so the studio's blue wash light was skipped.");

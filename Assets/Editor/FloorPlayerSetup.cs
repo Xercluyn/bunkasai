@@ -230,15 +230,10 @@ public static class FloorPlayerSetup
 
     static bool TryGetBounds(GameObject go, Transform exclude, out Bounds bounds)
     {
-        bounds = default;
-        bool found = false;
-        foreach (var r in go.GetComponentsInChildren<Renderer>())
-        {
-            if (exclude != null && r.transform.IsChildOf(exclude)) continue;
-            if (!found) { bounds = r.bounds; found = true; }
-            else bounds.Encapsulate(r.bounds);
-        }
-        return found;
+        var found = EditorKit.RendererBounds(go.GetComponentsInChildren<Renderer>()
+            .Where(r => exclude == null || !r.transform.IsChildOf(exclude)));
+        bounds = found ?? default;
+        return found != null;
     }
 
     // Height of the nearest floor below origin, ignoring the character; null if there's none.

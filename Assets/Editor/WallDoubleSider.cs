@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -18,57 +17,29 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public static class WallDoubleSider
 {
-    const string GeneratedFolder = "Assets/Generated";
     const string Title = "Make Walls Double-Sided";
 
-    [MenuItem("Tools/Elevator Game/Make Walls Double-Sided")]
+    [MenuItem("Tools/Elevator Game/Make Walls Double-Sided", false, 81)]
     static void MakeDoubleSided()
     {
-        if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog(Title, "Stop Play Mode first.", "OK"); return; }
+        if (!EditorKit.NotPlaying(Title)) return;
         var scene = SceneManager.GetActiveScene();
         if (Apply(scene) > 0) EditorSceneManager.MarkSceneDirty(scene);
     }
 
-    [MenuItem("Tools/Elevator Game/Make Walls Double-Sided (All Floors)")]
-    static void MakeAllDoubleSided()
-    {
-        if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog(Title, "Stop Play Mode first.", "OK"); return; }
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-        var setup = EditorSceneManager.GetSceneManagerSetup();
-        try
-        {
-            for (int n = 1; n <= 5; n++)
-            {
-                var key = SceneLinks.Floor(n);
-                if (!SceneLinks.Exists(key)) { Debug.LogWarning($"{Title}: no scene for floor {n}."); continue; }
-                var scene = EditorSceneManager.OpenScene(SceneLinks.Path(key), OpenSceneMode.Single);
-                if (Apply(scene) > 0) EditorSceneManager.SaveScene(scene);
-            }
-        }
-        finally
-        {
-            // Back to the scenes that were open (an unsaved new scene can't be reopened)
-            if (setup.Length > 0 && setup.All(s => !string.IsNullOrEmpty(s.path))) EditorSceneManager.RestoreSceneManagerSetup(setup);
-            else Debug.Log($"{Title}: the scene you started from was never saved, so the last floor stays open.");
-        }
-    }
+    [MenuItem("Tools/Elevator Game/Make Walls Double-Sided (All Floors)", false, 82)]
+    static void MakeAllDoubleSided() => EditorKit.ForFloors(Title, 1, 5, (scene, _) => Apply(scene) > 0);
 
     // Swaps every building mesh in the scene for its double-sided copy; returns how many parts changed
     static int Apply(Scene scene)
     {
-        var character = FloorPlayerSetup.FindCharacter(scene);
-        var ignore = character != null ? character.transform : null;
-        var filters = FloorPlayerSetup.BuildingRoots(scene, ignore)
+        var filters = EditorKit.BuildingRoots(scene)
             .SelectMany(r => r.GetComponentsInChildren<MeshFilter>(true))
-            .Where(mf => mf.sharedMesh != null && IsModelMesh(mf.sharedMesh))
+            .Where(mf => mf.sharedMesh != null && EditorKit.IsModelMesh(mf.sharedMesh))
             .ToList();
+        var outlined = EditorKit.OutlinedFilters(scene);
 
-        // Outlined parts are left alone: their outline pushes the mesh out along its normals, which cancel on a double-sided one
-        var outlined = new HashSet<MeshFilter>(scene.GetRootGameObjects()
-            .SelectMany(r => r.GetComponentsInChildren<InteractableOutline>(true))
-            .SelectMany(o => o.partMesh != null ? new[] { o.partMesh } : o.GetComponentsInChildren<MeshFilter>(true)));
-
-        string folder = GeneratedFolder + "/" + scene.name;
+        string folder = EditorKit.GeneratedFolder + "/" + scene.name;
         var made = new Dictionary<Mesh, Mesh>();   // parts sharing a mesh share its copy
         int parts = 0, skipped = 0;
         long triangles = 0;
@@ -90,9 +61,8 @@ public static class WallDoubleSider
                 if (!made.TryGetValue(mesh, out var both))
                 {
                     both = DoubleSided(mesh, mesh.name + " " + WallThickness.DoubleSidedSuffix);
-                    EnsureFolder(folder);
-                    string name = string.Concat(both.name.Split(Path.GetInvalidFileNameChars()));
-                    AssetDatabase.CreateAsset(both, AssetDatabase.GenerateUniqueAssetPath($"{folder}/{name}.asset"));
+                    EditorKit.EnsureFolder(folder);
+                    AssetDatabase.CreateAsset(both, AssetDatabase.GenerateUniqueAssetPath($"{folder}/{EditorKit.FileName(both.name)}.asset"));
                     made[mesh] = both;
                     triangles += TriangleCount(mesh);
                 }
@@ -110,13 +80,6 @@ public static class WallDoubleSider
         Debug.Log($"{scene.name}: made {made.Count} mesh(es) on {parts} part(s) double-sided ({triangles} triangle(s), now drawn both ways); " +
                   $"{skipped} part(s) skipped (already double-sided, outlined or unreadable). Meshes are in {folder}.");
         return parts;
-    }
-
-    // Meshes from a model file or earlier fixes (Close Wall Gaps), not ones a script built
-    static bool IsModelMesh(Mesh mesh)
-    {
-        string path = AssetDatabase.GetAssetPath(mesh);
-        return path.StartsWith(GeneratedFolder + "/") || AssetImporter.GetAtPath(path) is ModelImporter;
     }
 
     /// <summary>
@@ -190,12 +153,5 @@ public static class WallDoubleSider
         values.CopyTo(result, 0);
         values.CopyTo(result, n);
         return result;
-    }
-
-    static void EnsureFolder(string folder)
-    {
-        string parent = Path.GetDirectoryName(folder).Replace('\\', '/');
-        if (!AssetDatabase.IsValidFolder(parent)) EnsureFolder(parent);
-        if (!AssetDatabase.IsValidFolder(folder)) AssetDatabase.CreateFolder(parent, Path.GetFileName(folder));
     }
 }

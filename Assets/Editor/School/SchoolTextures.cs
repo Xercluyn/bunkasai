@@ -198,7 +198,7 @@ public static class SchoolTextures
 
     static void Save(string path, Func<float, float, float> painter)
     {
-        SchoolKit.EnsureFolder(SchoolKit.TextureFolder);
+        EditorKit.EnsureFolder(SchoolKit.TextureFolder);
         var pixels = new Color32[N * N];
         for (int y = 0; y < N; y++)
             for (int x = 0; x < N; x++)

@@ -114,33 +114,28 @@ public static class MinigameSetup
 
     // Floors 1–4 in one go: opens each floor scene, (re)fits its elevator zone and button outline, saves it.
     // The first floor also gets its quest banner.
-    [MenuItem("Tools/Elevator Game/Set Up Elevators On All Floors")]
+    [MenuItem("Tools/Elevator Game/Set Up Elevators On All Floors", false, 21)]
     static void SetUpAllElevators()
     {
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-        string previous = SceneManager.GetActiveScene().path;
+        const string title = "Set Up Elevators On All Floors";
         var done = new System.Collections.Generic.List<string>();
-        for (int n = 1; n <= 4; n++)
+        EditorKit.ForFloors(title, 1, 4, (scene, n) =>
         {
-            var key = SceneLinks.Floor(n);
-            if (!SceneLinks.Exists(key)) continue;
-            var scene = EditorSceneManager.OpenScene(SceneLinks.Path(key), OpenSceneMode.Single);
             if (!AddElevatorPlayZoneIfElevator())
             {
                 Debug.LogWarning($"{scene.name}: no elevator found; skipped.");
-                continue;
+                return false;
             }
             InteractableOutlineSetup.OutlineAllZones(false);
             if (n == 1)
             {
-                SetQuest(scene, FirstFloorQuest, "Set Up Elevators On All Floors");
-                AddLevelOneMenu(scene, "Set Up Elevators On All Floors");
+                SetQuest(scene, FirstFloorQuest, title);
+                AddLevelOneMenu(scene, title);
             }
-            EditorSceneManager.SaveScene(scene);
             done.Add(scene.name);
-        }
-        if (!string.IsNullOrEmpty(previous)) EditorSceneManager.OpenScene(previous);
-        EditorUtility.DisplayDialog("Set Up Elevators On All Floors",
+            return true;
+        });
+        EditorUtility.DisplayDialog(title,
             done.Count > 0 ? "Elevators set up and saved on: " + string.Join(", ", done) + "." : "No floor with an elevator was found.", "OK");
     }
 
@@ -334,11 +329,8 @@ public static class MinigameSetup
 
     static bool TryGetBounds(Transform t, out Bounds bounds)
     {
-        var renderers = t.GetComponentsInChildren<Renderer>();
-        bounds = default;
-        if (renderers.Length == 0) return false;
-        bounds = renderers[0].bounds;
-        foreach (var r in renderers) bounds.Encapsulate(r.bounds);
-        return true;
+        var found = EditorKit.RendererBounds(t.GetComponentsInChildren<Renderer>());
+        bounds = found ?? default;
+        return found != null;
     }
 }

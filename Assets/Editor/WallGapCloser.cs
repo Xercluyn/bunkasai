@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -18,7 +17,6 @@ public static class WallGapCloser
 {
     // Furthest an edge is stretched, in multiples of the player's height (doorways are much wider)
     const float ReachOfHeight = 0.2f;
-    const string GeneratedFolder = "Assets/Generated";
     const string Title = "Close Wall Gaps";
 
     [MenuItem("Tools/Elevator Game/Close Wall Gaps")]
@@ -87,8 +85,8 @@ public static class WallGapCloser
             foreach (var c in temporary) Object.DestroyImmediate(c);
         }
 
-        string folder = GeneratedFolder + "/" + scene.name;
-        if (results.Count > 0) EnsureFolder(folder);
+        string folder = EditorKit.GeneratedFolder + "/" + scene.name;
+        if (results.Count > 0) EditorKit.EnsureFolder(folder);
         foreach (var (mf, mesh, _) in results)
         {
             var saved = Save(mf, mesh, folder);
@@ -111,7 +109,7 @@ public static class WallGapCloser
     // The model's own mesh, also when an earlier run already swapped in a fixed copy
     static Mesh Original(MeshFilter mf)
     {
-        if (!AssetDatabase.GetAssetPath(mf.sharedMesh).StartsWith(GeneratedFolder + "/")) return mf.sharedMesh;
+        if (!EditorKit.IsGenerated(mf.sharedMesh)) return mf.sharedMesh;
         var source = PrefabUtility.GetCorrespondingObjectFromSource(mf);
         return source != null && source.sharedMesh != null ? source.sharedMesh : mf.sharedMesh;
     }
@@ -239,7 +237,7 @@ public static class WallGapCloser
     {
         // Overwrite the copy from an earlier run so scene references stay valid
         var current = mf.sharedMesh;
-        if (AssetDatabase.GetAssetPath(current).StartsWith(GeneratedFolder + "/"))
+        if (EditorKit.IsGenerated(current))
         {
             EditorUtility.CopySerialized(mesh, current);
             Object.DestroyImmediate(mesh);
@@ -247,16 +245,9 @@ public static class WallGapCloser
             return current;
         }
 
-        string name = string.Concat(mesh.name.Split(Path.GetInvalidFileNameChars()));
+        string name = EditorKit.FileName(mesh.name);
         string path = AssetDatabase.GenerateUniqueAssetPath($"{folder}/{(name.Length > 0 ? name : "mesh")}.asset");
         AssetDatabase.CreateAsset(mesh, path);
         return mesh;
-    }
-
-    static void EnsureFolder(string folder)
-    {
-        string parent = Path.GetDirectoryName(folder).Replace('\\', '/');
-        if (!AssetDatabase.IsValidFolder(parent)) EnsureFolder(parent);
-        if (!AssetDatabase.IsValidFolder(folder)) AssetDatabase.CreateFolder(parent, Path.GetFileName(folder));
     }
 }

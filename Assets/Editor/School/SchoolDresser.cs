@@ -13,16 +13,16 @@ public static class SchoolDresser
     const string Title = "Dress School";
 
     [MenuItem("Tools/Elevator Game/School/Dress School (This Floor)")]
-    static void DressOpenFloor() => SchoolKit.OnOpenFloor(Title, Dress);
+    static void DressOpenFloor() => EditorKit.OnOpenFloor(Title, Dress);
 
     [MenuItem("Tools/Elevator Game/School/Dress School (All Floors)")]
-    static void DressAllFloors() => SchoolKit.ForFloors(Title, 1, 5, Dress);
+    static void DressAllFloors() => EditorKit.ForFloors(Title, 1, 5, Dress);
 
     [MenuItem("Tools/Elevator Game/School/Place School Props (All Floors)")]
-    static void PlaceAllProps() => SchoolKit.ForFloors("Place School Props", 1, 5, PlaceProps);
+    static void PlaceAllProps() => EditorKit.ForFloors("Place School Props", 1, 5, PlaceProps);
 
     [MenuItem("Tools/Elevator Game/School/Arrange Rooms (2F, 3F, 5F)")]
-    static void ArrangeRooms() => SchoolKit.ForFloors("Arrange Rooms", 2, 5, Arrange);
+    static void ArrangeRooms() => EditorKit.ForFloors("Arrange Rooms", 2, 5, Arrange);
 
     static void Dress(Scene scene, int floor)
     {

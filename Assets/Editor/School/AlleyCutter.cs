@@ -24,7 +24,6 @@ using UnityEngine.SceneManagement;
 public static class AlleyCutter
 {
     const string Title = "Cut 5F Alley";
-    const string GeneratedFolder = "Assets/Generated";
     const string AlleyTag = " alley";
     const string ShellName = "Plane.002";
     const int AlleyFloor = 5;
@@ -48,7 +47,7 @@ public static class AlleyCutter
     };
 
     [MenuItem("Tools/Elevator Game/School/Cut 5F Alley")]
-    static void CutOpen() => SchoolKit.OnOpenFloor(Title, Apply);
+    static void CutOpen() => EditorKit.OnOpenFloor(Title, Apply);
 
     /// <summary>Cuts the alley into floor 5's shell; nothing for other floors or an already cut shell.</summary>
     internal static void Apply(Scene scene, int floor)
@@ -56,7 +55,7 @@ public static class AlleyCutter
         if (floor != AlleyFloor) return;
         var look = SchoolPalette.For(floor);
         float tile = (look != null ? look.wall.tileMetres : 1f) * SchoolPalette.WorldPerMetre;
-        var roots = BuildingRoots(scene).ToList();
+        var roots = EditorKit.BuildingRoots(scene).ToList();
         var shells = roots.SelectMany(r => r.GetComponentsInChildren<MeshFilter>(true))
             .Where(mf => mf.sharedMesh != null && mf.sharedMesh.name.StartsWith(ShellName)).ToList();
         if (shells.Count == 0) { Debug.LogWarning($"{Title}: no '{ShellName}' shell in {scene.name}."); return; }
@@ -65,12 +64,6 @@ public static class AlleyCutter
         foreach (var mf in shells) Cut(mf, scene, tile);
         HideInHole(roots, shells);
         AssetDatabase.SaveAssets();
-    }
-
-    static IEnumerable<GameObject> BuildingRoots(Scene scene)
-    {
-        var character = FloorPlayerSetup.FindCharacter(scene);
-        return FloorPlayerSetup.BuildingRoots(scene, character != null ? character.transform : null);
     }
 
     // ---------- cutting ----------
@@ -257,10 +250,7 @@ public static class AlleyCutter
         foreach (var r in roots.SelectMany(root => root.GetComponentsInChildren<Renderer>(true)))
         {
             var go = r.gameObject;
-            if (skip.Contains(go) || !go.activeSelf || HoleOf(r.bounds.center) < 0) continue;
-            Undo.RecordObject(go, Title);
-            go.SetActive(false);
-            PrefabUtility.RecordPrefabInstancePropertyModifications(go);
+            if (skip.Contains(go) || HoleOf(r.bounds.center) < 0 || !EditorKit.Hide(go, Title)) continue;
             Debug.Log($"{Title}: hid '{go.name}' (it stood in a hole).", go);
             hidden++;
         }
@@ -270,42 +260,15 @@ public static class AlleyCutter
     // ---------- assets ----------
 
     // "(base) alley (2s)", the base stripped of an earlier alley tag and the double-sided suffix
-    static string AlleyName(string name)
-    {
-        string baseName = name;
-        string[] tails = { " " + WallThickness.DoubleSidedSuffix, WallThickness.DoubleSidedSuffix, AlleyTag };
-        for (bool cut = true; cut;)
-        {
-            cut = false;
-            foreach (var tail in tails)
-                if (baseName.EndsWith(tail)) { baseName = baseName.Substring(0, baseName.Length - tail.Length); cut = true; }
-        }
-        return baseName.Trim() + AlleyTag + " " + WallThickness.DoubleSidedSuffix;
-    }
+    static string AlleyName(string name) => EditorKit.StripTags(name, AlleyTag) + AlleyTag + " " + WallThickness.DoubleSidedSuffix;
 
     // Next to a generated source; a raw model mesh goes to Assets/Generated/(scene)
-    static string FolderFor(Mesh source, Scene scene)
-    {
-        string path = AssetDatabase.GetAssetPath(source);
-        return path.StartsWith(GeneratedFolder + "/") ? Path.GetDirectoryName(path).Replace('\\', '/') : $"{GeneratedFolder}/{scene.name}";
-    }
+    static string FolderFor(Mesh source, Scene scene) =>
+        EditorKit.IsGenerated(source) ? Path.GetDirectoryName(AssetDatabase.GetAssetPath(source)).Replace('\\', '/')
+                                      : $"{EditorKit.GeneratedFolder}/{scene.name}";
 
-    // Saves the mesh as an asset, overwriting an earlier cut in place so references to it stay valid
-    static Mesh Save(Mesh mesh, string folder)
-    {
-        SchoolKit.EnsureFolder(folder);
-        string path = $"{folder}/{string.Concat(mesh.name.Split(Path.GetInvalidFileNameChars()))}.asset";
-        var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
-        if (existing == null)
-        {
-            AssetDatabase.CreateAsset(mesh, path);
-            return mesh;
-        }
-        EditorUtility.CopySerialized(mesh, existing);
-        Object.DestroyImmediate(mesh);
-        EditorUtility.SetDirty(existing);
-        return existing;
-    }
+    // Saved over an earlier cut in place, so references to it stay valid
+    static Mesh Save(Mesh mesh, string folder) => EditorKit.SaveMesh(mesh, folder);
 
     static Bounds Box(Vector3 min, Vector3 max)
     {

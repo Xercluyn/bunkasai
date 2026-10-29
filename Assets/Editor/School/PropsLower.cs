@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using static EditorKit;
 using static SchoolKit;
 
 /// <summary>
@@ -48,9 +49,9 @@ public static class PropsLower
         {
             this.scene = scene;
             this.floor = floor;
-            var b = BoundsOf(FindInBuilding(scene, "").Select(t => t.GetComponent<Renderer>()).Where(r => r != null));
+            var b = RendererBounds(FindInBuilding(scene, "").Select(t => t.GetComponent<Renderer>()).Where(r => r != null));
             var c = b?.center ?? Vector3.zero;
-            level = FloorLevel(scene, b?.min.y ?? 0f);
+            level = PlayerFloorY(scene, b?.min.y ?? 0f);
             room = new Vector3(c.x, level, c.z);
         }
     }
@@ -62,34 +63,6 @@ public static class PropsLower
         public Vector3 center;
         public float yaw;
         public bool found;
-    }
-
-    static Bounds? BoundsOf(IEnumerable<Renderer> renderers)
-    {
-        Bounds? total = null;
-        foreach (var r in renderers)
-        {
-            if (total == null) { total = r.bounds; continue; }
-            var b = total.Value;
-            b.Encapsulate(r.bounds);
-            total = b;
-        }
-        return total;
-    }
-
-    // The highest upward floor hit straight under the player (their own collider ignored)
-    static float FloorLevel(Scene scene, float fallback)
-    {
-        var character = FloorPlayerSetup.FindCharacter(scene);
-        if (character == null) return fallback;
-        var hits = new RaycastHit[32];
-        int n = scene.GetPhysicsScene().Raycast(character.transform.position + Vector3.up * 2f, Vector3.down, hits, 40f,
-                                                ~0, QueryTriggerInteraction.Ignore);
-        float best = float.NegativeInfinity;
-        for (int i = 0; i < n; i++)
-            if (hits[i].normal.y > 0.9f && !hits[i].collider.transform.IsChildOf(character.transform))
-                best = Mathf.Max(best, hits[i].point.y);
-        return float.IsNegativeInfinity(best) ? fallback : best;
     }
 
     static float Snap(float yaw) => Mathf.Round(yaw / 90f) * 90f;
@@ -104,7 +77,7 @@ public static class PropsLower
             return new Spot { name = $"{prefix} (missing, building centre)", center = ctx.room, yaw = 0f, found = false };
         }
         var t = found[0];
-        var c = BoundsOf(t.GetComponentsInChildren<Renderer>(true))?.center ?? t.position;
+        var c = RendererBounds(t.GetComponentsInChildren<Renderer>(true))?.center ?? t.position;
         return new Spot { name = t.name, center = new Vector3(c.x, ctx.level, c.z), yaw = Snap(t.eulerAngles.y), found = true };
     }
 
@@ -174,10 +147,8 @@ public static class PropsLower
 
     // ---------- shared parts ----------
 
-    static Vector3 V(float x, float y, float z) => new Vector3(x, y, z);
-
     static Material Paint(int floor, string key, string hex, float smoothness = 0.25f, float metallic = 0f) =>
-        Mat($"F{floor}_{key}", UiKit.Hex(hex), TexKind.Plain, smoothness, metallic);
+        HexMat($"F{floor}_{key}", hex, smoothness, metallic);
 
     // A label on a face pointing +Z (TextMesh reads from -Z, so it is turned round)
     static void FrontLabel(GameObject p, string name, string text, Vector3 at, float height, Color color) =>

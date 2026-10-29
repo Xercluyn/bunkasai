@@ -108,10 +108,10 @@ public static class PropRecolour
     static string AccentHex(int floor, string key) => "#" + ColorUtility.ToHtmlStringRGB(SchoolPalette.Accent(floor, key));
 
     [MenuItem("Tools/Elevator Game/School/Recolour Furniture")]
-    static void RecolourOpen() => SchoolKit.OnOpenFloor(Title, Apply);
+    static void RecolourOpen() => EditorKit.OnOpenFloor(Title, Apply);
 
     [MenuItem("Tools/Elevator Game/School/Recolour Furniture (All Floors)")]
-    static void RecolourAll() => SchoolKit.ForFloors(Title, 1, 5, Apply);
+    static void RecolourAll() => EditorKit.ForFloors(Title, 1, 5, Apply);
 
     [MenuItem("Tools/Elevator Game/School/List Floor Materials")]
     static void ListMaterials()
@@ -133,7 +133,7 @@ public static class PropRecolour
         var counts = new Dictionary<string, int>();
         int renderersChanged = 0, seat = 0;
 
-        foreach (var r in Renderers(scene).OrderBy(r => PathOf(r.transform)))
+        foreach (var r in Renderers(scene).OrderBy(r => EditorKit.PathOf(r.transform)))
         {
             var mats = r.sharedMaterials;
             bool changed = false;
@@ -245,6 +245,4 @@ public static class PropRecolour
     }
 
     static string MatKey(int floor, string key) => $"F{floor}_furn_{key}";
-
-    static string PathOf(Transform t) => t.parent == null ? t.name : PathOf(t.parent) + "/" + t.name;
 }

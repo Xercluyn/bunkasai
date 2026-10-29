@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using static EditorKit;
 using static SchoolKit;
 
 /// <summary>
@@ -55,7 +56,7 @@ public static class PropsUpper
 
     static void SubControl(Scene scene)
     {
-        var chair = OfficeChair("F4_CrimsonChair", A(4, "crimson"), A(4, "control"));
+        var chair = OfficeChair("F4_CrimsonChair", Accent(4, "crimson"), Accent(4, "control"));
         var rack = Rack();
         PlaceGroup(scene, "sub-control", new[] { "chair_frame", "stool00_1_seat", "swBtn22" }, V(5.8f, 2.8f, 3.2f), 6f, 60f,
             It("subMonitorWall", MonitorWall(), 0f, -1.3f), It("subConsole", ConsoleDesk(), 0f, -0.6f),
@@ -68,19 +69,19 @@ public static class PropsUpper
         PlaceGroup(scene, "power lab", new[] { "cabinet", "locker_topbox", "shelf_board0" }, V(5.4f, 3.4f, 3.4f), 6f, 60f,
             It("powerFrame", PowerFrame(), -1.0f, 0f), It("powerMeterPanel", MeterPanel(), 1.0f, -1.3f),
             It("powerSwitchgear", Switchgear(), 2.1f, -1.1f),
-            It("powerSign", Sign("F4_PowerLabSign", "電力実験室\nPOWER LAB", A(4, "control")), 1.6f, 1.2f));
+            It("powerSign", Sign("F4_PowerLabSign", "電力実験室\nPOWER LAB", Accent(4, "control")), 1.6f, 1.2f));
     }
 
     static void CareRoom(Scene scene)
     {
-        var bed = Bed("F5_CareBed", White(), A(5, "lavender"), A(5, "bedWood"));
+        var bed = Bed("F5_CareBed", White(), Accent(5, "lavender"), Accent(5, "bedWood"));
         var chair = ShowerChair("F5_ShowerChair", White());
-        var orange = ShowerChair("F5_ShowerChairOrange", H("F5_orange", "#E8803A", 0.4f));
+        var orange = ShowerChair("F5_ShowerChairOrange", HexMat("F5_orange", "#E8803A", 0.4f));
         PlaceGroup(scene, "care room", new[] { "bed" }, V(5.6f, 2.1f, 3.6f), 6f, 60f,
             It("careBed1", bed, -1.7f, -0.6f), It("careBed2", bed, -0.5f, -0.6f), It("careBed3", bed, 0.7f, -0.6f),
             It("careLift", PatientLift(), 2.1f, -0.8f),
             It("careShower1", chair, -1.5f, 1.3f), It("careShower2", chair, -0.8f, 1.3f), It("careShower3", orange, -0.1f, 1.3f),
-            It("careSign", Sign("F5_CareSign", "介護実習室\nCARE ROOM", A(5, "grey")), 1.9f, 1.3f));
+            It("careSign", Sign("F5_CareSign", "介護実習室\nCARE ROOM", Accent(5, "grey")), 1.9f, 1.3f));
     }
 
     static void ClinicalRoom(Scene scene)
@@ -88,28 +89,28 @@ public static class PropsUpper
         var machine = MedicalMachine();
         var iv = IvPole();
         PlaceGroup(scene, "clinical engineering", new[] { "bodyBack" }, V(5.6f, 2.1f, 3.6f), 6f, 60f,
-            It("ceBed", Bed("F5_HospitalBed", A(5, "bedGold", 0.45f, 0.5f), White(), Medical()), -1.8f, -0.6f),
+            It("ceBed", Bed("F5_HospitalBed", Accent(5, "bedGold", 0.45f, 0.5f), White(), Medical()), -1.8f, -0.6f),
             It("ceMachine1", machine, -0.6f, -1.3f), It("ceMachine2", machine, 0f, -1.3f), It("ceMachine3", machine, 0.6f, -1.3f),
             It("ceIv1", iv, 1.3f, -0.5f), It("ceIv2", iv, 1.9f, -0.5f), It("ceIv3", iv, 2.5f, -0.5f),
             It("ceTrolley", Trolley(), 0.2f, 0.5f), It("ceLamp", ExamLamp(), -0.7f, -0.2f, -90f),
-            It("ceSign", Sign("F5_ClinicalSign", "臨床工学実習室\nCLINICAL ENG.", A(5, "grey")), 2.0f, 1.2f));
+            It("ceSign", Sign("F5_ClinicalSign", "臨床工学実習室\nCLINICAL ENG.", Accent(5, "grey")), 2.0f, 1.2f));
     }
 
     static void ItRoom(Scene scene)
     {
         var desk = ItDesk();
-        var chair = OfficeChair("F5_BlueMeshChair", H("F5_blueMesh", "#2A5CC8", 0.2f), Black5());
+        var chair = OfficeChair("F5_BlueMeshChair", HexMat("F5_blueMesh", "#2A5CC8", 0.2f), Black5());
         PlaceGroup(scene, "IT room", new[] { "laptopLogo", "monitot" }, V(4.2f, 2.1f, 4.2f), 6f, 60f,
             It("itDesk1", desk, 0f, -1.3f), It("itDesk2", desk, 0f, 0.8f),
             It("itChair1", chair, -0.45f, -0.55f, 180f), It("itChair2", chair, 0.45f, -0.55f, 180f),
             It("itChair3", chair, -0.45f, 1.55f, 180f), It("itChair4", chair, 0.45f, 1.55f, 180f),
-            It("itSign", Sign("F5_ItSign", "ITエンジニア\nIT ENGINEER", A(5, "grey")), 1.6f, -0.25f));
+            It("itSign", Sign("F5_ItSign", "ITエンジニア\nIT ENGINEER", Accent(5, "grey")), 1.6f, -0.25f));
     }
 
     static void Lounge(Scene scene)
     {
         var table = LoungeTable();
-        var chairs = new[] { "teal", "mauve", "grey", "maroon" }.Select(c => LoungeChair("F5_LoungeChair_" + c, A(5, c))).ToArray();
+        var chairs = new[] { "teal", "mauve", "grey", "maroon" }.Select(c => LoungeChair("F5_LoungeChair_" + c, Accent(5, c))).ToArray();
         var items = new List<Item>();
         for (int t = 0; t < 2; t++)
         {
@@ -203,7 +204,6 @@ public static class PropsUpper
     // Centre of the first matching anchor (else of the whole building), 2 units above the floor level
     static Vector3 AnchorPoint(Scene scene, string[] prefixes, out string used)
     {
-        var character = FloorPlayerSetup.FindCharacter(scene);
         Bounds? box = null;
         used = null;
         foreach (var prefix in prefixes)
@@ -211,54 +211,28 @@ public static class PropsUpper
             var hits = FindInBuilding(scene, prefix);
             if (hits.Count == 0) continue;
             used = prefix;
-            box = BoundsOf(new[] { hits[0].gameObject }) ?? new Bounds(hits[0].position, Vector3.zero);
+            box = RendererBounds(hits[0].GetComponentsInChildren<Renderer>()) ?? new Bounds(hits[0].position, Vector3.zero);
             break;
         }
-        if (box == null) box = BoundsOf(FloorPlayerSetup.BuildingRoots(scene, character != null ? character.transform : null)) ?? new Bounds();
+        if (box == null) box = RendererBounds(BuildingRoots(scene).SelectMany(g => g.GetComponentsInChildren<Renderer>())) ?? new Bounds();
         var b = box.Value;
-        return new Vector3(b.center.x, FloorY(scene, character, b.min.y) + 2f, b.center.z);
-    }
-
-    // The floor under the player (one level per floor scene); `fallback` when there's no player
-    static float FloorY(Scene scene, GameObject character, float fallback)
-    {
-        if (character == null) return fallback;
-        var origin = character.transform.position + Vector3.up;
-        return scene.GetPhysicsScene().Raycast(origin, Vector3.down, out var hit, 40f, ~0, QueryTriggerInteraction.Ignore)
-            ? hit.point.y : character.transform.position.y;
-    }
-
-    static Bounds? BoundsOf(IEnumerable<GameObject> roots)
-    {
-        Bounds? total = null;
-        foreach (var r in roots.SelectMany(g => g.GetComponentsInChildren<Renderer>()))
-        {
-            if (total == null) { total = r.bounds; continue; }
-            var b = total.Value;
-            b.Encapsulate(r.bounds);
-            total = b;
-        }
-        return total;
+        // the floor under the player (one level per floor scene)
+        return new Vector3(b.center.x, PlayerFloorY(scene, b.min.y) + 2f, b.center.z);
     }
 
     // ---------- materials and shared parts ----------
 
-    static Vector3 V(float x, float y, float z) => new Vector3(x, y, z);
-    static Material A(int floor, string key, float smooth = 0.25f, float metal = 0f, bool glow = false) => Accent(floor, key, smooth, metal, glow);
-    static Material H(string key, string hex, float smooth = 0.3f, float metal = 0f, bool glow = false) =>
-        Mat(key, UiKit.Hex(hex), TexKind.Plain, smooth, metal, null, glow);
-
-    static Material Dark4() => A(4, "grid", 0.4f, 0.4f);
-    static Material Grey4() => A(4, "camera", 0.35f, 0.3f);
-    static Material Screen4() => H("F4_screenBlue", "#142A60", 0.8f, 0f, true);
-    static Material CableRed() => H("F4_cableRed", "#B01818", 0.4f);
-    static Material Porcelain() => A(4, "porcelain", 0.7f);
-    static Material White() => H("F5_white", "#F4F4F2", 0.4f);
-    static Material Medical() => A(5, "medical", 0.45f);
-    static Material Chrome() => A(5, "steel", 0.7f, 0.9f);
-    static Material Black5() => A(5, "black", 0.4f);
-    static Material Oak5() => H("F5_oak", "#D8BC8C", 0.35f);
-    static Material Screen5() => H("F5_screen", "#0E2226", 0.85f, 0f, true);
+    static Material Dark4() => Accent(4, "grid", 0.4f, 0.4f);
+    static Material Grey4() => Accent(4, "camera", 0.35f, 0.3f);
+    static Material Screen4() => HexMat("F4_screenBlue", "#142A60", 0.8f, 0f, true);
+    static Material CableRed() => HexMat("F4_cableRed", "#B01818", 0.4f);
+    static Material Porcelain() => Accent(4, "porcelain", 0.7f);
+    static Material White() => HexMat("F5_white", "#F4F4F2", 0.4f);
+    static Material Medical() => Accent(5, "medical", 0.45f);
+    static Material Chrome() => Accent(5, "steel", 0.7f, 0.9f);
+    static Material Black5() => Accent(5, "black", 0.4f);
+    static Material Oak5() => HexMat("F5_oak", "#D8BC8C", 0.35f);
+    static Material Screen5() => HexMat("F5_screen", "#0E2226", 0.85f, 0f, true);
 
     // four small castor wheels under the corners of a w x d footprint
     static void Castors(GameObject p, float w, float d, Material mat)
@@ -287,8 +261,8 @@ public static class PropsUpper
         var p = NewProp(id);
         Box(p, "foot", V(0f, 0.02f, 0f), V(0.5f, 0.04f, 0.35f), frame);
         Cyl(p, "post", Vector3.zero, 0.05f, 1.5f, frame, 0.04f);
-        Box(p, "board", V(0f, 1.75f, 0f), V(1.5f, 0.55f, 0.04f), H("F45_signBoard", "#F6F6F4", 0.3f));
-        Box(p, "stripe", V(0f, 1.49f, 0.005f), V(1.5f, 0.04f, 0.045f), H("F45_signStripe", "#2A5CC8", 0.3f));
+        Box(p, "board", V(0f, 1.75f, 0f), V(1.5f, 0.55f, 0.04f), HexMat("F45_signBoard", "#F6F6F4", 0.3f));
+        Box(p, "stripe", V(0f, 1.49f, 0.005f), V(1.5f, 0.04f, 0.045f), HexMat("F45_signStripe", "#2A5CC8", 0.3f));
         Label(p, "text", text, V(0f, 1.76f, 0.03f), 0.13f, UiKit.Hex("#1E2A4A"), V(0f, 180f, 0f));
         return SavePrefab(p);
     }
@@ -298,7 +272,7 @@ public static class PropsUpper
     static GameObject StudioCamera()
     {
         var p = NewProp("F4_StudioCamera");
-        Material body = Grey4(), dark = Dark4(), gold = A(4, "pedestal", 0.45f, 0.6f);
+        Material body = Grey4(), dark = Dark4(), gold = Accent(4, "pedestal", 0.45f, 0.6f);
         Cyl(p, "pedestal", Vector3.zero, 0.7f, 0.3f, gold);
         Cyl(p, "column", Vector3.zero, 0.14f, 0.85f, body, 0.3f);
         Cyl(p, "steeringRing", Vector3.zero, 0.55f, 0.03f, gold, 0.9f);
@@ -307,7 +281,7 @@ public static class PropsUpper
         Part(p, "lens", PrimitiveType.Cylinder, V(0f, 1.38f, 0.4f), V(0.16f, 0.22f, 0.16f), dark, V(90f, 0f, 0f));
         Box(p, "lensHood", V(0f, 1.38f, 0.52f), V(0.22f, 0.2f, 0.04f), dark);
         Box(p, "viewfinder", V(0f, 1.64f, -0.12f), V(0.24f, 0.17f, 0.24f), dark);
-        Box(p, "tally", V(0f, 1.75f, -0.05f), V(0.08f, 0.05f, 0.08f), A(4, "tally", 0.5f, 0f, true));
+        Box(p, "tally", V(0f, 1.75f, -0.05f), V(0.08f, 0.05f, 0.08f), Accent(4, "tally", 0.5f, 0f, true));
         for (int s = -1; s <= 1; s += 2)
             Box(p, "panBar" + s, V(0.13f * s, 1.25f, -0.52f), V(0.03f, 0.03f, 0.5f), dark, V(-12f, 0f, 0f));
         return SavePrefab(p);
@@ -317,7 +291,7 @@ public static class PropsUpper
     static GameObject LightingGrid()
     {
         var p = NewProp("F4_LightingGrid");
-        Material pipe = Dark4(), lens = H("F4_fresnelLens", "#5A5040", 0.6f, 0f, true);
+        Material pipe = Dark4(), lens = HexMat("F4_fresnelLens", "#5A5040", 0.6f, 0f, true);
         for (int i = 0; i <= 4; i++)
         {
             Box(p, "pipeZ" + i, V(-2f + i, 4.2f, 0f), V(0.05f, 0.05f, 4f), pipe);
@@ -341,7 +315,7 @@ public static class PropsUpper
     static GameObject Cyclorama()
     {
         var p = NewProp("F4_Cyclorama");
-        var cyc = A(4, "cyc", 0.1f, 0f, true);
+        var cyc = Accent(4, "cyc", 0.1f, 0f, true);
         Box(p, "panel", V(0f, 1.85f, 0f), V(6f, 3.5f, 0.1f), cyc);
         Box(p, "cove", V(0f, 0.05f, 0.25f), V(6f, 0.1f, 0.4f), cyc);
         for (int s = -1; s <= 1; s += 2) Box(p, "brace" + s, V(2.7f * s, 0.6f, -0.25f), V(0.08f, 1.2f, 0.4f), Dark4());
@@ -352,7 +326,7 @@ public static class PropsUpper
     static GameObject Curtain()
     {
         var p = NewProp("F4_Curtain");
-        var cloth = A(4, "curtain", 0.05f);
+        var cloth = Accent(4, "curtain", 0.05f);
         Box(p, "rail", V(0f, 3.55f, 0f), V(4.1f, 0.06f, 0.06f), Dark4());
         const float fold = 4f / 6f;
         for (int i = 0; i < 6; i++)
@@ -378,8 +352,8 @@ public static class PropsUpper
     static GameObject ConsoleDesk()
     {
         var p = NewProp("F4_ConsoleDesk");
-        Box(p, "body", V(0f, 0.43f, -0.05f), V(4f, 0.86f, 0.7f), A(4, "console"));
-        Box(p, "top", V(0f, 0.88f, 0f), V(4f, 0.04f, 0.8f), A(4, "control"));
+        Box(p, "body", V(0f, 0.43f, -0.05f), V(4f, 0.86f, 0.7f), Accent(4, "console"));
+        Box(p, "top", V(0f, 0.88f, 0f), V(4f, 0.04f, 0.8f), Accent(4, "control"));
         Box(p, "armrest", V(0f, 0.88f, 0.41f), V(4f, 0.06f, 0.08f), Dark4());
         ConsoleControls(p);
         return SavePrefab(p);
@@ -388,10 +362,10 @@ public static class PropsUpper
     // 24 fader strips near the operator (+Z) with caps at varied levels, three rows of lit buttons behind them
     static void ConsoleControls(GameObject p)
     {
-        Material strip = A(4, "fader"), cap = H("F4_faderCap", "#C8CACC", 0.4f);
+        Material strip = Accent(4, "fader"), cap = HexMat("F4_faderCap", "#C8CACC", 0.4f);
         Material[] buttons =
         {
-            H("F4_btnRed", "#D02020", 0.5f, 0f, true), H("F4_btnYellow", "#E8C020", 0.5f, 0f, true), H("F4_btnBlue", "#2050D0", 0.5f, 0f, true),
+            HexMat("F4_btnRed", "#D02020", 0.5f, 0f, true), HexMat("F4_btnYellow", "#E8C020", 0.5f, 0f, true), HexMat("F4_btnBlue", "#2050D0", 0.5f, 0f, true),
         };
         for (int c = 0; c < 24; c++)
         {
@@ -407,7 +381,7 @@ public static class PropsUpper
     static GameObject MonitorWall()
     {
         var p = NewProp("F4_MonitorWall");
-        Material frame = A(4, "control"), dark = Dark4(), screen = Screen4();
+        Material frame = Accent(4, "control"), dark = Dark4(), screen = Screen4();
         for (int s = -1; s <= 1; s += 2)
         {
             Box(p, "post" + s, V(2.0f * s, 1.4f, 0f), V(0.08f, 2.8f, 0.08f), frame);
@@ -428,8 +402,8 @@ public static class PropsUpper
     static GameObject Rack()
     {
         var p = NewProp("F4_EquipmentRack");
-        Material dark = A(4, "control"), led = H("F4_led", "#30D060", 0.5f, 0f, true);
-        Box(p, "cabinet", V(0f, 1f, 0f), V(0.6f, 2f, 0.8f), A(4, "rack"));
+        Material dark = Accent(4, "control"), led = HexMat("F4_led", "#30D060", 0.5f, 0f, true);
+        Box(p, "cabinet", V(0f, 1f, 0f), V(0.6f, 2f, 0.8f), Accent(4, "rack"));
         for (int u = 0; u < 16; u++)
         {
             float y = 0.16f + u * 0.11f;
@@ -447,8 +421,8 @@ public static class PropsUpper
     static GameObject PowerFrame()
     {
         var p = NewProp("F4_PowerLabFrame");
-        FramePipes(p, A(4, "galv", 0.4f, 0.7f));
-        var cage = H("F4_cageMesh", "#5A5E62", 0.3f, 0.6f);
+        FramePipes(p, Accent(4, "galv", 0.4f, 0.7f));
+        var cage = HexMat("F4_cageMesh", "#5A5E62", 0.3f, 0.6f);
         CagePanel(p, "cageBack", V(0f, 0f, -1.5f), 3f, false, cage);
         CagePanel(p, "cageLeft", V(-1.5f, 0f, 0f), 3f, true, cage);
         CagePanel(p, "cageRight", V(1.5f, 0f, 0f), 3f, true, cage);
@@ -487,7 +461,7 @@ public static class PropsUpper
     // grey finned transformer with three porcelain bushings on top
     static void Transformer(GameObject p, string name, float x, float z)
     {
-        var body = H("F4_transformer", "#7A7E84", 0.35f, 0.4f);
+        var body = HexMat("F4_transformer", "#7A7E84", 0.35f, 0.4f);
         Box(p, name, V(x, 0.3f, z), V(0.5f, 0.6f, 0.5f), body);
         for (int i = 0; i < 5; i++)
             for (int s = -1; s <= 1; s += 2)
@@ -497,7 +471,7 @@ public static class PropsUpper
 
     static void InsulatorsAndCables(GameObject p)
     {
-        Material copper = A(4, "copper", 0.5f, 0.8f), black = H("F4_cableBlack", "#151515", 0.4f);
+        Material copper = Accent(4, "copper", 0.5f, 0.8f), black = HexMat("F4_cableBlack", "#151515", 0.4f);
         for (int i = 0; i < 5; i++)
         {
             float x = -1.2f + i * 0.6f;
@@ -516,8 +490,8 @@ public static class PropsUpper
     static GameObject MeterPanel()
     {
         var p = NewProp("F4_MeterPanel");
-        Material face = H("F4_dialFace", "#F6F6F0", 0.6f), dark = Dark4();
-        Box(p, "cabinet", V(0f, 1.3f, 0f), V(0.8f, 2.6f, 0.3f), A(4, "meterPanel"));
+        Material face = HexMat("F4_dialFace", "#F6F6F0", 0.6f), dark = Dark4();
+        Box(p, "cabinet", V(0f, 1.3f, 0f), V(0.8f, 2.6f, 0.3f), Accent(4, "meterPanel"));
         for (int i = 0; i < 4; i++)
         {
             float x = i % 2 == 0 ? -0.18f : 0.18f, y = i < 2 ? 2.0f : 1.6f;
@@ -538,9 +512,9 @@ public static class PropsUpper
     static GameObject Switchgear()
     {
         var p = NewProp("F4_Switchgear");
-        var dark = A(4, "control");
+        var dark = Accent(4, "control");
         Box(p, "plinth", V(0f, 0.04f, 0f), V(1.02f, 0.08f, 1.02f), dark);
-        Box(p, "cabinet", V(0f, 0.54f, 0f), V(1f, 0.92f, 1f), H("F4_switchgear", "#8A9096", 0.35f, 0.5f));
+        Box(p, "cabinet", V(0f, 0.54f, 0f), V(1f, 0.92f, 1f), HexMat("F4_switchgear", "#8A9096", 0.35f, 0.5f));
         Box(p, "seam", V(0f, 0.54f, 0.502f), V(0.008f, 0.86f, 0.006f), dark);
         for (int s = -1; s <= 1; s += 2) Box(p, "handle" + s, V(0.07f * s, 0.6f, 0.52f), V(0.03f, 0.16f, 0.03f), dark);
         for (int i = 0; i < 4; i++) Box(p, "vent" + i, V(0.25f, 0.2f + i * 0.04f, 0.502f), V(0.3f, 0.015f, 0.006f), dark);
@@ -581,8 +555,8 @@ public static class PropsUpper
         Box(p, "handle", V(0f, 1.15f, -0.32f), V(0.5f, 0.035f, 0.035f), chrome);
         Box(p, "strap", V(0f, 1.33f, 0.62f), V(0.02f, 0.24f, 0.02f), dark);
         Box(p, "spreader", V(0f, 1.2f, 0.62f), V(0.5f, 0.04f, 0.04f), chrome);
-        Box(p, "sling", V(0f, 0.88f, 0.62f), V(0.46f, 0.6f, 0.06f), H("F5_slingYellow", "#E8C838", 0.15f));
-        Box(p, "slingInner", V(0f, 0.86f, 0.656f), V(0.3f, 0.4f, 0.02f), H("F5_slingBlue", "#3A6AC8", 0.15f));
+        Box(p, "sling", V(0f, 0.88f, 0.62f), V(0.46f, 0.6f, 0.06f), HexMat("F5_slingYellow", "#E8C838", 0.15f));
+        Box(p, "slingInner", V(0f, 0.86f, 0.656f), V(0.3f, 0.4f, 0.02f), HexMat("F5_slingBlue", "#3A6AC8", 0.15f));
         return SavePrefab(p);
     }
 
@@ -607,11 +581,11 @@ public static class PropsUpper
         var p = NewProp("F5_MedicalMachine");
         var dark = Black5();
         Castors(p, 0.45f, 0.45f, dark);
-        Box(p, "base", V(0f, 0.11f, 0f), V(0.55f, 0.08f, 0.55f), A(5, "grey"));
+        Box(p, "base", V(0f, 0.11f, 0f), V(0.55f, 0.08f, 0.55f), Accent(5, "grey"));
         Box(p, "body", V(0f, 0.8f, 0f), V(0.5f, 1.3f, 0.5f), Medical());
         Box(p, "screen", V(0f, 1.28f, 0.255f), V(0.36f, 0.24f, 0.01f), Screen5());
         for (int i = 0; i < 2; i++) Box(p, "pump" + i, V(0f, 0.85f - i * 0.2f, 0.255f), V(0.36f, 0.08f, 0.012f), dark);
-        Material[] knobs = { H("F5_knobRed", "#D03030", 0.5f), H("F5_knobYellow", "#E8C030", 0.5f), H("F5_knobBlue", "#2A6AD0", 0.5f) };
+        Material[] knobs = { HexMat("F5_knobRed", "#D03030", 0.5f), HexMat("F5_knobYellow", "#E8C030", 0.5f), HexMat("F5_knobBlue", "#2A6AD0", 0.5f) };
         for (int i = 0; i < 3; i++)
             Part(p, "knob" + i, PrimitiveType.Cylinder, V(-0.12f + i * 0.12f, 1.06f, 0.265f), V(0.05f, 0.03f, 0.05f), knobs[i], V(90f, 0f, 0f));
         Box(p, "handle", V(0f, 1.47f, -0.15f), V(0.4f, 0.035f, 0.035f), Chrome());
@@ -622,7 +596,7 @@ public static class PropsUpper
     static GameObject IvPole()
     {
         var p = NewProp("F5_IvPole");
-        Material chrome = Chrome(), bag = H("F5_ivBag", "#E4EEF4", 0.7f);
+        Material chrome = Chrome(), bag = HexMat("F5_ivBag", "#E4EEF4", 0.7f);
         for (int i = 0; i < 3; i++) Box(p, "foot" + i, V(0f, 0.04f, 0f), V(0.55f, 0.025f, 0.03f), chrome, V(0f, i * 60f, 0f));
         Cyl(p, "pole", Vector3.zero, 0.025f, 1.9f, chrome, 0.04f);
         for (int i = 0; i < 5; i++)
@@ -638,7 +612,7 @@ public static class PropsUpper
     static GameObject Trolley()
     {
         var p = NewProp("F5_Trolley");
-        Material yellow = A(5, "trolley", 0.4f), chrome = Chrome();
+        Material yellow = Accent(5, "trolley", 0.4f), chrome = Chrome();
         Castors(p, 0.52f, 0.38f, Black5());
         for (int i = 0; i < 4; i++)
             Box(p, "post" + i, V(i % 2 == 0 ? -0.28f : 0.28f, 0.53f, i < 2 ? -0.2f : 0.2f), V(0.03f, 0.9f, 0.03f), chrome);
@@ -658,7 +632,7 @@ public static class PropsUpper
         Box(p, "arm", V(0f, 1.6f, 0.25f), V(0.04f, 0.04f, 0.55f), white);
         Box(p, "neck", V(0f, 1.57f, 0.5f), V(0.03f, 0.05f, 0.03f), chrome);
         Cyl(p, "head", V(0f, 0f, 0.5f), 0.36f, 0.1f, white, 1.45f);
-        Part(p, "lens", PrimitiveType.Cylinder, V(0f, 1.445f, 0.5f), V(0.28f, 0.012f, 0.28f), H("F5_lampLens", "#FFF4D8", 0.8f, 0f, true));
+        Part(p, "lens", PrimitiveType.Cylinder, V(0f, 1.445f, 0.5f), V(0.28f, 0.012f, 0.28f), HexMat("F5_lampLens", "#FFF4D8", 0.8f, 0f, true));
         return SavePrefab(p);
     }
 
@@ -678,7 +652,7 @@ public static class PropsUpper
 
     static void Workstation(GameObject p, string n, float x)
     {
-        Material shell = A(5, "imac", 0.6f, 0.3f), black = Black5();
+        Material shell = Accent(5, "imac", 0.6f, 0.3f), black = Black5();
         Box(p, n + "Foot", V(x, 0.745f, -0.14f), V(0.2f, 0.01f, 0.18f), shell);
         Box(p, n + "Stand", V(x, 0.84f, -0.2f), V(0.16f, 0.2f, 0.03f), shell, V(-10f, 0f, 0f));
         Box(p, n + "Body", V(x, 1.06f, -0.18f), V(0.6f, 0.44f, 0.03f), shell);

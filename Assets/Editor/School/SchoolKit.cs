@@ -10,7 +10,8 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// Shared helpers for the Tools > Elevator Game > School tools: school materials (URP Lit, tinted detail
 /// textures), primitive-built props saved as prefabs, the "SchoolProps" root, idempotent placement, a free-spot
-/// search that keeps props off walls, play zones, the spawn point and each other, and the all-floors loop.
+/// search that keeps props off walls, play zones, the spawn point and each other, floor-height and overlap
+/// checks. Running on floors and finding building parts are EditorKit's.
 /// Sizes passed to the prop builders are in real metres (scaled by SchoolPalette.WorldPerMetre).
 /// </summary>
 public static class SchoolKit
@@ -24,70 +25,13 @@ public static class SchoolKit
     /// <summary>The detail texture for a kind (set by SchoolTextures; null = untextured).</summary>
     public static Func<TexKind, Texture2D> TextureFor = _ => null;
 
-    // ---------- floors ----------
-
-    /// <summary>The floor number (1–5) of a scene, or 0 when it isn't a floor scene.</summary>
-    public static int FloorOf(Scene scene)
-    {
-        for (int n = 1; n <= 5; n++)
-            if (SceneLinks.Exists(SceneLinks.Floor(n)) && SceneLinks.Path(SceneLinks.Floor(n)) == scene.path) return n;
-        return 0;
-    }
-
-    /// <summary>Runs `apply` on the open scene if it's a floor; returns false (with a dialog) otherwise.</summary>
-    public static bool OnOpenFloor(string title, Action<Scene, int> apply)
-    {
-        if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog(title, "Stop Play Mode first.", "OK"); return false; }
-        var scene = SceneManager.GetActiveScene();
-        int floor = FloorOf(scene);
-        if (floor == 0) { EditorUtility.DisplayDialog(title, "Open one of the five floor scenes first.", "OK"); return false; }
-        apply(scene, floor);
-        EditorSceneManager.MarkSceneDirty(scene);
-        return true;
-    }
-
-    /// <summary>Opens floors `from`..`to` in turn, runs `apply`, saves each, then reopens what was open.</summary>
-    public static void ForFloors(string title, int from, int to, Action<Scene, int> apply)
-    {
-        if (EditorApplication.isPlaying) { EditorUtility.DisplayDialog(title, "Stop Play Mode first.", "OK"); return; }
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-        var setup = EditorSceneManager.GetSceneManagerSetup();
-        try
-        {
-            for (int n = from; n <= to; n++)
-            {
-                var key = SceneLinks.Floor(n);
-                if (!SceneLinks.Exists(key)) { Debug.LogWarning($"{title}: no scene for floor {n}."); continue; }
-                var scene = EditorSceneManager.OpenScene(SceneLinks.Path(key), OpenSceneMode.Single);
-                apply(scene, n);
-                EditorSceneManager.MarkSceneDirty(scene);
-                EditorSceneManager.SaveScene(scene);
-            }
-        }
-        finally
-        {
-            if (setup.Length > 0 && setup.All(s => !string.IsNullOrEmpty(s.path))) EditorSceneManager.RestoreSceneManagerSetup(setup);
-            else Debug.Log($"{title}: the scene you started from was never saved, so the last floor stays open.");
-        }
-    }
-
-    /// <summary>Every transform of the floor's building (not the props, player or zones) whose name starts with `prefix`.</summary>
-    public static List<Transform> FindInBuilding(Scene scene, string prefix)
-    {
-        var character = FloorPlayerSetup.FindCharacter(scene);
-        return FloorPlayerSetup.BuildingRoots(scene, character != null ? character.transform : null)
-            .SelectMany(r => r.GetComponentsInChildren<Transform>(true))
-            .Where(t => t.name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-    }
-
     // ---------- materials ----------
 
     /// <summary>Gets or creates the URP Lit material `key` (Assets/Materials/School/key.mat) and sets it up.</summary>
     public static Material Mat(string key, Color color, TexKind tex = TexKind.Plain, float smoothness = 0.2f,
                                float metallic = 0f, Vector2? tiling = null, bool emissive = false)
     {
-        EnsureFolder(MaterialFolder);
+        EditorKit.EnsureFolder(MaterialFolder);
         string path = $"{MaterialFolder}/{key}.mat";
         var shader = Shader.Find("Universal Render Pipeline/Lit");
         var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -182,7 +126,7 @@ public static class SchoolKit
     {
         var shader = Shader.Find("Elevator Game/World Text");
         if (shader == null) return font.material;
-        EnsureFolder(MaterialFolder);
+        EditorKit.EnsureFolder(MaterialFolder);
         string path = $"{MaterialFolder}/WorldText_{font.name}.mat";
         var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (mat == null)
@@ -202,7 +146,7 @@ public static class SchoolKit
     /// </summary>
     public static GameObject SavePrefab(GameObject prop, bool solid = true)
     {
-        EnsureFolder(PrefabFolder);
+        EditorKit.EnsureFolder(PrefabFolder);
         var renderers = prop.GetComponentsInChildren<Renderer>();
         if (solid && renderers.Length > 0)
         {
@@ -391,11 +335,65 @@ public static class SchoolKit
         return list;
     }
 
-    internal static void EnsureFolder(string folder)
+    // ---------- floor height and overlaps ----------
+
+    /// <summary>
+    /// The walking floor's height under `at`: the highest upward-facing hit within `band` of y 0 on a ray down
+    /// from y `top` (2 × `top` long), ignoring triggers and school props; 0 when there's none.
+    /// </summary>
+    public static float Ground(Scene scene, Vector3 at, float top = 15f, float band = 3f)
     {
-        if (AssetDatabase.IsValidFolder(folder)) return;
-        string parent = Path.GetDirectoryName(folder).Replace('\\', '/');
-        EnsureFolder(parent);
-        AssetDatabase.CreateFolder(parent, Path.GetFileName(folder));
+        var props = PropsRoot(scene);
+        var hits = new RaycastHit[32];
+        int n = scene.GetPhysicsScene().Raycast(new Vector3(at.x, top, at.z), Vector3.down, hits, 2f * top, ~0, QueryTriggerInteraction.Ignore);
+        float best = float.NegativeInfinity;
+        for (int i = 0; i < n; i++)
+        {
+            var h = hits[i];
+            if (h.normal.y < 0.9f || Mathf.Abs(h.point.y) > band || h.collider.transform.IsChildOf(props)) continue;
+            best = Mathf.Max(best, h.point.y);
+        }
+        return float.IsNegativeInfinity(best) ? 0f : best;
     }
+
+    /// <summary>The highest upward floor hit straight under the player (their own collider ignored); `fallback` without one.</summary>
+    public static float PlayerFloorY(Scene scene, float fallback)
+    {
+        var character = FloorPlayerSetup.FindCharacter(scene);
+        if (character == null) return fallback;
+        var hits = new RaycastHit[32];
+        int n = scene.GetPhysicsScene().Raycast(character.transform.position + Vector3.up * 2f, Vector3.down, hits, 40f,
+                                                ~0, QueryTriggerInteraction.Ignore);
+        float best = float.NegativeInfinity;
+        for (int i = 0; i < n; i++)
+            if (hits[i].normal.y > 0.9f && !hits[i].collider.transform.IsChildOf(character.transform))
+                best = Mathf.Max(best, hits[i].point.y);
+        return float.IsNegativeInfinity(best) ? fallback : best;
+    }
+
+    /// <summary>
+    /// Names of the solid colliders the prop's box collider touches, lifted off the floor and shrunk a hair (its
+    /// own parts left out); empty when it's clear or has no box.
+    /// </summary>
+    public static List<string> OverlapsWith(Scene scene, Transform t)
+    {
+        var box = t.GetComponent<BoxCollider>();
+        if (box == null) return new List<string>();
+        Physics.SyncTransforms();
+        const float lift = 0.3f, shrink = 0.1f;
+        var half = Vector3.Scale(box.size, t.lossyScale) * 0.5f;
+        half = new Vector3(half.x - shrink, half.y - lift * 0.5f, half.z - shrink);
+        var center = t.TransformPoint(box.center) + Vector3.up * (lift * 0.5f);
+        var found = new Collider[32];
+        int n = scene.GetPhysicsScene().OverlapBox(center, half, found, t.rotation, ~0, QueryTriggerInteraction.Ignore);
+        return found.Take(n).Where(c => !c.transform.IsChildOf(t)).Select(c => c.name).Distinct().ToList();
+    }
+
+    // ---------- prop-building shorthands ----------
+
+    public static Vector3 V(float x, float y, float z) => new Vector3(x, y, z);
+
+    /// <summary>A plain material `key` in colour `hex`.</summary>
+    public static Material HexMat(string key, string hex, float smoothness = 0.3f, float metallic = 0f, bool emissive = false) =>
+        Mat(key, UiKit.Hex(hex), TexKind.Plain, smoothness, metallic, null, emissive);
 }

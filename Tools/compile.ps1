@@ -1,7 +1,7 @@
 # Compile-checks the project's scripts with Unity's bundled Roslyn (no Unity needed).
-# Usage: powershell -File compile.ps1   (run from C:\users\cleme\bunkasai)
+# Usage: powershell -File Tools/compile.ps1
 $ErrorActionPreference = 'Stop'
-$root = 'C:\users\cleme\bunkasai'
+$root = Split-Path $PSScriptRoot -Parent
 $editorData = 'C:\Program Files\Unity\Hub\Editor\6000.6.4f1\Editor\Data'
 $dotnet = Join-Path $editorData 'DotNetSdk\dotnet.exe'
 $csc = Join-Path $editorData 'DotNetSdk\sdk\8.0.318\Roslyn\bincore\csc.dll'

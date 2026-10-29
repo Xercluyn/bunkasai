@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using static EditorKit;
 using static SchoolKit;
 
 /// <summary>
@@ -214,58 +215,19 @@ public static class SchoolLayout3F
         CheckOverlap(scene, go, report);
     }
 
-    // The walking floor's height under `at`: the highest upward-facing hit near y 0, ignoring triggers and props
-    static float Ground(Scene scene, Vector3 at)
-    {
-        var props = PropsRoot(scene);
-        var hits = new RaycastHit[32];
-        int n = scene.GetPhysicsScene().Raycast(at + Vector3.up * (15f - at.y), Vector3.down, hits, 30f, ~0, QueryTriggerInteraction.Ignore);
-        float best = float.NegativeInfinity;
-        for (int i = 0; i < n; i++)
-        {
-            var h = hits[i];
-            if (h.normal.y < 0.9f || Mathf.Abs(h.point.y) > 3f || h.collider.transform.IsChildOf(props)) continue;
-            best = Mathf.Max(best, h.point.y);
-        }
-        return float.IsNegativeInfinity(best) ? 0f : best;
-    }
-
     // Warns (without moving it) when the prop's box collider, lifted off the floor and shrunk a hair, hits anything
     static void CheckOverlap(Scene scene, GameObject go, Report report)
     {
-        var box = go.GetComponent<BoxCollider>();
-        if (box == null) return;
-        var t = go.transform;
-        Physics.SyncTransforms();
-        const float lift = 0.3f, shrink = 0.1f;
-        var half = Vector3.Scale(box.size, t.lossyScale) * 0.5f;
-        half = new Vector3(half.x - shrink, half.y - lift * 0.5f, half.z - shrink);
-        var center = t.TransformPoint(box.center) + Vector3.up * (lift * 0.5f);
-        var found = new Collider[32];
-        int n = scene.GetPhysicsScene().OverlapBox(center, half, found, t.rotation, ~0, QueryTriggerInteraction.Ignore);
-        var others = found.Take(n).Where(c => !c.transform.IsChildOf(t)).Select(c => c.name).Distinct().ToList();
+        var others = OverlapsWith(scene, go.transform);
         if (others.Count == 0) return;
         report.overlaps.Add(go.name);
-        Debug.LogWarning($"{Title}: {go.name} at {t.position} overlaps {string.Join(", ", others)}.", go);
+        Debug.LogWarning($"{Title}: {go.name} at {go.transform.position} overlaps {string.Join(", ", others)}.", go);
     }
 
     // ---------- building furniture ----------
 
     // Hides building objects (recorded on their prefab instance); returns how many were newly hidden
-    static int Hide(IEnumerable<Transform> targets)
-    {
-        int count = 0;
-        foreach (var t in targets.ToList())
-        {
-            var go = t.gameObject;
-            if (!go.activeSelf) continue;
-            Undo.RecordObject(go, Title);
-            go.SetActive(false);
-            PrefabUtility.RecordPrefabInstancePropertyModifications(go);
-            count++;
-        }
-        return count;
-    }
+    static int Hide(IEnumerable<Transform> targets) => targets.ToList().Count(t => EditorKit.Hide(t.gameObject, Title));
 
     // The FBX model shelves (apron_short): hidden, with the models on them, where they stand in or between the
     // drafting rows; painted drafting white elsewhere (their models left as they are)
@@ -276,7 +238,7 @@ public static class SchoolLayout3F
         foreach (var shelf in FindInBuilding(scene, "apron_short").Where(t => ModelShelf.IsMatch(t.name) && InArchRoom(t)))
         {
             if (!shelf.gameObject.activeInHierarchy) { Debug.Log($"{Title}: {shelf.name} is already hidden; left as it is.", shelf); continue; }
-            if (!TryBounds(shelf, out var b)) continue;
+            if (!(RendererBounds(shelf.GetComponentsInChildren<Renderer>()) is Bounds b)) continue;
             var footprint = Rect.MinMaxRect(b.min.x, b.min.z, b.max.x, b.max.z);
             if (footprint.Overlaps(RowsZone))
             {
@@ -333,21 +295,10 @@ public static class SchoolLayout3F
         return count;
     }
 
-    // The combined bounds of an object's visible renderers; false when it has none
-    static bool TryBounds(Transform t, out Bounds b)
-    {
-        var renderers = t.GetComponentsInChildren<Renderer>();
-        b = default;
-        if (renderers.Length == 0) return false;
-        b = renderers[0].bounds;
-        foreach (var r in renderers) b.Encapsulate(r.bounds);
-        return true;
-    }
-
     // Whether an object's middle (its renderers' bounds, else its position) is inside the architecture class
     static bool InArchRoom(Transform t)
     {
-        var p = TryBounds(t, out var b) ? b.center : t.position;
+        var p = RendererBounds(t.GetComponentsInChildren<Renderer>())?.center ?? t.position;
         return ArchRoom.Contains(new Vector2(p.x, p.z));
     }
 
@@ -360,8 +311,6 @@ public static class SchoolLayout3F
     }
 
     // ---------- props of this layout ----------
-
-    static Vector3 V(float x, float y, float z) => new Vector3(x, y, z);
 
     // The short drafting set: a 2.4 m white table (under-shelf, four legs) with two stools along its front
     static GameObject ShortDraftingSet()

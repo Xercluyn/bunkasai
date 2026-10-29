@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
@@ -19,7 +18,6 @@ using UnityEngine.SceneManagement;
 public static class ShellDresser
 {
     const string Title = "Dress Floor Surfaces";
-    const string GeneratedFolder = "Assets/Generated";
     const string DressedTag = " dressed";
     const float M = SchoolPalette.WorldPerMetre;
     const float Cover = 0.5f;   // share of the building's X and Z a shell or ceiling spans
@@ -40,10 +38,10 @@ public static class ShellDresser
     }
 
     [MenuItem("Tools/Elevator Game/School/Dress Floor Surfaces")]
-    static void DressOpen() => SchoolKit.OnOpenFloor(Title, Apply);
+    static void DressOpen() => EditorKit.OnOpenFloor(Title, Apply);
 
     [MenuItem("Tools/Elevator Game/School/Dress Floor Surfaces (All Floors)")]
-    static void DressAll() => SchoolKit.ForFloors(Title, 1, 5, Apply);
+    static void DressAll() => EditorKit.ForFloors(Title, 1, 5, Apply);
 
     /// <summary>Dresses the shell, ceilings and pillars of `scene`, which is floor `floor`.</summary>
     internal static void Apply(Scene scene, int floor)
@@ -56,7 +54,7 @@ public static class ShellDresser
         var job = new Job
         {
             look = look,
-            folder = $"{GeneratedFolder}/{scene.name}",
+            folder = $"{EditorKit.GeneratedFolder}/{scene.name}",
             shellMats = new[]
             {
                 SchoolKit.Mat($"F{floor}_floor", look.floor), SchoolKit.Mat($"F{floor}_wall", look.wall),
@@ -99,21 +97,12 @@ public static class ShellDresser
     // Mesh parts of the building from a model or earlier fixes, minus outlined parts and play zones
     static List<MeshFilter> Candidates(Scene scene)
     {
-        var character = FloorPlayerSetup.FindCharacter(scene);
-        var outlined = new HashSet<MeshFilter>(scene.GetRootGameObjects()
-            .SelectMany(r => r.GetComponentsInChildren<InteractableOutline>(true))
-            .SelectMany(o => o.partMesh != null ? new[] { o.partMesh } : o.GetComponentsInChildren<MeshFilter>(true)));
-        return FloorPlayerSetup.BuildingRoots(scene, character != null ? character.transform : null)
+        var outlined = EditorKit.OutlinedFilters(scene);
+        return EditorKit.BuildingRoots(scene)
             .SelectMany(r => r.GetComponentsInChildren<MeshFilter>(true))
             .Where(mf => mf.sharedMesh != null && mf.GetComponent<MeshRenderer>() != null && !outlined.Contains(mf) &&
-                         mf.GetComponentInParent<ElevatorPlayZone>(true) == null && IsModelMesh(mf.sharedMesh))
+                         mf.GetComponentInParent<ElevatorPlayZone>(true) == null && EditorKit.IsModelMesh(mf.sharedMesh))
             .ToList();
-    }
-
-    static bool IsModelMesh(Mesh mesh)
-    {
-        string path = AssetDatabase.GetAssetPath(mesh);
-        return path.StartsWith(GeneratedFolder + "/") || AssetImporter.GetAtPath(path) is ModelImporter;
     }
 
     // World bounds of the visible parts
@@ -307,37 +296,11 @@ public static class ShellDresser
     // "(base) dressed (2s)", with the base stripped of earlier tags so re-runs keep one name; numbered on a clash
     static string Name(Mesh source, Job job)
     {
-        string baseName = BaseName(source.name), name = baseName;
+        string baseName = EditorKit.StripTags(source.name, DressedTag), name = baseName;
         for (int k = 2; !job.names.Add(name); k++) name = $"{baseName} {k}";
         return name + DressedTag + " " + WallThickness.DoubleSidedSuffix;
     }
 
-    static string BaseName(string name)
-    {
-        string[] tails = { " " + WallThickness.DoubleSidedSuffix, WallThickness.DoubleSidedSuffix, DressedTag };
-        for (bool cut = true; cut;)
-        {
-            cut = false;
-            foreach (var tail in tails)
-                if (name.EndsWith(tail)) { name = name.Substring(0, name.Length - tail.Length); cut = true; }
-        }
-        return name.Trim();
-    }
-
-    // Saves the mesh as an asset, overwriting an earlier dressed copy in place so references to it stay valid
-    static Mesh Save(Mesh mesh, string folder)
-    {
-        SchoolKit.EnsureFolder(folder);
-        string path = $"{folder}/{string.Concat(mesh.name.Split(Path.GetInvalidFileNameChars()))}.asset";
-        var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
-        if (existing == null)
-        {
-            AssetDatabase.CreateAsset(mesh, path);
-            return mesh;
-        }
-        EditorUtility.CopySerialized(mesh, existing);
-        UnityEngine.Object.DestroyImmediate(mesh);
-        EditorUtility.SetDirty(existing);
-        return existing;
-    }
+    // Saved over an earlier dressed copy in place, so references to it stay valid
+    static Mesh Save(Mesh mesh, string folder) => EditorKit.SaveMesh(mesh, folder);
 }

@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using static EditorKit;
 using static SchoolKit;
 
 /// <summary>
@@ -47,14 +48,14 @@ public static class SchoolLayout2F
 
         if (IsPlaced(scene, DoorId))
         {
-            Debug.Log($"{Title}: prefab rebuilt from {Path(template)}; {DoorId} already placed, kept where it is.");
+            Debug.Log($"{Title}: prefab rebuilt from {PathOf(template)}; {DoorId} already placed, kept where it is.");
             return;
         }
         var spot = DoorSpot(scene, counter, counterBox, prefab.GetComponent<BoxCollider>());
         if (spot == null) { Debug.LogWarning($"{Title}: no free wall at either end of the counter for the door; nothing placed."); return; }
         var go = Place(scene, DoorId, prefab, spot.Value.position, spot.Value.yaw);
         if (go != null)
-            Debug.Log($"{Title}: {DoorId} copied from {Path(template)} and placed at {spot.Value.position} yaw {spot.Value.yaw:0} " +
+            Debug.Log($"{Title}: {DoorId} copied from {PathOf(template)} and placed at {spot.Value.position} yaw {spot.Value.yaw:0} " +
                       $"on the counter's {spot.Value.side} end ({GapMetres:0.#} m gap).", go);
     }
 
@@ -101,7 +102,7 @@ public static class SchoolLayout2F
         copy.transform.SetParent(prop.transform, true);
         prop.transform.position = Vector3.zero;
         var prefab = SavePrefab(prop);
-        Debug.Log($"{Title}: rebuilt {PrefabFolder}/{DoorId}.prefab from {Path(template)} ({b.size.x:0.00} wide × {b.size.y:0.00} tall × {b.size.z:0.00} deep).");
+        Debug.Log($"{Title}: rebuilt {PrefabFolder}/{DoorId}.prefab from {PathOf(template)} ({b.size.x:0.00} wide × {b.size.y:0.00} tall × {b.size.z:0.00} deep).");
         return prefab;
     }
 
@@ -214,22 +215,6 @@ public static class SchoolLayout2F
         return found.Take(n).Any(c => !c.transform.IsChildOf(counter));
     }
 
-    // The walking floor's height under `at`: the highest upward-facing hit near y 0, ignoring triggers and props
-    static float Ground(Scene scene, Vector3 at)
-    {
-        var props = PropsRoot(scene);
-        var hits = new RaycastHit[32];
-        int n = scene.GetPhysicsScene().Raycast(at + Vector3.up * (15f - at.y), Vector3.down, hits, 30f, ~0, QueryTriggerInteraction.Ignore);
-        float best = float.NegativeInfinity;
-        for (int i = 0; i < n; i++)
-        {
-            var h = hits[i];
-            if (h.normal.y < 0.9f || Mathf.Abs(h.point.y) > 3f || h.collider.transform.IsChildOf(props)) continue;
-            best = Mathf.Max(best, h.point.y);
-        }
-        return float.IsNegativeInfinity(best) ? 0f : best;
-    }
-
     // ---------- geometry ----------
 
     // The world corners of every mesh under `t` (its mesh bounds, so tight for rotated parts)
@@ -259,6 +244,4 @@ public static class SchoolLayout2F
     }
 
     static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
-
-    static string Path(Transform t) => t.parent == null ? t.name : Path(t.parent) + "/" + t.name;
 }

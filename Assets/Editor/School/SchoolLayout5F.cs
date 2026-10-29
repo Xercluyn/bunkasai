@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using static EditorKit;
 using static SchoolKit;
 
 /// <summary>
@@ -31,8 +32,8 @@ public static class SchoolLayout5F
     {
         if (floor != 5) return;
         Physics.SyncTransforms();
-        PlaceLaptops(scene, "IT room 1", Laptop("F5_LaptopSilver", H("F5_laptopSilver", "#C8CCD0", 0.6f, 0.7f), true), ItRoom1Seats());
-        PlaceLaptops(scene, "IT room 2", Laptop("F5_LaptopBlack", H("F5_laptopBlack", "#151515", 0.5f, 0.3f), false), ItRoom2Seats());
+        PlaceLaptops(scene, "IT room 1", Laptop("F5_LaptopSilver", HexMat("F5_laptopSilver", "#C8CCD0", 0.6f, 0.7f), true), ItRoom1Seats());
+        PlaceLaptops(scene, "IT room 2", Laptop("F5_LaptopBlack", HexMat("F5_laptopBlack", "#151515", 0.5f, 0.3f), false), ItRoom2Seats());
         // care first, so its old spots in the CE half are free; each room's one-off pass waits for its props
         ArrangeOnce(scene, "care room", "layout5F_care_v1", CareSpots);
         ArrangeOnce(scene, "clinical engineering", "layout5F_ce_v1", CeSpots);
@@ -57,7 +58,7 @@ public static class SchoolLayout5F
     static GameObject Laptop(string id, Material body, bool logo)
     {
         var p = NewProp(id);
-        Material keys = H("F5_laptopKeys", "#1C1C1E", 0.3f), pad = H("F5_laptopPad", "#6E7278", 0.6f, 0.4f);
+        Material keys = HexMat("F5_laptopKeys", "#1C1C1E", 0.3f), pad = HexMat("F5_laptopPad", "#6E7278", 0.6f, 0.4f);
         Box(p, "base", V(0f, 0.01f, 0f), V(0.33f, 0.02f, 0.23f), body);
         Box(p, "keyboard", V(0f, 0.0205f, -0.035f), V(0.28f, 0.002f, 0.1f), keys);
         Box(p, "trackpad", V(0f, 0.0205f, 0.068f), V(0.1f, 0.002f, 0.06f), pad);
@@ -66,8 +67,8 @@ public static class SchoolLayout5F
         Vector3 OnLid(float up, float forward) => hinge + tilt * V(0f, up, forward);
         var lean = V(-15f, 0f, 0f);
         Box(p, "lid", OnLid(0.11f, 0f), V(0.33f, 0.22f, 0.01f), body, lean);
-        Box(p, "screen", OnLid(0.115f, 0.0055f), V(0.3f, 0.19f, 0.002f), H("F5_laptopScreen", "#1E3A5F", 0.85f, 0f, true), lean);
-        if (logo) Box(p, "logo", OnLid(0.12f, -0.0055f), V(0.04f, 0.045f, 0.001f), H("F5_laptopLogo", "#EDEFF2", 0.8f, 0.9f), lean);
+        Box(p, "screen", OnLid(0.115f, 0.0055f), V(0.3f, 0.19f, 0.002f), HexMat("F5_laptopScreen", "#1E3A5F", 0.85f, 0f, true), lean);
+        if (logo) Box(p, "logo", OnLid(0.12f, -0.0055f), V(0.04f, 0.045f, 0.001f), HexMat("F5_laptopLogo", "#EDEFF2", 0.8f, 0.9f), lean);
         return SavePrefab(p, false);
     }
 
@@ -207,46 +208,12 @@ public static class SchoolLayout5F
         {
             float x = s.x + n.x, z = s.z + n.y;
             Move(scene, s.id, new Vector3(x, FloorY(scene, x, z), z), s.yaw);
-            if (!Overlaps(scene, t)) return true;
+            if (OverlapsWith(scene, t).Count == 0) return true;
         }
         Move(scene, s.id, new Vector3(s.x, FloorY(scene, s.x, s.z), s.z), s.yaw);
         return false;
     }
 
     // The floor (about y 0) under (x, z), ignoring school props
-    static float FloorY(Scene scene, float x, float z)
-    {
-        var hits = new RaycastHit[16];
-        int n = scene.GetPhysicsScene().Raycast(new Vector3(x, 3f, z), Vector3.down, hits, 6f, ~0, QueryTriggerInteraction.Ignore);
-        var props = PropsRoot(scene);
-        float? best = null;
-        for (int i = 0; i < n; i++)
-        {
-            var h = hits[i];
-            if (h.normal.y <= 0.9f || Mathf.Abs(h.point.y) > 1f || h.collider.transform.IsChildOf(props)) continue;
-            if (best == null || h.point.y > best.Value) best = h.point.y;
-        }
-        return best ?? 0f;
-    }
-
-    // True when the prop's box (raised clear of the floor, a little shrunk) touches any other solid collider
-    static bool Overlaps(Scene scene, Transform t)
-    {
-        var box = t.GetComponent<BoxCollider>();
-        if (box == null) return false;
-        var half = Vector3.Scale(box.size * 0.5f, t.lossyScale) * 0.95f;
-        half.y = Mathf.Max(0.05f, half.y - 0.25f);
-        var center = t.TransformPoint(box.center) + Vector3.up * 0.25f;
-        var found = new Collider[32];
-        int n = scene.GetPhysicsScene().OverlapBox(center, half, found, t.rotation, ~0, QueryTriggerInteraction.Ignore);
-        for (int i = 0; i < n; i++)
-            if (!found[i].transform.IsChildOf(t)) return true;
-        return false;
-    }
-
-    // ---------- materials ----------
-
-    static Vector3 V(float x, float y, float z) => new Vector3(x, y, z);
-    static Material H(string key, string hex, float smooth = 0.3f, float metal = 0f, bool glow = false) =>
-        Mat(key, UiKit.Hex(hex), TexKind.Plain, smooth, metal, null, glow);
+    static float FloorY(Scene scene, float x, float z) => Ground(scene, new Vector3(x, 0f, z), 3f, 1f);
 }
