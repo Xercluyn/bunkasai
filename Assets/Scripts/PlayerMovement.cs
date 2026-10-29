@@ -3,7 +3,8 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
-/// WASD / arrow-key movement (new Input System), camera-relative, always at running pace with the Run animation,
+/// WASD / arrow-key or gamepad left-stick movement (new Input System; GamepadInput), camera-relative, always at
+/// running pace with the Run animation,
 /// with a raycast ground check. Shows a small controls guide in the upper-right corner, which folds down to a
 /// single 「Esc: メニュー」 line once the player has been moving for a while. Also sets up the floor's quest guide,
 /// pause menu (FloorPauseMenu), footsteps and ending.
@@ -113,6 +114,7 @@ public class PlayerMovement : MonoBehaviour
     RectTransform guidePanel;
     float movedFor;          // seconds spent moving; the guide folds down after CollapseAfter
     bool guideCollapsed;
+    bool guidePad;           // the guide shows the gamepad's buttons
     const float CollapseAfter = 10f, GuideWidth = 290f;
     // rich-text colours for the guide: keys in white, what they do in the muted blue
     static readonly string KeyInk = "#" + ColorUtility.ToHtmlStringRGB(UiKit.Fg), HelpInk = "#" + ColorUtility.ToHtmlStringRGB(UiKit.Muted);
@@ -147,24 +149,34 @@ public class PlayerMovement : MonoBehaviour
 
     void WriteGuide()
     {
+        guidePad = GamepadInput.UsingPad;
+        string menuKey = guidePad ? GamepadInput.MenuName : "Esc";
         if (guideCollapsed)
         {
             // one compact line, as narrow as its text
             guideTitle.gameObject.SetActive(false);
             for (int i = 0; i < guideLines.Length - 1; i++) guideLines[i].gameObject.SetActive(false);
             var last = guideLines[guideLines.Length - 1];
-            last.text = $"<color={KeyInk}>Esc</color><color={HelpInk}>: {L.T("メニュー", "Menu")}</color>";
+            last.text = $"<color={KeyInk}>{menuKey}</color><color={HelpInk}>: {L.T("メニュー", "Menu")}</color>";
             guidePanel.sizeDelta = new Vector2(last.preferredWidth + 34f, 0f);
             return;
         }
         guideTitle.text = L.T("操作方法", "CONTROLS");
-        var lines = new[]
-        {
-            ("WASD / ↑↓←→", L.T("移動", "Move")),
-            (L.T("マウス", "Mouse"), L.T("視点を回す", "Look around")),
-            ("E / " + L.T("クリック", "Click"), L.T("決定", "Interact")),
-            ("Esc", L.T("メニュー", "Menu")),
-        };
+        var lines = guidePad
+            ? new[]
+            {
+                (L.T("左スティック", "Left stick"), L.T("移動", "Move")),
+                (L.T("右スティック", "Right stick"), L.T("視点を回す", "Look around")),
+                (GamepadInput.InteractName, L.T("決定", "Interact")),
+                (menuKey, L.T("メニュー", "Menu")),
+            }
+            : new[]
+            {
+                ("WASD / ↑↓←→", L.T("移動", "Move")),
+                (L.T("マウス", "Mouse"), L.T("視点を回す", "Look around")),
+                ("E / " + L.T("クリック", "Click"), L.T("決定", "Interact")),
+                ("Esc", L.T("メニュー", "Menu")),
+            };
         for (int i = 0; i < lines.Length; i++)
             guideLines[i].text = $"<color={KeyInk}>{lines[i].Item1}</color>　<color={HelpInk}>{lines[i].Item2}</color>";
     }
@@ -172,7 +184,9 @@ public class PlayerMovement : MonoBehaviour
     // after a while on the move the player knows the controls: fold the guide down to its Esc line
     void UpdateGuide()
     {
-        if (guidePanel == null || guideCollapsed) return;
+        if (guidePanel == null) return;
+        if (guidePad != GamepadInput.UsingPad) WriteGuide();   // switched between the pad and keyboard + mouse
+        if (guideCollapsed) return;
         if (running) movedFor += Time.deltaTime;
         if (movedFor < CollapseAfter) return;
         guideCollapsed = true;
@@ -222,6 +236,14 @@ public class PlayerMovement : MonoBehaviour
             // WASD or the arrow keys
             h = (kb.dKey.isPressed || kb.rightArrowKey.isPressed ? 1f : 0f) - (kb.aKey.isPressed || kb.leftArrowKey.isPressed ? 1f : 0f);
             v = (kb.wKey.isPressed || kb.upArrowKey.isPressed ? 1f : 0f) - (kb.sKey.isPressed || kb.downArrowKey.isPressed ? 1f : 0f);
+        }
+        // or the gamepad's left stick: any tilt past the dead zone runs at full pace, like a key
+        var stick = GamepadInput.Move;
+        if (stick != Vector2.zero && h == 0f && v == 0f)
+        {
+            stick.Normalize();
+            h = stick.x;
+            v = stick.y;
         }
         if (PlayerLock.Locked) h = v = 0f;   // the intro, a menu, the ride or the ending has the screen
         UpdateGuide();

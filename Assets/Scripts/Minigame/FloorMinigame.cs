@@ -37,7 +37,7 @@ public class FloorMinigame : MonoBehaviour
         public int index;
         public Dir dir;
         public RectTransform root, inner, coverSide, faceSide, arrow;
-        public Image coverShadow, coverRing, faceGlow, faceShadow, faceRing, faceBorder, arrowImg, flash;
+        public Image coverShadow, coverRing, faceGlow, faceShadow, faceRing, faceBorder, arrowImg, flash, focus;
         public CanvasGroup faceGroup;
         public UiPointerState pointer;
         public bool flipped, good, bad, ghost, disabled, hasArrow;
@@ -184,7 +184,13 @@ public class FloorMinigame : MonoBehaviour
         restartPlayBtn.onClick.AddListener(StartGame);   // リスタート: new shuffle, timer and taps reset
         passBtn.onClick.AddListener(() => { if (state == State.Paused) Resume(); else Pause(); });   // 一時停止 / 続ける
 
-        var foot = UiKit.Label(wrap, L.T("「↑」を3枚見つけよう！", "Find three \"↑\" cards!"), 18, UiKit.Muted, TextAnchor.MiddleCenter, false);
+        var foot = UiKit.Label(wrap, "", 18, UiKit.Muted, TextAnchor.MiddleCenter, false);
+        foot.resizeTextForBestFit = true;   // the pad line is longer
+        foot.resizeTextMinSize = 14;
+        foot.resizeTextMaxSize = 18;
+        GamepadInput.Bind(foot, () => GamepadInput.T("「↑」を3枚見つけよう！", "Find three \"↑\" cards!",
+            $"スティックで選んで {GamepadInput.South} でめくる　一時停止：{GamepadInput.MenuName}",
+            $"Stick to choose, {GamepadInput.South} to flip   Pause: {GamepadInput.MenuName}"));
         UiKit.Place(foot.rectTransform, 0f, actionsY + 46f + 10f, W, 24f);
 
         BuildOverlays(root);
@@ -242,7 +248,9 @@ public class FloorMinigame : MonoBehaviour
         Rule(rules, MAX_TAPS.ToString(), UiKit.Accent, L.T($"押せるのは{MAX_TAPS}回まで。", $"You can tap up to {MAX_TAPS} times."));
         Rule(rules, ((int)TOTAL_TIME).ToString(), UiKit.Bad, L.T($"制限時間は{(int)TOTAL_TIME}秒。急げ！", $"You have {(int)TOTAL_TIME} seconds. Hurry!"));
         Rule(rules, "II", UiKit.Accent, L.T("「一時停止」で止めて、「続ける」で再開！", "\"Pause\" stops the game, \"Continue\" resumes it!"));
-        UiKit.MainButton(start, L.T("スタート！", "Start!"), out _).onClick.AddListener(StartGame);
+        var startBtn = UiKit.MainButton(start, L.T("スタート！", "Start!"), out _);
+        startBtn.onClick.AddListener(StartGame);
+        GamepadInput.SetDefault(startBtn, GamepadInput.OverlayPriority);
 
         // Win screen
         var win = Overlay(root, "WinScreen", out winScreen);
@@ -250,7 +258,9 @@ public class FloorMinigame : MonoBehaviour
         var winStats = StatRow(win);
         winTime = Stat(winStats, L.T("クリアタイム", "CLEAR TIME"), L.T("0.0秒", "0.0s"));
         Stat(winStats, L.T("発見数", "FOUND"), "3/3");
-        UiKit.MainButton(win, L.T("次のステージへ", "Next Stage"), out _).onClick.AddListener(NextLevel);
+        var nextBtn = UiKit.MainButton(win, L.T("次のステージへ", "Next Stage"), out _);
+        nextBtn.onClick.AddListener(NextLevel);
+        GamepadInput.SetDefault(nextBtn, GamepadInput.OverlayPriority);
 
         // Game over screen
         var lose = Overlay(root, "LoseScreen", out loseScreen);
@@ -260,7 +270,9 @@ public class FloorMinigame : MonoBehaviour
         loseReason.fontSize = 20;
         loseScore = Stat(loseStats, L.T("発見数", "FOUND"), "0/3");
         loseNote = Reason(lose, "");
-        UiKit.MainButton(lose, L.T("もう一度", "Try Again"), out _).onClick.AddListener(StartGame);
+        var againBtn = UiKit.MainButton(lose, L.T("もう一度", "Try Again"), out _);
+        againBtn.onClick.AddListener(StartGame);
+        GamepadInput.SetDefault(againBtn, GamepadInput.OverlayPriority);
 
         // Pass screen
         var pass = Overlay(root, "PassScreen", out passScreen);
@@ -270,7 +282,9 @@ public class FloorMinigame : MonoBehaviour
         passScore = Stat(passStats, L.T("発見数", "FOUND"), "0/3");
         passTaps = Stat(passStats, L.T("残り回数", "TAPS LEFT"), "7/7");
         Reason(pass, L.T("ゲームを一時停止しました。「続ける」で止めた所から再開します。", "The game is paused. \"Continue\" picks up where you left off."));
-        UiKit.MainButton(pass, L.T("続ける ▶", "Continue ▶"), out _).onClick.AddListener(Resume);
+        var continueBtn = UiKit.MainButton(pass, L.T("続ける ▶", "Continue ▶"), out _);
+        continueBtn.onClick.AddListener(Resume);
+        GamepadInput.SetDefault(continueBtn, GamepadInput.OverlayPriority);
         UiKit.SubButton(pass, L.T("↻ リスタート", "↻ Restart"), out _).onClick.AddListener(StartGame);
 
         startScreen.SetActive(true);
@@ -415,6 +429,12 @@ public class FloorMinigame : MonoBehaviour
             button.targetGraphic = hit;
             button.onClick.AddListener(() => Flip(c));
             c.pointer = c.root.gameObject.AddComponent<UiPointerState>();
+            if (i == 5) GamepadInput.SetDefault(button, GamepadInput.BoardPriority);   // the pad starts near the middle
+
+            // the gamepad's cursor: a cyan halo behind the card, face up or down
+            c.focus = UiKit.Img("Focus", c.root, UiKit.Circle, UiKit.Accent);
+            UiKit.Center(c.focus.rectTransform, s + 18f, s + 18f);
+            c.focus.raycastTarget = false;
 
             c.inner = UiKit.Stretch(UiKit.Rect("Inner", c.root));
 
@@ -565,6 +585,13 @@ public class FloorMinigame : MonoBehaviour
 
         foreach (var c in cards) ApplyCard(c, false);
         confetti.Update(Time.deltaTime);
+
+        // gamepad Menu / OPTIONS: 一時停止 / 続ける
+        if (GamepadInput.MenuPressed)
+        {
+            if (state == State.Playing) Pause();
+            else if (state == State.Paused) Resume();
+        }
     }
 
     // .meter.danger: red border and a pulsing value
@@ -586,7 +613,8 @@ public class FloorMinigame : MonoBehaviour
 
         // .card:not([disabled]):not(.flipped):hover / :active on the cover
         bool live = !c.disabled && !c.flipped;
-        bool hover = live && c.pointer.hovered;
+        bool hover = live && c.pointer.Highlighted;
+        c.focus.enabled = c.pointer.selected;
         bool press = live && c.pointer.pressed;
         float liftTarget = press ? -2f : hover ? 4f : 0f;
         float shadowTarget = press ? 3f : hover ? 10f : 6f;

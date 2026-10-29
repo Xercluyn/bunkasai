@@ -81,8 +81,10 @@ public class FourthFloorGame : MonoBehaviour
 
     /* ---------- data.js messages ---------- */
     static string Title => L.T("読祭 マッチングゲーム！", "Yomisai Matching Game!");
-    static string MsgInstruction => L.T("カードを、やっている学科の屋台へ！（ドラッグ、またはカードをタップ → 屋台をタップ）",
-        "Bring each card to the department that runs it! (drag it, or click a card, then a department)");
+    static string MsgInstruction => GamepadInput.T("カードを、やっている学科の屋台へ！（ドラッグ、またはカードをタップ → 屋台をタップ）",
+        "Bring each card to the department that runs it! (drag it, or click a card, then a department)",
+        $"カードを、やっている学科の屋台へ！（スティックでカードを選んで {GamepadInput.South} → 屋台を選んで {GamepadInput.South}）",
+        $"Bring each card to the department that runs it! (stick to a card, {GamepadInput.South}, then to a department, {GamepadInput.South})");
     static string MsgProgressLabel => L.T("せいかいの数：", "Correctly placed:");
     static string MsgSelected => L.T("「{food}」をえらんだよ。どの屋台かな？", "You picked \"{food}\". Which department is it?");
     static string MsgPickCardFirst => L.T("先にカードをえらんでね", "Pick a card first");
@@ -182,7 +184,10 @@ public class FourthFloorGame : MonoBehaviour
         MinigameKit.HowToPlay(canvasRoot, "マッチングゲーム", "Matching Game", new[]
         {
             ("カードを、その出し物をやっている学科の屋台へドラッグしよう", "Drag each card to the stall of the department that runs it"),
-            ("タップでもOK：カードをタップ → 屋台をタップ", "Or tap a card, then tap a stall"),
+            GamepadInput.UsingPad
+                ? ($"パッド：スティックでカードを選んで {GamepadInput.South} → 屋台を選んで {GamepadInput.South}",
+                   $"Pad: stick to a card and press {GamepadInput.South}, then to a stall and press {GamepadInput.South}")
+                : ("タップでもOK：カードをタップ → 屋台をタップ", "Or tap a card, then tap a stall"),
             ("まちがえたら、正しい屋台がピカピカ光ってヒントになるよ", "Wrong stall? The right one glows as a hint"),
             ($"{booths.Count}つの屋台をぜんぶうめたらクリア！", $"Fill all {booths.Count} stalls to clear!"),
         }, null, 1.5f);
@@ -461,6 +466,9 @@ public class FourthFloorGame : MonoBehaviour
         b.pointer = b.root.gameObject.AddComponent<UiPointerState>();
         var trigger = b.root.gameObject.AddComponent<EventTrigger>();
         On(trigger, EventTriggerType.PointerClick, _ => OnBoothActivate(b));
+        // the gamepad: the stick moves onto the stall, A / × works like a click
+        PadTarget(b.root.gameObject);
+        On(trigger, EventTriggerType.Submit, _ => OnBoothActivate(b));
 
         b.body = UiKit.Stretch(UiKit.Rect("Body", b.root));
         var sprite = Art(dept.id);
@@ -519,6 +527,8 @@ public class FourthFloorGame : MonoBehaviour
         On(trigger, EventTriggerType.BeginDrag, e => BeginDrag(c, (PointerEventData)e));
         On(trigger, EventTriggerType.Drag, e => Drag((PointerEventData)e));
         On(trigger, EventTriggerType.EndDrag, e => EndDrag(c, (PointerEventData)e));
+        GamepadInput.SetDefault(PadTarget(c.root.gameObject), GamepadInput.BoardPriority);   // the pad starts in the tray
+        On(trigger, EventTriggerType.Submit, _ => ToggleSelect(c));
 
         c.face = UiKit.Stretch(UiKit.Rect("Face", c.root));
         c.glow = BuildCardLook(c.face, f, 5f);
@@ -584,6 +594,14 @@ public class FourthFloorGame : MonoBehaviour
             UiKit.Stretch(en.rectTransform, 1f);
         }
         return glow;
+    }
+
+    // Something the gamepad can move onto (no look of its own: Update shows it like a hover)
+    static Selectable PadTarget(GameObject go)
+    {
+        var s = go.AddComponent<Selectable>();
+        s.transition = Selectable.Transition.None;
+        return s;
     }
 
     static void On(EventTrigger trigger, EventTriggerType type, Action<BaseEventData> action)
@@ -734,6 +752,11 @@ public class FourthFloorGame : MonoBehaviour
         if (shadow != null) ((RectTransform)shadow).anchoredPosition = new Vector2(0f, -2f);
         card.root.GetComponent<Image>().raycastTarget = false;
         card.group.blocksRaycasts = false;
+        card.root.GetComponent<Selectable>().interactable = false;   // out of the pad's way on the counter
+        // the pad goes back to the tray's first card
+        var next = cards.FirstOrDefault(c => !c.placed);
+        if (next != null && GamepadInput.UsingPad && EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(next.root.gameObject);
         StartCoroutine(LandIn(card.root));
 
         b.complete = true;
@@ -797,8 +820,13 @@ public class FourthFloorGame : MonoBehaviour
         }
     }
 
+    // the instruction names the pad's buttons, so it's rewritten when the player switches devices
+    bool showingInstruction, instructionPad;
+
     void SetMessage(string msg, string kind, bool withParty = false)
     {
+        showingInstruction = msg == MsgInstruction;
+        instructionPad = GamepadInput.UsingPad;
         message.text = msg;
         messageBg.color = kind == "ok" ? OkC : kind == "ng" ? UiKit.Hex("#ffe1e7") : new Color(1f, 1f, 1f, 0.12f);
         message.color = kind == "ok" ? Color.white : kind == "ng" ? UiKit.BadShadow : Paper;
@@ -989,8 +1017,10 @@ public class FourthFloorGame : MonoBehaviour
     /* ---------- per frame: lanterns, stall and card states (the CSS classes) ---------- */
     void Update()
     {
+        // a click's selection is dropped; the gamepad keeps its own (that's its cursor)
         var es = EventSystem.current;
-        if (es != null && es.currentSelectedGameObject != null) es.SetSelectedGameObject(null);
+        if (es != null && es.currentSelectedGameObject != null && !GamepadInput.UsingPad) es.SetSelectedGameObject(null);
+        if (showingInstruction && instructionPad != GamepadInput.UsingPad) SetMessage(MsgInstruction, "info");
 
         // @keyframes sway: ±4° from 12 px above the lantern
         for (int i = 0; i < lanterns.Count; i++)
@@ -1005,7 +1035,7 @@ public class FourthFloorGame : MonoBehaviour
         foreach (var b in booths)
         {
             bool ready = b == hoverBooth;                                   // .drop-ready while a card is dragged over it
-            bool hover = b.pointer.hovered && dragging == null;             // .booth:hover
+            bool hover = b.pointer.Highlighted && dragging == null;         // .booth:hover (or the pad on it)
             bool hint = Time.time < b.hintUntil, ok = Time.time < b.okUntil;
             float lift = ready ? 6f : hover ? 3f : 0f;
             float scale = 1f;
@@ -1040,10 +1070,10 @@ public class FourthFloorGame : MonoBehaviour
             c.root.anchoredPosition = Vector2.Lerp(c.root.anchoredPosition, c.target, m);
             bool sel = c == selected && dragging != c;
             // .card:hover lifts 4 px; .card.selected lifts 10 px and grows to 1.07 with a cyan glow
-            float lift = sel ? 10f : c.pointer.hovered && dragging == null ? 4f : 0f;
+            float lift = sel ? 10f : c.pointer.Highlighted && dragging == null ? 4f : 0f;
             c.face.anchoredPosition = new Vector2(Shake(c.shakeUntil), Mathf.Lerp(c.face.anchoredPosition.y, lift, k));
-            // pointed at: zoomed up to read, drawn over its neighbours
-            bool hover = c.pointer.hovered && dragging == null;
+            // pointed at (or the pad on it): zoomed up to read, drawn over its neighbours
+            bool hover = c.pointer.Highlighted && dragging == null;
             if (hover && c.root.GetSiblingIndex() != c.root.parent.childCount - 1) c.root.SetAsLastSibling();
             float zoom = hover ? CardHoverZoom : sel ? 1.07f : 1f;
             c.face.localScale = Vector3.Lerp(c.face.localScale, Vector3.one * zoom, k);

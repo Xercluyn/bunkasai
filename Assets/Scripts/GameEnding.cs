@@ -57,6 +57,7 @@ public class GameEnding : MonoBehaviour
         var again = UiKit.MainButton(box, L.T("メニューへ", "Back to menu"), out _);
         UiKit.Place((RectTransform)again.transform, 90f, 228f, 220f, 56f);
         again.onClick.AddListener(Restart);
+        GamepadInput.SetDefault(again, GamepadInput.MenuPriority);   // the pad lands here when the panel opens
         var stay = UiKit.SubButton(box, L.T("このまま見て回る", "Keep exploring"), out var stayText);
         UiKit.Place((RectTransform)stay.transform, 330f, 233f, Mathf.Max(220f, stayText.preferredWidth + 48f), 46f);
         stay.onClick.AddListener(Close);

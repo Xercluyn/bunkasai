@@ -289,6 +289,19 @@ public class ShinbunGame : MonoBehaviour
         return mesh;
     }
 
+    bool quitPad;   // Quit's label names the pad's button
+
+    void Update()
+    {
+        if (hud == null) return;
+        if (GamepadInput.BackPressed) hud.PressQuit();   // B / ○ works like clicking Quit
+        if (quitPad != GamepadInput.UsingPad)
+        {
+            quitPad = GamepadInput.UsingPad;
+            hud.RefreshQuit();
+        }
+    }
+
     void LateUpdate()
     {
         // Always centred on the camera, so it never gets closer
@@ -323,8 +336,8 @@ public class ShinbunGame : MonoBehaviour
         while (!go)
         {
             var kb = Keyboard.current;
-            if (kb != null && Time.unscaledTime - opened > 0.3f &&
-                (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame)) go = true;
+            if (Time.unscaledTime - opened > 0.3f &&
+                ((kb != null && (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame)) || GamepadInput.InteractPressed)) go = true;
             yield return null;
         }
         Destroy(card);
@@ -349,7 +362,8 @@ public class ShinbunGame : MonoBehaviour
         // Jump: fall onto the pad; press as the ring closes to land cleanly
         agentT.SetParent(null, true);
         agentT.rotation = Quaternion.LookRotation(level.runDir);
-        hud.Caption(L.T("練習：緑のリングが重なったら スペース か クリック で着地！", "Practice: press Space or click when the green rings meet to land!"));
+        hud.Caption(GamepadInput.T("練習：緑のリングが重なったら スペース か クリック で着地！", "Practice: press Space or click when the green rings meet to land!",
+            $"練習：緑のリングが重なったら {GamepadInput.South} ボタンで着地！", $"Practice: press {GamepadInput.South} when the green rings meet to land!"));
         const float gravity = 30f, maxFall = 40f;
         float v = 0f;
         bool judged = false;
@@ -600,7 +614,8 @@ public class ShinbunGame : MonoBehaviour
         extracted = true;
         audioSource.PlayOneShot(sfxGood);
         hud.Pop(L.T("脱出ゾーン到達！", "Extraction zone reached!"), UiKit.Good);
-        hud.Caption(L.T("迎えの飛行機が来るよ！（スペースでスキップ）", "Here comes the pick-up plane! (Space to skip)"));
+        hud.Caption(GamepadInput.T("迎えの飛行機が来るよ！（スペースでスキップ）", "Here comes the pick-up plane! (Space to skip)",
+            $"迎えの飛行機が来るよ！（{GamepadInput.South} でスキップ）", $"Here comes the pick-up plane! ({GamepadInput.South} to skip)"));
 
         // Low angle from the helipad floor, looking up at the agent and the sky
         Vector3 low = pad + (level.cameraSide * 5f - level.runDir * 4f + Vector3.up * 0.4f) * S;
@@ -747,7 +762,8 @@ public class ShinbunGame : MonoBehaviour
         var mouse = Mouse.current;
         bool overUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
         return (kb != null && kb.spaceKey.wasPressedThisFrame) ||
-               (mouse != null && mouse.leftButton.wasPressedThisFrame && !overUi);
+               (mouse != null && mouse.leftButton.wasPressedThisFrame && !overUi) ||
+               GamepadInput.InteractPressed;   // A / ×
     }
 
     void Play(string state)

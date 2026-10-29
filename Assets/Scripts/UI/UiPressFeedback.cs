@@ -9,8 +9,9 @@ using UnityEngine.UI;
 /// </summary>
 [RequireComponent(typeof(UiPointerState))]
 [RequireComponent(typeof(CanvasGroup))]
-public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler
+public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler, ISelectHandler, ISubmitHandler
 {
+    const float SelectedScale = 1.06f;   // a gamepad-selected button stands out a little
     public RectTransform face;
     public Button button;
     public Shadow shadow;
@@ -47,7 +48,21 @@ public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnter
         Sfx.PlayUi(Sfx.Click(), clickVolume);
     }
 
-    public void OnPointerEnter(PointerEventData e)
+    public void OnPointerEnter(PointerEventData e) => Tick();
+
+    // moving the gamepad selection onto it ticks like a hover
+    public void OnSelect(BaseEventData e)
+    {
+        if (!(e is PointerEventData)) Tick();
+    }
+
+    // A / × on the selected button clicks like the mouse
+    public void OnSubmit(BaseEventData e)
+    {
+        if (On) Sfx.PlayUi(Sfx.Click(), clickVolume);
+    }
+
+    void Tick()
     {
         if (button == null || !button.interactable || hoverVolume <= 0f) return;
         if (Time.unscaledTime - lastHover < 0.08f) return;
@@ -62,7 +77,8 @@ public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnter
 
         if (face != null) face.anchoredPosition = new Vector2(0f, down ? -depth : 0f);
         if (shadow != null) shadow.effectDistance = new Vector2(0f, down ? -(shadowDepth - depth) : -shadowDepth);
-        if (border != null) border.color = on && pointer.hovered ? borderHover : borderNormal;
+        if (border != null) border.color = on && pointer.Highlighted ? borderHover : borderNormal;
+        if (face != null) face.localScale = Vector3.one * (on && pointer.selected ? SelectedScale : 1f);
         group.alpha = on ? 1f : 0.4f;
     }
 }

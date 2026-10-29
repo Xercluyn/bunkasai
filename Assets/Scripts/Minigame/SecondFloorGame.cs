@@ -155,6 +155,12 @@ public class SecondFloorGame : MonoBehaviour
         ShowDemo();
         SetOverlay(L.T("2階ゲーム", "2F Game"), L.T($"↓かタップでフックを落として、お金をつかもう！\n{(int)TIME}秒以内に ¥3,000 集めたらクリア！", $"Press ↓ or tap to drop the hook and grab money!\nCollect ¥3,000 within {(int)TIME} seconds to clear!"),
             L.T("スタート！", "Start!"), StartGame, true, false);
+        // the start card names the pad's button while the pad is in use
+        GamepadInput.Bind(ovText, () => GamepadInput.T(
+            $"↓かタップでフックを落として、お金をつかもう！\n{(int)TIME}秒以内に ¥3,000 集めたらクリア！",
+            $"Press ↓ or tap to drop the hook and grab money!\nCollect ¥3,000 within {(int)TIME} seconds to clear!",
+            $"{GamepadInput.South} ボタンでフックを落として、お金をつかもう！\n{(int)TIME}秒以内に ¥3,000 集めたらクリア！",
+            $"Press {GamepadInput.South} to drop the hook and grab money!\nCollect ¥3,000 within {(int)TIME} seconds to clear!"));
     }
 
     void BuildUi()
@@ -214,9 +220,12 @@ public class SecondFloorGame : MonoBehaviour
 
         // controls
         float cy = stageY + H + 12f;
-        var hint = UiKit.Label(wrap, L.T("発射：↓ / Space / タップ　はなす：↑\n一時停止：P　リスタート：R",
-            "Drop: ↓ / Space / tap   Let go: ↑\nPause: P   Restart: R"), 18,
-            Muted, TextAnchor.MiddleLeft, false);
+        var hint = UiKit.Label(wrap, "", 18, Muted, TextAnchor.MiddleLeft, false);
+        GamepadInput.Bind(hint, () => GamepadInput.T(
+            "発射：↓ / Space / タップ　はなす：↑\n一時停止：P　リスタート：R",
+            "Drop: ↓ / Space / tap   Let go: ↑\nPause: P   Restart: R",
+            $"発射：{GamepadInput.South}　はなす：{GamepadInput.North}\n一時停止：{GamepadInput.MenuName}　リスタート：{GamepadInput.SelectName}",
+            $"Drop: {GamepadInput.South}   Let go: {GamepadInput.North}\nPause: {GamepadInput.MenuName}   Restart: {GamepadInput.SelectName}"));
         hint.lineSpacing = 1.05f;
         hint.resizeTextForBestFit = true;   // two lines in 48 px; the English lines are the longer ones
         hint.resizeTextMinSize = 14;
@@ -377,8 +386,12 @@ public class SecondFloorGame : MonoBehaviour
             h.childAlignment = TextAnchor.UpperLeft;
             h.childControlWidth = h.childControlHeight = true;
             h.childForceExpandWidth = h.childForceExpandHeight = false;
-            LegendCell(row, what, Paper, 190f);
+            var whatCell = LegendCell(row, what, Paper, 190f);
             LegendCell(row, how, Muted, 316f);
+            // the let-go row names the pad's button while the pad is in use
+            if (what == L.T("↑ キー", "↑ key"))
+                GamepadInput.Bind(whatCell, () => GamepadInput.T("↑ キー", "↑ key",
+                    $"{GamepadInput.North} ボタン", $"{GamepadInput.North} button"));
         }
         legend = lg.gameObject;
 
@@ -388,7 +401,7 @@ public class SecondFloorGame : MonoBehaviour
     }
 
     // fixed cell, one line: longer (English) entries shrink instead of wrapping and pushing the card past the stage
-    static void LegendCell(RectTransform row, string text, Color color, float width)
+    static Text LegendCell(RectTransform row, string text, Color color, float width)
     {
         var t = UiKit.Label(row, text, 18, color, TextAnchor.MiddleLeft, false);
         t.resizeTextForBestFit = true;
@@ -397,12 +410,13 @@ public class SecondFloorGame : MonoBehaviour
         var le = t.gameObject.AddComponent<LayoutElement>();
         le.preferredWidth = le.minWidth = width;
         le.preferredHeight = le.minHeight = 28f;
+        return t;
     }
 
     void SetOverlay(string title, string text, string button, Action action, bool showLegend, bool win)
     {
         ovTitle.text = title;
-        ovText.text = text;
+        GamepadInput.Bind(ovText, () => text);   // replaces the start card's live text
         ovBtnText.text = button;
         ovBtnLayout.preferredWidth = ovBtnText.preferredWidth + 52f;
         ovAction = action;
@@ -866,24 +880,29 @@ public class SecondFloorGame : MonoBehaviour
         var es = UnityEngine.EventSystems.EventSystem.current;
         if (es != null && es.currentSelectedGameObject != null) es.SetSelectedGameObject(null);
 
+        // keyboard, or the gamepad: A / × drops (and presses the card's button), Y / △ or D-pad up lets go,
+        // D-pad down drops too, Menu / OPTIONS pauses, View / SHARE restarts
         var kb = Keyboard.current;
-        if (kb != null)
+        bool pausePress = (kb != null && (kb.pKey.wasPressedThisFrame || kb.escapeKey.wasPressedThisFrame)) || GamepadInput.MenuPressed;
+        bool firePress = (kb != null && (kb.downArrowKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame)) ||
+                         GamepadInput.InteractPressed || GamepadInput.DpadDownPressed;
+        bool cutPress = (kb != null && kb.upArrowKey.wasPressedThisFrame) || GamepadInput.NorthPressed || GamepadInput.DpadUpPressed;
+        bool restartPress = (kb != null && kb.rKey.wasPressedThisFrame) || GamepadInput.SelectPressed;
+        bool cardPress = (kb != null && (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)) ||
+                         GamepadInput.InteractPressed;
+        if (running)
         {
-            if (running)
+            if (pausePress) TogglePause();
+            else if (!paused)
             {
-                if (kb.pKey.wasPressedThisFrame || kb.escapeKey.wasPressedThisFrame) TogglePause();
-                else if (!paused)
-                {
-                    if (kb.downArrowKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame) Fire();
-                    if (kb.upArrowKey.wasPressedThisFrame) Cut();
-                }
+                if (firePress) Fire();
+                if (cutPress) Cut();
             }
-            if (kb.rKey.wasPressedThisFrame) RestartGame();
-            // the card's button by keyboard too (the win card leaves through the result hold instead)
-            else if ((!running || paused) && !counting && !won && overlay.activeSelf && Time.unscaledTime - overlayAt > 0.4f &&
-                     (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame))
-                ovAction?.Invoke();
         }
+        if (restartPress) RestartGame();
+        // the card's button by keyboard or pad too (the win card leaves through the result hold instead)
+        else if ((!running || paused) && !counting && !won && overlay.activeSelf && Time.unscaledTime - overlayAt > 0.4f && cardPress)
+            ovAction?.Invoke();
 
         bool pressed = stagePointer.pressed;
         if (pressed && !stageWasPressed && running) Fire();

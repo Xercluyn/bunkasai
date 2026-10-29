@@ -68,7 +68,7 @@ public class ThirdFloorGame : MonoBehaviour
     Sprite[] cells;
 
     // UI
-    RectTransform canvasRoot, column, quiz, end, optsBox, emojiRt, menu, cloudsLayer;
+    RectTransform canvasRoot, column, quiz, end, optsBox, emojiRt, menu, cloudsLayer, menuButton;
     Image[] dots;
     Image ring, emoji, trophy;
     Text tnum, endTitle, endMsg, muteLbl;
@@ -143,6 +143,7 @@ public class ThirdFloorGame : MonoBehaviour
         tt.lineSpacing = 1.1f;
         UiKit.Stretch(tt.rectTransform);
         var menuBtn = Pressable(column, W - 50f, 8f, 50f, 55f, Color.white, Ledge, 18f, 5f, "☰", 24, Ink, out _, out _, out _);
+        menuButton = (RectTransform)menuBtn.transform;
         menuBtn.onClick.AddListener(() =>
         {
             if (menu.gameObject.activeSelf) CloseMenu();
@@ -179,7 +180,11 @@ public class ThirdFloorGame : MonoBehaviour
         tnum = UiKit.Label(timerFace.transform, ((int)TIME).ToString(), 28, Ink);
         UiKit.Stretch(tnum.rectTransform);
 
-        var hint = UiKit.Label(quiz, L.T("絵をタップして音を聞こう。正しい答えを選んでね。", "Tap the picture to hear it. Pick the right answer!"), 18, Ink2);
+        var hint = UiKit.Label(quiz, "", 18, Ink2);
+        GamepadInput.Bind(hint, () => GamepadInput.T(
+            "絵をタップして音を聞こう。正しい答えを選んでね。", "Tap the picture to hear it. Pick the right answer!",
+            $"{GamepadInput.West} で音を聞こう。スティックで選んで {GamepadInput.South}　メニュー：{GamepadInput.MenuName}",
+            $"{GamepadInput.West}: hear it.  Stick + {GamepadInput.South}: answer.  Menu: {GamepadInput.MenuName}"));
         hint.resizeTextForBestFit = true;   // the English line is long: shrink rather than clip
         hint.resizeTextMinSize = 15;
         hint.resizeTextMaxSize = 18;
@@ -232,10 +237,12 @@ public class ThirdFloorGame : MonoBehaviour
         Top((RectTransform)again.transform, 400f, 50f, 260f);
         again.onClick.AddListener(Begin);
         againBtn = again.gameObject;
+        GamepadInput.SetDefault(again, GamepadInput.OverlayPriority);
         var home = Pressable(endCard, 0f, 0f, 260f, 56f, Ok, UiKit.Hex("#33a874"), 28f, 6f, L.T("フロアに戻る", "Back to the floor"), 22, Color.white, out _, out _, out _);
         Top((RectTransform)home.transform, 474f, 50f, 260f);
         home.onClick.AddListener(Leave);
         homeBtn = home.gameObject;
+        GamepadInput.SetDefault(home, GamepadInput.OverlayPriority);
         end.gameObject.SetActive(false);
 
         BuildMenu();
@@ -322,6 +329,7 @@ public class ThirdFloorGame : MonoBehaviour
         var bb = blocker.gameObject.AddComponent<Button>();
         bb.transition = Selectable.Transition.None;
         bb.onClick.AddListener(CloseMenu);
+        bb.navigation = new Navigation { mode = Navigation.Mode.None };   // the pad never lands on the catcher
         menuBlocker = blocker.gameObject;
 
         var box = UiKit.Box("Menu", canvasRoot, Color.white, 20f);
@@ -334,6 +342,15 @@ public class ThirdFloorGame : MonoBehaviour
         MenuItem(L.T("おとを OFFにする", "Sound OFF"), 1, out muteLbl, ToggleMute);
         MenuItem(L.T("はじめから", "Start over"), 2, out _, () => { Speech.Stop(); Begin(); });
         MenuItem(L.T("あそびかた", "How to play"), 3, out _, ShowHelp);
+        // the stick goes up and down the four rows only, never to the quiz behind the menu
+        var items = menu.GetComponentsInChildren<Button>(true);
+        for (int k = 0; k < items.Length; k++)
+            items[k].navigation = new Navigation
+            {
+                mode = Navigation.Mode.Explicit,
+                selectOnUp = items[(k + items.Length - 1) % items.Length],
+                selectOnDown = items[(k + 1) % items.Length],
+            };
         menu.gameObject.SetActive(false);
         menuBlocker.SetActive(false);
     }
@@ -348,10 +365,11 @@ public class ThirdFloorGame : MonoBehaviour
         colors.normalColor = Color.white;
         colors.highlightedColor = Bg2;
         colors.pressedColor = Bg1;
-        colors.selectedColor = Color.white;
+        colors.selectedColor = Bg2;   // shows the gamepad's choice (a click's selection is dropped at once)
         b.colors = colors;
         b.targetGraphic = row;
         b.onClick.AddListener(() => { CloseMenu(); action(); });
+        if (i == 0) GamepadInput.SetDefault(b, GamepadInput.MenuPriority);
         text = UiKit.Label(row.transform, label, 18, Ink, TextAnchor.MiddleLeft);
         UiKit.Place(text.rectTransform, 14f, 0f, 190f, 44f);
     }
@@ -540,6 +558,7 @@ public class ThirdFloorGame : MonoBehaviour
             var b = Pressable(optsBox, 0f, i * 66f, optsBox.sizeDelta.x, 56f, c, cd, 24f, 7f, w, 30, Ink, out var text, out var top, out var ledge);
             var o = new Opt { w = w, root = (RectTransform)b.transform, top = top, ledge = ledge, text = text, index = i };
             b.onClick.AddListener(() => Choose(o, cur));
+            if (i == 0) GamepadInput.SetDefault(b, GamepadInput.BoardPriority);   // the pad starts on the top answer
             opts.Add(o);
             i++;
         }
@@ -672,9 +691,10 @@ public class ThirdFloorGame : MonoBehaviour
     /* ---------- loop ---------- */
     void Update()
     {
-        // a clicked button must not stay selected, or Space/Enter would press it again
+        // a clicked button must not stay selected, or Space/Enter would press it again (the gamepad keeps its
+        // selection: that's how it chooses)
         var es = UnityEngine.EventSystems.EventSystem.current;
-        if (es != null && es.currentSelectedGameObject != null) es.SetSelectedGameObject(null);
+        if (es != null && es.currentSelectedGameObject != null && !GamepadInput.UsingPad) es.SetSelectedGameObject(null);
 
         // timer: 14 → 0 in whole seconds, ring shrinking smoothly; red with a beep a second over the last 3
         float left = timing ? Mathf.Max(0f, TIME - (Time.time - timerStart)) : frozenLeft;
@@ -701,6 +721,18 @@ public class ThirdFloorGame : MonoBehaviour
         var kb = Keyboard.current;
         var mouse = Mouse.current;
         if (kb != null && kb.escapeKey.wasPressedThisFrame) CloseMenu();
+        // gamepad: X / □ plays the word again, Menu / OPTIONS opens or closes ☰, B / ○ closes it
+        if (GamepadInput.WestPressed && quiz.gameObject.activeSelf && !menu.gameObject.activeSelf) PlaySound();
+        if (GamepadInput.BackPressed && menu.gameObject.activeSelf) CloseMenu();
+        else if (GamepadInput.MenuPressed)
+        {
+            if (menu.gameObject.activeSelf) CloseMenu();
+            else
+            {
+                var r = menuButton;
+                OpenMenu(r.TransformPoint(new Vector3(r.rect.xMax - 210f, r.rect.yMin - 8f)));
+            }
+        }
         if (mouse != null && mouse.rightButton.wasPressedThisFrame)
         {
             // contextmenu: the menu opens at the pointer

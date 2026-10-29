@@ -30,6 +30,9 @@ public class ThirdPersonCamera : MonoBehaviour
     /// <summary>Set while a panel that must be clicked is open (the ending): frees the cursor.</summary>
     public static bool panelOpen;
 
+    // Right-stick look at full tilt, in degrees per second, at the default 視点感度
+    const float PadYawSpeed = 180f, PadPitchSpeed = 110f, DefaultLookSpeed = 0.12f;
+
     // no domain reload on entering Play Mode: start each session with the cursor rules reset
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void NewSession() => panelOpen = false;
@@ -74,6 +77,14 @@ public class ThirdPersonCamera : MonoBehaviour
             Vector2 d = mouse.delta.ReadValue() * FloorPauseMenu.LookSpeed;   // the pause menu's 視点感度
             yaw += d.x;
             pitch = Mathf.Clamp(pitch - d.y, minPitch, maxPitch);
+        }
+        // the gamepad's right stick: degrees per second, scaled by the same 視点感度 (paused: deltaTime is 0)
+        var stick = GamepadInput.Look;
+        if (stick != Vector2.zero && !panelOpen && !PlayerLock.Locked)
+        {
+            float rate = FloorPauseMenu.LookSpeed / DefaultLookSpeed * Time.deltaTime;
+            yaw += stick.x * PadYawSpeed * rate;
+            pitch = Mathf.Clamp(pitch - stick.y * PadPitchSpeed * rate, minPitch, maxPitch);
         }
 
         Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);

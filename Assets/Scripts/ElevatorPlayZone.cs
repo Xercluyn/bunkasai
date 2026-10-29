@@ -43,7 +43,8 @@ public class ElevatorPlayZone : MonoBehaviour
     protected PlayerMovement player;
     InteractableOutline outline;
     RectTransform buttonRect;
-    Text labelText, keysText;
+    Text labelText, keysText, keyBadge;
+    bool keyPad;   // the prompt shows the gamepad's button
     bool leaving;
 
     /// <summary>True from a zone starting its minigame until the scene changes; the pause menu stays shut.</summary>
@@ -78,8 +79,8 @@ public class ElevatorPlayZone : MonoBehaviour
             var face = labelText.transform.parent;
             var badge = UiKit.Box("Key", face, UiKit.Ink, 8f);
             UiKit.Place(badge.rectTransform, 12f, 10f, 34f, 34f);
-            var key = UiKit.Label(badge.transform, "E", 20, UiKit.MainFill);
-            UiKit.Stretch(key.rectTransform);
+            keyBadge = UiKit.Label(badge.transform, "E", 20, UiKit.MainFill);
+            UiKit.Stretch(keyBadge.rectTransform);
             labelText.rectTransform.offsetMin = new Vector2(56f, 0f);
             labelText.rectTransform.offsetMax = new Vector2(-20f, 0f);
 
@@ -111,9 +112,11 @@ public class ElevatorPlayZone : MonoBehaviour
     // the language was switched
     void Relabel()
     {
-        if (labelText == null) return;
+        if (labelText == null || keysText == null) return;
         labelText.text = L.Tr(buttonLabel);
-        keysText.text = L.T("E / クリック", "E / Click");
+        keyPad = GamepadInput.UsingPad;
+        if (keyBadge != null) keyBadge.text = keyPad ? GamepadInput.InteractName : "E";
+        keysText.text = keyPad ? L.T($"{GamepadInput.InteractName} ボタン", $"{GamepadInput.InteractName} button") : L.T("E / クリック", "E / Click");
         buttonRect.sizeDelta = new Vector2(Mathf.Max(200f, labelText.preferredWidth + 76f), 54f);
     }
 
@@ -165,7 +168,10 @@ public class ElevatorPlayZone : MonoBehaviour
         // a click while looking around (cursor locked, nothing on screen under it) works like E
         bool click = mouse != null && mouse.leftButton.wasPressedThisFrame && Cursor.lockState == CursorLockMode.Locked &&
                      !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject());
-        if (key || click) TryPlay();
+        // A / × on a gamepad, unless that press just closed the pause menu
+        bool pad = GamepadInput.InteractPressed && !FloorPauseMenu.ClosedThisFrame;
+        if (keyPad != GamepadInput.UsingPad) Relabel();   // switched between the pad and keyboard + mouse
+        if (key || click || pad) TryPlay();
     }
 
     // E, a click or the prompt: not while the player is locked or already on the way

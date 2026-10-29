@@ -29,6 +29,7 @@ public class ShinbunHud
     Coroutine feedbackAnim, quitDisarm;
     DoorKind promptKind = DoorKind.Plain;
     float quitArmedUntil = -1f;
+    readonly Action onQuit;
 
     /// <summary>The screen canvas, for the shared MinigameKit overlays.</summary>
     public Transform Canvas => canvas;
@@ -36,6 +37,7 @@ public class ShinbunHud
     public ShinbunHud(MonoBehaviour host, Action onQuit)
     {
         this.host = host;
+        this.onQuit = onQuit;
         UiKit.EnsureEventSystem();
         canvas = (RectTransform)UiKit.MakeCanvas("ShinbunCanvas", 10, new Vector2(1280f, 720f)).transform;
 
@@ -94,11 +96,8 @@ public class ShinbunHud
         quitRect.anchoredPosition = new Vector2(-16f, -16f);
         quitRect.sizeDelta = new Vector2(QuitWidth, 46f);
         BestFit(quitText, 12);
-        quit.onClick.AddListener(() =>
-        {
-            if (Time.unscaledTime < quitArmedUntil) onQuit();
-            else ArmQuit();
-        });
+        quit.onClick.AddListener(PressQuit);
+        quitText.text = QuitLabel;
 
         // Judgement pop-up and a caption line near the bottom
         feedback = UiKit.Label(canvas, "", 64, UiKit.Accent);
@@ -156,6 +155,23 @@ public class ShinbunHud
 
     // ---------- quit ----------
 
+    /// <summary>Quit's click (or the gamepad's B / ○): the first press arms it, a second one within the time quits.</summary>
+    public void PressQuit()
+    {
+        if (!quit.gameObject.activeInHierarchy) return;
+        if (Time.unscaledTime < quitArmedUntil) onQuit();
+        else ArmQuit();
+    }
+
+    // 「やめる」, with the pad's button while the pad is in use
+    static string QuitLabel => GamepadInput.T("やめる", "Quit", $"やめる（{GamepadInput.East}）", $"Quit ({GamepadInput.East})");
+
+    /// <summary>Rewrites Quit's label for the current input device (unless it's armed).</summary>
+    public void RefreshQuit()
+    {
+        if (quitDisarm == null) quitText.text = QuitLabel;
+    }
+
     void ArmQuit()
     {
         quitArmedUntil = Time.unscaledTime + QuitConfirmSeconds;
@@ -169,7 +185,7 @@ public class ShinbunHud
     IEnumerator DisarmQuit()
     {
         while (Time.unscaledTime < quitArmedUntil) yield return null;
-        quitText.text = L.T("やめる", "Quit");
+        quitText.text = QuitLabel;
         quitText.color = UiKit.Fg;
         quitRect.sizeDelta = new Vector2(QuitWidth, quitRect.sizeDelta.y);
         quitDisarm = null;
@@ -188,7 +204,7 @@ public class ShinbunHud
         SetPromptKind(kind);
         key.text = kind == DoorKind.Trap
             ? L.T("まって！投げないで", "WAIT! Don't throw")
-            : L.T("SPACE / クリック！", "SPACE / Click!");
+            : GamepadInput.T("SPACE / クリック！", "SPACE / Click!", $"{GamepadInput.South} ボタン！", $"{GamepadInput.South}!");
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas, screenPoint, null, out Vector2 local);
         // Kept on screen (with room for the label underneath) even if the door is at or past the edge
         Vector2 half = canvas.rect.size * 0.5f;
@@ -275,12 +291,16 @@ public class ShinbunHud
         DoorCard(row, Yellow, L.T("黄色のドア", "Yellow door"), L.T("ふつうの部屋。\nなにも起きない", "An ordinary room.\nNothing happens"));
 
         string accent = "#" + ColorUtility.ToHtmlStringRGB(UiKit.Accent);
-        UiKit.Label(card.transform, L.T($"<color={accent}>スペース</color> または <color={accent}>クリック</color> で投げる　/　緑のドアを逃す・早すぎると MISS",
-            $"<color={accent}>Space</color> or <color={accent}>click</color> to throw　/　Missing a green door, or throwing too early, is a MISS"),
-            18, UiKit.Fg, TextAnchor.MiddleCenter, false);
+        var throwHelp = UiKit.Label(card.transform, "", 18, UiKit.Fg, TextAnchor.MiddleCenter, false);
+        GamepadInput.Bind(throwHelp, () => GamepadInput.T(
+            $"<color={accent}>スペース</color> または <color={accent}>クリック</color> で投げる　/　緑のドアを逃す・早すぎると MISS",
+            $"<color={accent}>Space</color> or <color={accent}>click</color> to throw　/　Missing a green door, or throwing too early, is a MISS",
+            $"<color={accent}>{GamepadInput.South}</color> ボタンで投げる　/　緑のドアを逃す・早すぎると MISS　/　やめる：{GamepadInput.East}",
+            $"<color={accent}>{GamepadInput.South}</color> to throw　/　Missing a green door, or throwing too early, is a MISS　/　Quit: {GamepadInput.East}"));
 
         var start = UiKit.MainButton(card.transform, L.T("▶ スタート", "▶ Start"), out _);
         start.onClick.AddListener(() => onStart());
+        GamepadInput.SetDefault(start, GamepadInput.CardPriority);
         return dim.gameObject;
     }
 
@@ -369,6 +389,7 @@ public class ShinbunHud
 
         var back = UiKit.MainButton(card.transform, L.T("5階に戻る", "Back to 5F"), out _);
         back.onClick.AddListener(() => onReturn());
+        GamepadInput.SetDefault(back, GamepadInput.OverlayPriority);
         var retry = UiKit.SubButton(card.transform, L.T("もう一度", "Try Again"), out _);
         retry.onClick.AddListener(() => onRetry());
     }

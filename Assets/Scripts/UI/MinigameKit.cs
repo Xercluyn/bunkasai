@@ -85,11 +85,13 @@ public static class MinigameKit
             kicker.text = L.T("あそびかた", "HOW TO PLAY");
             title.text = L.T(titleJa, titleEn);
             for (int i = 0; i < rules.Length; i++) ruleTexts[i].text = L.T(rules[i].ja, rules[i].en);
-            hint.text = L.T("Space / Enter でもスタート", "Space / Enter also starts");
             buttonText.text = L.T(buttonJa, buttonEn);
         };
         card.write();
+        GamepadInput.Bind(hint, () => GamepadInput.T("Space / Enter でもスタート", "Space / Enter also starts",
+            $"{GamepadInput.South} ボタンでスタート", $"Press {GamepadInput.South} to start"));
         button.onClick.AddListener(card.Close);
+        GamepadInput.SetDefault(button, GamepadInput.CardPriority);
         return dim.gameObject;
     }
 
@@ -111,8 +113,9 @@ public static class MinigameKit
         void Update()
         {
             var kb = Keyboard.current;
-            if (kb != null && Time.unscaledTime - opened > 0.3f &&
-                (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame))
+            if (Time.unscaledTime - opened > 0.3f &&
+                ((kb != null && (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)) ||
+                 GamepadInput.InteractPressed))
                 Close();
         }
 
@@ -182,8 +185,9 @@ public static class MinigameKit
         holder.anchoredPosition = new Vector2(0f, 18f * scale);
         holder.sizeDelta = new Vector2(420f * scale, 44f * scale);
         holder.SetAsLastSibling();
-        var label = UiKit.Label(holder, L.T("クリック / Space で次へ", "Click / Space to continue"),
-            Mathf.RoundToInt(18 * scale), UiKit.Fg);
+        var label = UiKit.Label(holder, "", Mathf.RoundToInt(18 * scale), UiKit.Fg);
+        GamepadInput.Bind(label, () => GamepadInput.T("クリック / Space で次へ", "Click / Space to continue",
+            $"{GamepadInput.South} ボタンで次へ", $"Press {GamepadInput.South} to continue"));
         UiKit.HardShadow(label, UiKit.WithAlpha(UiKit.PanelShadow, 0.8f), 2f * scale);
         UiKit.Place(label.rectTransform, 0f, 0f, 420f * scale, 24f * scale);
         var track = UiKit.Box("Track", holder, UiKit.WithAlpha(UiKit.Dim, 0.7f), 4f * scale);
@@ -201,7 +205,7 @@ public static class MinigameKit
             var mouse = Mouse.current;
             bool skip = t > 0.4f &&
                 ((kb != null && (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)) ||
-                 (mouse != null && mouse.leftButton.wasPressedThisFrame));
+                 (mouse != null && mouse.leftButton.wasPressedThisFrame) || GamepadInput.InteractPressed);
             if (skip) break;
             yield return null;
         }

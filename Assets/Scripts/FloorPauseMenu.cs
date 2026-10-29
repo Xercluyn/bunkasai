@@ -1,11 +1,12 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// The floors' pause menu: Esc opens it over a dimmed screen and Esc (or 続ける) closes it. While it is open the game
+/// The floors' pause menu: Esc (gamepad Menu / OPTIONS) opens it over a dimmed screen and Esc (or 続ける) closes it. While it is open the game
 /// stands still (Time.timeScale 0), the player can't move and the mouse is free. It has 続ける, a 音量 (volume) and a
 /// 視点感度 (look speed) stepper, English / 日本語, 最初から (level 1 only, where the scene has a LevelOneMenu) and
 /// メインメニューへ; the last two ask for a second press within 3 seconds so they aren't hit by accident.
@@ -26,6 +27,10 @@ public class FloorPauseMenu : MonoBehaviour
     public static float LookSpeed => lookSpeed ?? (lookSpeed = PlayerPrefs.GetFloat(LookKey, LookSteps[LookDefault])).Value;
 
     static FloorPauseMenu instance;
+    static int closedFrame = -1;
+
+    /// <summary>True on the frame the menu closed: that press (A / × on 続ける) mustn't also start a zone.</summary>
+    public static bool ClosedThisFrame => closedFrame == Time.frameCount;
 
     // no domain reload on entering Play Mode: never start a session paused
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -34,6 +39,7 @@ public class FloorPauseMenu : MonoBehaviour
         Open = false;
         lookSpeed = null;
         instance = null;
+        closedFrame = -1;
         Time.timeScale = 1f;
     }
 
@@ -43,7 +49,7 @@ public class FloorPauseMenu : MonoBehaviour
         if (instance == null) new GameObject("FloorPauseMenu").AddComponent<FloorPauseMenu>();
     }
 
-    GameObject root;
+    GameObject root, resumeButton;
     CanvasGroup group;
     RectTransform box, menuButton, restartButton;
     Text title, resumeText, volumeLabel, lookLabel, langText, restartText, menuText, hintText;
@@ -77,6 +83,8 @@ public class FloorPauseMenu : MonoBehaviour
         UiKit.Place(title.rectTransform, 0f, 22f, W, 64f);
 
         var resume = UiKit.MainButton(box, "", out resumeText);
+        resumeButton = resume.gameObject;
+        GamepadInput.SetDefault(resume, GamepadInput.MenuPriority);
         UiKit.Place((RectTransform)resume.transform, (W - 300f) * 0.5f, 100f, 300f, 56f);
         resume.onClick.AddListener(Close);
 
@@ -125,7 +133,9 @@ public class FloorPauseMenu : MonoBehaviour
     void Update()
     {
         var kb = Keyboard.current;
-        if (kb == null || !kb.escapeKey.wasPressedThisFrame) return;
+        bool toggle = (kb != null && kb.escapeKey.wasPressedThisFrame) || GamepadInput.MenuPressed;
+        if (Open && GamepadInput.BackPressed) toggle = true;   // B / ○ closes it too
+        if (!toggle) return;
         if (Open) Close();
         else if (CanOpen) Show();
     }
@@ -144,6 +154,9 @@ public class FloorPauseMenu : MonoBehaviour
         Disarm();
         Write();
         root.SetActive(true);
+        // on the gamepad, 続ける starts selected so the stick / D-pad can move between the buttons
+        var es = EventSystem.current;
+        if (es != null) es.SetSelectedGameObject(GamepadInput.UsingPad ? resumeButton : null);
         Sfx.PlayUi(Sfx.Whoosh(), 0.6f);
         if (pop != null) StopCoroutine(pop);
         pop = StartCoroutine(Pop());
@@ -169,6 +182,9 @@ public class FloorPauseMenu : MonoBehaviour
         if (!Open) return;
         Resume();
         root.SetActive(false);
+        closedFrame = Time.frameCount;
+        var es = EventSystem.current;
+        if (es != null) es.SetSelectedGameObject(null);
     }
 
     // the game runs again (also when this menu goes away with its scene)

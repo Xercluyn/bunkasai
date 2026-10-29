@@ -13,7 +13,8 @@ using UnityEngine.UI;
 /// describing the floor under the pointer. A string of cyan and white lights swings across the top. Everything plays in
 /// on opening: the title drops in line by line and the building rises. English / 日本語 in the corner switches
 /// the language. Every visit starts a fresh session. Pointing at a floor blips (each floor a little higher) and
-/// choosing one whooshes.
+/// choosing one whooshes. With a gamepad, A / × on 「1階から5階まで遊ぶ」 starts the run, → moves onto the building,
+/// ↑ ↓ pick a floor and A / × plays it, ← or B / ○ goes back, and Y / △ switches the language.
 /// Everything is built at runtime, so the scene only needs a camera and this component
 /// (Tools > Elevator Game > Create Menu Scene makes it).
 /// </summary>
@@ -106,7 +107,53 @@ public class MainMenu : MonoBehaviour
         opened = Time.unscaledTime;
     }
 
-    void OnDestroy() => L.Changed -= Write;
+    void OnDestroy()
+    {
+        L.Changed -= Write;
+        GamepadInput.FocusPaused = false;
+    }
+
+    /* ---------- gamepad ---------- */
+    Button runButton;
+    bool padOnBuilding, textPad;
+    int padFloor = 1;
+
+    // → onto the building, ↑ ↓ between its floors, A / × plays the floor, ← or B / ○ back to the full-run button
+    // (where A / × is the button's own press); Y / △ switches the language. True when a floor was chosen.
+    bool PadInput()
+    {
+        if (GamepadInput.NorthPressed) L.Toggle();
+        var s = GamepadInput.NavStep;
+        if (!padOnBuilding)
+        {
+            if (s.x > 0)
+            {
+                padOnBuilding = true;
+                GamepadInput.FocusPaused = true;   // no button holds the pad meanwhile
+                if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+            }
+            return false;
+        }
+        if (s.y != 0) padFloor = Mathf.Clamp(padFloor + s.y, 1, 5);
+        if (s.x < 0 || GamepadInput.BackPressed)
+        {
+            LeaveBuilding(true);
+            return false;
+        }
+        if (GamepadInput.InteractPressed)
+        {
+            PlayFloor(padFloor);
+            return true;
+        }
+        return false;
+    }
+
+    void LeaveBuilding(bool selectRun)
+    {
+        padOnBuilding = false;
+        GamepadInput.FocusPaused = false;
+        if (selectRun && EventSystem.current != null && runButton != null) EventSystem.current.SetSelectedGameObject(runButton.gameObject);
+    }
 
     /* ---------- 3D ---------- */
     void SetUpCamera()
@@ -241,6 +288,10 @@ public class MainMenu : MonoBehaviour
         UiKit.Fit(runLabel, 28, 18);
         UiKit.Stretch((RectTransform)run.transform);
         run.onClick.AddListener(PlayAll);
+        // the gamepad starts here; its stick doesn't wander off through the UI (→ goes to the building instead)
+        runButton = run;
+        run.navigation = new Navigation { mode = Navigation.Mode.None };
+        GamepadInput.SetDefault(run, GamepadInput.OverlayPriority);
         Enter(runHolder, 1.0f, false);
 
         // card: the floor under the pointer, or how to pick one
@@ -280,6 +331,7 @@ public class MainMenu : MonoBehaviour
         lrt.sizeDelta = new Vector2(LangW, LangH);
         langText.fontSize = 17;
         lang.onClick.AddListener(L.Toggle);
+        lang.navigation = new Navigation { mode = Navigation.Mode.None };   // the pad switches language with Y / △
     }
 
     // Twelve cyan and white lights on a cable across the top, each swinging from its cord and glowing
@@ -335,15 +387,20 @@ public class MainMenu : MonoBehaviour
             titleLines[i].text = i < lines.Length ? lines[i] : "";
             titleLines[i].fontSize = L.English ? 48 : 68;
         }
-        subtitle.text = L.T("ビルの階をクリックして遊ぶフロアを選ぼう", "Click a floor of the building to play it");
+        textPad = GamepadInput.UsingPad;
+        subtitle.text = GamepadInput.T("ビルの階をクリックして遊ぶフロアを選ぼう", "Click a floor of the building to play it",
+            "スティック → でビルの階を選ぼう", "Push the stick → to pick a floor of the building");
         runLabel.text = L.T("▶ 1階から5階まで遊ぶ", "▶ Play floors 1 to 5");
-        hintText.text = L.T("右のビルの階をクリックすると\nそのフロアだけ遊べるよ", "Click a floor of the building\nto play just that floor");
+        hintText.text = GamepadInput.T("右のビルの階をクリックすると\nそのフロアだけ遊べるよ", "Click a floor of the building\nto play just that floor",
+            $"→ でビルへ、↑↓ で階を選んで {GamepadInput.South}\n言語の切り替え：{GamepadInput.North}",
+            $"→ to the building, ↑↓ for a floor, {GamepadInput.South} to play\nLanguage: {GamepadInput.North}");
         for (int i = 0; i < 5; i++)
         {
             floors[i].name.text = L.T((i + 1) + "階", (i + 1) + "F");
             floors[i].game.text = L.T(FloorGames[i].ja, FloorGames[i].en);
         }
-        langText.text = L.English ? "日本語" : "English";   // the language it switches to
+        langText.text = (L.English ? "日本語" : "English") +   // the language it switches to
+                        (textPad ? $" ({GamepadInput.North})" : "");
         ShowInfo();
     }
 
@@ -354,7 +411,8 @@ public class MainMenu : MonoBehaviour
         cardBorder.color = hover > 0 ? UiKit.Accent : UiKit.Line;
         if (hover == 0) return;
         infoNumber.text = hover.ToString();
-        infoFloor.text = L.T($"{hover}階 · クリックでスタート", $"{hover}F · click to start");
+        infoFloor.text = GamepadInput.T($"{hover}階 · クリックでスタート", $"{hover}F · click to start",
+            $"{hover}階 · {GamepadInput.South} でスタート　← で戻る", $"{hover}F · {GamepadInput.South} to start   ← back");
         infoGame.text = L.T(FloorGames[hover - 1].ja, FloorGames[hover - 1].en);
         infoNote.text = L.T("このフロアのクエストをクリアしたらゲームクリア！", "Clear this floor's quest to win the game!");
     }
@@ -382,6 +440,14 @@ public class MainMenu : MonoBehaviour
             Physics.Raycast(cam.ScreenPointToRay(mp), out var hitInfo, 100f))
             foreach (var f in floors)
                 if (hitInfo.collider == f.hit) now = f.n;
+        // the gamepad runs its own cursor on the building (the mouse takes over again as soon as it moves)
+        if (textPad != GamepadInput.UsingPad) Write();
+        if (GamepadInput.UsingPad && !leaving && rise >= 1f)
+        {
+            if (PadInput()) return;
+            now = padOnBuilding ? padFloor : 0;
+        }
+        else if (padOnBuilding && !GamepadInput.UsingPad) LeaveBuilding(false);
         if (now != hover)
         {
             // a soft blip on reaching a floor (not too often when the pointer runs down the building)
