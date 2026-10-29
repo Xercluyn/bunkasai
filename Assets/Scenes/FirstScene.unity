@@ -412,6 +412,7 @@ MonoBehaviour:
   - loungeChair6
   - loungeChair7
   - loungeChair8
+  - '#posters_size_v2'
   adopted: 1
 --- !u!4 &556293412
 Transform:

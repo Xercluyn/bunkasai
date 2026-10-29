@@ -144,6 +144,19 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
 - **Over the 800-line limit (runtime, not split yet):** `SecondFloorGame.cs` 1392, `FourthFloorGame.cs` 1053, `FloorMinigame.cs` 889. Split them after the play-test. Every editor file is under 800.
 - **Still to do:** in Unity, re-run Dress School (All Floors) and check with `git status` that the scenes don't change. Then merge the branch.
 
+## Done 2026-10-29: 5F ending and festival posters (not run in Unity yet)
+- **5F ending** (`ShinbunGame.Ending`, as in GAMEPLAY.txt), skippable with Space, click or Esc:
+  - a pulsing extraction ring on the far helipad that triggers the pick-up;
+  - the plane hooks the agent;
+  - a cut to a low angle from the helipad deck as the plane climbs away.
+  - It always plays. `quickFinish` now only swaps the results screen for the short goal card.
+- **Festival posters** (`School/FestivalPosters.cs`; School > Steps > Hang Festival Posters, also run by Dress School):
+  - **Assets:** `Assets/Models/School/festival_poster.fbx` (from bunkasai_asset/levels_asset/poster.fbx) and `Assets/Textures/School/festival_poster.jpeg`. The FBX's `Material` and `Material.001` are remapped to `FestivalPoster.mat` (the picture) and `FestivalPosterFrame.mat`.
+  - **Per floor, along the spawn → zones route:** up to 4 wall posters (Cube.003), 2 floor stands (Cube.002) and 2 ceiling banners (Plane and Plane.001 back to back).
+  - **Sizes** are set from the player's height.
+  - **Ids** are `f{n}_poster_{wall|stand|banner}_{k}`, kept or left out like the other props.
+  - **Check:** that posters aren't mirrored or upside down. The face direction comes from the picture faces' normals.
+
 ## Not done yet / next steps
 1. **Play-test everything.** None of today's polish pass has run in Unity yet; it was only compile-checked. Watch for:
    - footsteps in time on 1F and 5F (tune `Footsteps.strideBodyHeights`, `volume`);

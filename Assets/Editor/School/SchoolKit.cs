@@ -282,6 +282,18 @@ public static class SchoolKit
         EditorUtility.SetDirty(dressing);
     }
 
+    /// <summary>Takes prop `id` down and forgets it was ever placed, so the next placement puts it up afresh.</summary>
+    public static void Forget(Scene scene, string id)
+    {
+        var dressing = Record(scene);
+        var t = PropsRoot(scene).Find(id);
+        if (t != null) Undo.DestroyObjectImmediate(t.gameObject);
+        if (!dressing.placed.Contains(id)) return;
+        Undo.RecordObject(dressing, "Forget school prop");
+        dressing.placed.Remove(id);
+        EditorUtility.SetDirty(dressing);
+    }
+
     /// <summary>
     /// A clear spot on the floor near `anchor` for a footprint of `sizeMetres` (x wide, y tall, z deep) facing
     /// `yaw`: searched on rings from `minDist` to `maxDist` world units. Clear means: floor under it, nothing

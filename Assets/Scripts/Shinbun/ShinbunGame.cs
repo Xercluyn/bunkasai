@@ -9,8 +9,9 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// The fifth floor's arcade game (Assets/Minigame/FifthFloorGame/GAMEPLAY.txt): the how-to-play card first,
 /// then a transport plane drops the agent onto a rooftop helipad (a practice timing press for the landing),
-/// a 3-2-1 countdown, the agent auto-runs along an apartment walkway delivering newspapers, and a plane
-/// snatches the agent off the far helipad at the end.
+/// a 3-2-1 countdown, the agent auto-runs along an apartment walkway delivering newspapers, and the ending:
+/// reaching the extraction zone on the far helipad triggers the pick-up, the plane hooks the agent, and the
+/// camera cuts to a low angle from the helipad deck watching the plane climb away (skippable).
 ///  - Green doors: throw (Space / click) as the shrinking green ring meets the target ring. PERFECT / GOOD
 ///    score points and build a combo; running past without throwing, or throwing while the ring is still too
 ///    big, is a MISS (no points lost, combo reset, no second try at that door).
@@ -39,7 +40,7 @@ public class ShinbunGame : MonoBehaviour
     [Tooltip("Number of hallway pieces between the two helipads.")]
     public int hallways = 10;
 
-    [Tooltip("Back to the floor (after a short, skippable goal card) as soon as the run reaches the end, skipping the plane pickup and the results.")]
+    [Tooltip("After the extraction ending, back to the floor via a short, skippable goal card instead of the full results screen.")]
     public bool quickFinish = true;
     public float runSpeed = 7.5f;
 
@@ -106,6 +107,7 @@ public class ShinbunGame : MonoBehaviour
         SpawnAgent();
         SpawnPlane();
         SpawnSkyline();
+        SpawnExtractionZone();
 
         PrepareIntro();
         yield return Tutorial();
@@ -113,18 +115,16 @@ public class ShinbunGame : MonoBehaviour
         yield return Countdown();
         yield return Run();
         hud.HideQuit();   // cleared from here on: leaving must clear the quest
+        yield return Ending();
+
+        audioSource.PlayOneShot(sfxWin);
         if (quickFinish)
         {
-            // reaching the end of the hallways wins: a short goal card (skippable), then back to the floor
-            audioSource.PlayOneShot(sfxWin);
-            Play("Idle");
+            // a short goal card (skippable), then back to the floor
             hud.ShowGoal(score, delivered, deliverTotal);
             MinigameKit.ResultThenExit(this, hud.Canvas, () => Leave(true), MinigameKit.ResultHold);
             yield break;
         }
-        yield return Ending();
-
-        audioSource.PlayOneShot(sfxWin);
         hud.ShowResults(score, delivered, deliverTotal, perfects, trapsHit,
             () => Leave(true), () => SceneManager.LoadScene(gameObject.scene.name));
     }
@@ -526,7 +526,68 @@ public class ShinbunGame : MonoBehaviour
         Destroy(paper);
     }
 
-    // ---------- 5. ending (quickFinish off): skyhook pick-up from the far helipad ----------
+    // ---------- 5. ending: extraction zone on the far helipad, pick-up, low shot of the plane leaving ----------
+
+    const float ExtractionSize = 1.6f;   // ring diameter in agent heights
+    Transform extraction;
+    Material extractionMat;
+    bool extracted, skipEnding;
+
+    // The glowing ring on the far helipad the run heads for; it pulses until the agent reaches it
+    void SpawnExtractionZone()
+    {
+        var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        ring.name = "Extraction Zone";
+        Destroy(ring.GetComponent<Collider>());
+        extraction = ring.transform;
+        extraction.position = level.endPad + Vector3.up * 0.03f * S;
+        var r = ring.GetComponent<Renderer>();
+        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        extractionMat = r.material;
+        SetExtractionColor(UiKit.Accent);
+        StartCoroutine(PulseExtraction());
+    }
+
+    void SetExtractionColor(Color c)
+    {
+        extractionMat.color = c;
+        if (!extractionMat.HasProperty("_EmissionColor")) return;
+        extractionMat.EnableKeyword("_EMISSION");
+        extractionMat.SetColor("_EmissionColor", c * 1.5f);
+    }
+
+    IEnumerator PulseExtraction()
+    {
+        while (!extracted)
+        {
+            float s = ExtractionSize * agentHeight * (1f + 0.08f * Mathf.Sin(Time.time * 4f));
+            extraction.localScale = new Vector3(s, 0.01f, s);
+            yield return null;
+        }
+        // Triggered: a bright flash that swells and fades
+        float size = ExtractionSize * agentHeight;
+        for (float t = 0f; t < 1f; t += Time.deltaTime / 0.8f)
+        {
+            float s = size * (1f + t);
+            extraction.localScale = new Vector3(s, 0.01f, s);
+            SetExtractionColor(Color.Lerp(UiKit.Good, UiKit.Bg, t));
+            yield return null;
+        }
+        extraction.gameObject.SetActive(false);
+    }
+
+    void OnDestroy()
+    {
+        if (extractionMat != null) Destroy(extractionMat);
+    }
+
+    // Space, click or Esc skips the rest of the ending
+    bool SkipEnding()
+    {
+        var kb = Keyboard.current;
+        if (Pressed() || (kb != null && kb.escapeKey.wasPressedThisFrame)) skipEnding = true;
+        return skipEnding;
+    }
 
     IEnumerator Ending()
     {
@@ -534,12 +595,17 @@ public class ShinbunGame : MonoBehaviour
         agentT.position = pad;
         agentT.rotation = Quaternion.LookRotation(level.runDir);
         Play("Idle");
-        hud.Caption(L.T("ヘリパッドに到着！迎えの飛行機を待とう", "Reached the helipad! Wait for the plane to pick you up"));
+
+        // Stepping into the extraction zone triggers the pick-up
+        extracted = true;
+        audioSource.PlayOneShot(sfxGood);
+        hud.Pop(L.T("脱出ゾーン到達！", "Extraction zone reached!"), UiKit.Good);
+        hud.Caption(L.T("迎えの飛行機が来るよ！（スペースでスキップ）", "Here comes the pick-up plane! (Space to skip)"));
 
         // Low angle from the helipad floor, looking up at the agent and the sky
         Vector3 low = pad + (level.cameraSide * 5f - level.runDir * 4f + Vector3.up * 0.4f) * S;
-        PlacePlane(new Vector3(pad.x, pad.y + planeAltitude * 0.7f, pad.z) - level.runDir * 170f);
-        for (float t = 0f; t < 1.2f; t += Time.deltaTime)
+        PlacePlane(new Vector3(pad.x, pad.y + planeAltitude * 0.7f, pad.z) - level.runDir * 120f);
+        for (float t = 0f; t < 1f && !SkipEnding(); t += Time.deltaTime)
         {
             MovePlane();
             MoveCamera(low, agentT.position + Vector3.up * agentHeight * 2.5f, 3f);
@@ -547,26 +613,58 @@ public class ShinbunGame : MonoBehaviour
         }
         Play("Hang");   // arms up, ready to be hooked
 
+        // The plane sweeps in and hooks the agent off the pad
         bool hooked = false;
         float after = 0f;
-        while (after < 3.5f)
+        while (after < 1.2f && !SkipEnding())
         {
             MovePlane();
             Vector3 tail = planeT.TransformPoint(planeTailLocal);
             if (!hooked && Vector3.Dot(tail - agentT.position, level.runDir) >= 0f)
             {
                 hooked = true;
-                hud.Caption("");
                 audioSource.PlayOneShot(sfxGood);
             }
             if (hooked)
             {
                 after += Time.deltaTime;
                 agentT.position = Vector3.MoveTowards(agentT.position, tail, 45f * Time.deltaTime);
-                if ((agentT.position - tail).sqrMagnitude < 0.01f) agentT.position = tail;
             }
             Vector3 look = hooked ? Vector3.Lerp(agentT.position, PlaneCenter(), 0.35f) : PlaneCenter();
             MoveCamera(low, look, 3f);
+            yield return null;
+        }
+        // Skipped: jump the plane to about where the departure shot would leave it
+        if (skipEnding)
+            PlacePlane(pad + Vector3.up * (planeAltitude * 0.7f + planeSpeed * 0.9f) + level.runDir * planeSpeed * 3f);
+        // Aboard: from here the agent rides along with the plane
+        agentT.position = planeT.TransformPoint(planeTailLocal);
+        agentT.SetParent(planeT, true);
+        hud.Caption("");
+
+        // Cut to a worm's-eye view from the helipad deck: the plane climbs away overhead into the distance
+        Vector3 under = pad + (level.cameraSide * 2f - level.runDir * 3f + Vector3.up * 0.15f) * S;
+        SnapCamera(under, PlaneCenter());
+        for (float t = 0f; t < 3f && !SkipEnding(); t += Time.deltaTime)
+        {
+            FlyAway(under);
+            yield return null;
+        }
+        StartCoroutine(KeepFlying(under));   // keeps going behind the goal card / results
+    }
+
+    void FlyAway(Vector3 camAt)
+    {
+        MovePlane();
+        planeT.position += Vector3.up * planeSpeed * 0.3f * Time.deltaTime;   // climbing out
+        MoveCamera(camAt, PlaneCenter(), 6f);   // the camera stays put, turning to follow
+    }
+
+    IEnumerator KeepFlying(Vector3 camAt)
+    {
+        while (true)
+        {
+            FlyAway(camAt);
             yield return null;
         }
     }
