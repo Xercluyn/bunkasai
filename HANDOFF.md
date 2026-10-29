@@ -1,8 +1,9 @@
-# Handoff — 学園祭 エレベーターゲーム (2026-10-28)
+# Handoff — 学園祭 エレベーターゲーム (updated 2026-10-29)
 
 Where the project stands, so work can continue on another PC. (Claude's notes on the old PC don't travel with the repo; this file does.)
 
 ## Setting up on a new PC
+0. Install **Git LFS** before cloning (`git lfs install`; it comes with Git for Windows). The generated meshes in `Assets/Generated/**/*.asset` are LFS files. Without LFS they arrive as small text pointers and the walls and ceilings go missing. If you already cloned without it, run `git lfs pull`.
 1. Unity Hub → install **Unity 6000.6.4f1** → *Add project from disk* → this folder. The first open rebuilds `Library` (5–15 min).
 2. Run **Tools > Elevator Game > Reimport Game Fonts** once (fallback fonts for ▶ ✓ ↻).
 3. Run **Tools > Elevator Game > Apply Difficulty Values** once (it saves the scenes itself); this writes the tuned values into the scenes (see "Not done yet").
@@ -41,7 +42,7 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
   - Every game gets a how-to card, a 3-2-1 countdown, sounds, text of 18 px or more, and a 3 s result screen.
   - 1F: 55 s; the pause label is fixed.
   - 2F: 85 s; ↑ drops money back instead of destroying it.
-  - 3F: 14 s per question; the menu pauses the timer.
+  - 3F: 14 s per question; the menu pauses the timer. (Made harder on 2026-10-29, see below.)
   - 4F: hint after 1 mistake; 1.4× text.
   - 5F: the ring is red with ✕ on trap doors; the tutorial comes first; Quit asks twice; easy values are clamped in code (7 hallways, 1.3 s, 0.35 s window, run speed 6.5).
 
@@ -156,6 +157,30 @@ Where the project stands, so work can continue on another PC. (Claude's notes on
   - **Sizes** are set from the player's height.
   - **Ids** are `f{n}_poster_{wall|stand|banner}_{k}`, kept or left out like the other props.
   - **Check:** that posters aren't mirrored or upside down. The face direction comes from the picture faces' normals.
+
+## Done 2026-10-29 (afternoon): new character, gamepad hints, camera, shorter texts
+- **New player character: Onimaru,** a Blender onigiri rigged and animated by the user. Commit `f38847e`.
+  - The sources are `bunkasai_asset/new_onigiri/onimaru_idle.fbx` and `onimaru_run.fbx`. That folder is local only; the copies in the repo are what count.
+  - They were copied over `Assets/Animations/onigiri_idle.fbx` and `onigiri_run.fbx`, which keeps their GUIDs. `onigiri_walk.fbx` is deleted, so the Walk state plays the run at 0.6×.
+  - The rig has 14 bones (no head or hands), so it imports as **Generic**. The materials are extracted to `Assets/Materials/Character` (Rice, nori, black, lambert1).
+  - On every floor the onigiri instance is scaled **0.8**. On 4F it is 0.8 / 0.747 / 0.747; check whether that is intended.
+  - To swap the model again: replace those two FBXs (keep the file names), then run Setup Character Animation and then Setup Player On All Floors.
+- **Button hints:** `Assets/Scripts/UI/ButtonHints.cs` draws the controls as real buttons: Xbox A/B/X/Y or PlayStation ×○□△ on a pad, plus the stick, ≡ / OPTIONS, View / SHARE and keyboard keycaps.
+  - It follows whichever device was used last and the language.
+  - Use `ButtonHints.Row(parent, ink, align, ButtonHints.Of/Keys/OnPad(...))`, then place the returned rect. Its height sets the size of the buttons.
+  - Used in the 1F–4F minigame hint lines, at the bottom of 4F, in MinigameKit's Start / Continue prompts and on the ending panel.
+- **Ending panel** (`GameEnding`): Y / Enter is メニューへ and B / Esc is このまま見て回る, each with a chip under the button. A still presses the selected button.
+- **`PlayerLock.Locked` is also true for the frame a holder lets go** (`PlayerLock.JustReleased`). Before this, the A press that closed the ending panel also started the 5F arcade game next to the player.
+- **Follow camera** (`ThirdPersonCamera`): it sits farther back and higher.
+  - New values: distance 3.2 × the character's height, pivot 1.1, shoulder 0.1, start pitch 28°, pitch −20..70°, FOV 65.
+  - Cameras saved with the old framing are upgraded once through a hidden `framingVersion` field, so no tool needs to be run.
+  - `QuestGuide` hands over to the edge arrow when the marker's label would go off the top of the screen.
+  - **Open question:** QuestGuide's distances in metres assume a 1.6 m player. With the smaller onigiri they read about 3× too long.
+- **Shorter texts** in Japanese and English everywhere: how-to cards, prompts, toasts, the menus, the 5F captions and 4F messages.
+  - The five scene-saved quest texts are shortened when shown, through a short-Japanese table in `L.cs` (`L.Tr`). The keys are still the exact Japanese saved in the scenes.
+- **3F quiz is harder:** 5 questions, 4 right to clear, 7 s each, and 4 choices in a 2×2 grid. Wrong answers come from similar animals (farm, pets, birds). One try per question.
+- **Not tried in Unity yet:** all of the above apart from the character swap. Check that the 1F/4F cards, the 3F 2×2 grid and the button rows fit on screen.
+- **Untracked duplicates on the old PC:** `Assets/poster.fbx`, `Assets/festival_poster.jpeg` and `Assets/Materials/festival_poster.mat` are byte copies of the tracked `Assets/Models/School/festival_poster.fbx` and `Assets/Textures/School/festival_poster.jpeg`. Nothing uses them, so they can be deleted. They are not needed on a new PC.
 
 ## Not done yet / next steps
 1. **Play-test everything.** None of today's polish pass has run in Unity yet; it was only compile-checked. Watch for:
