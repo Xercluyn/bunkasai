@@ -210,10 +210,53 @@ public static class GamepadInput
             bool valid = current != null && current.activeInHierarchy &&
                          current.TryGetComponent<Selectable>(out var s) && s.IsInteractable();
             if (best == null) return;
+            // a card, overlay or menu on top keeps the pad: the stick can't wander onto what's behind it
+            if (valid && best.priority > BoardPriority && !current.transform.IsChildOf(ScreenRoot(best.transform)))
+                valid = false;
             if (valid && best.priority <= lastPriority) return;
             es.SetSelectedGameObject(best.gameObject);
             lastPriority = best.priority;
             padSelected = true;
+        }
+
+        // the screen `t` is on: its ancestor right under the root canvas (a how-to card, an overlay, a menu)
+        static Transform ScreenRoot(Transform t)
+        {
+            var canvas = t.GetComponentInParent<Canvas>();
+            var root = canvas != null ? canvas.rootCanvas.transform : null;
+            while (t.parent != null && t.parent != root) t = t.parent;
+            return t;
+        }
+    }
+
+    /// <summary>The stick and D-pad never select `s` (the pad reaches it through its own button, or not at all).</summary>
+    public static void NoPad(Selectable s)
+    {
+        if (s != null) s.navigation = new Navigation { mode = Navigation.Mode.None };
+    }
+
+    /// <summary>
+    /// The stick and D-pad move only between `items`, laid out `cols` to a row (left to right, top to bottom),
+    /// wrapping at the edges, so they never land on another button of the screen.
+    /// </summary>
+    public static void Grid(IList<Selectable> items, int cols)
+    {
+        int n = items.Count;
+        if (n == 0 || cols < 1) return;
+        int rows = (n + cols - 1) / cols;
+        for (int i = 0; i < n; i++)
+        {
+            int r = i / cols, c = i % cols;
+            int rowLen = Math.Min(cols, n - r * cols);
+            Selectable At(int row, int col) => items[Math.Min(row * cols + col, Math.Min(n, (row + 1) * cols) - 1)];
+            items[i].navigation = new Navigation
+            {
+                mode = Navigation.Mode.Explicit,
+                selectOnLeft = rowLen > 1 ? items[r * cols + (c + rowLen - 1) % rowLen] : null,
+                selectOnRight = rowLen > 1 ? items[r * cols + (c + 1) % rowLen] : null,
+                selectOnUp = rows > 1 ? At((r + rows - 1) % rows, c) : null,
+                selectOnDown = rows > 1 ? At((r + 1) % rows, c) : null,
+            };
         }
     }
 }

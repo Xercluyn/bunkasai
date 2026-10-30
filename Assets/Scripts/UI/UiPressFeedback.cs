@@ -6,7 +6,8 @@ using UnityEngine.UI;
 /// <summary>
 /// Button feel from style.css: the face sinks and its hard shadow shrinks while pressed,
 /// the border can change colour on hover, and a disabled button fades to 40%.
-/// Hovered (mouse) or selected (pad), the face grows a little and swapped fill / ink pairs trade colours.
+/// Hovered (mouse) or selected (pad), the face grows a little and swapped fill / ink pairs trade colours; the pad's
+/// choice also grows a bit more and wears a yellow ring (UiKit.Highlight) so it stands out from the mouse's hover.
 /// A click sounds on press and a faint tick when the pointer moves onto an enabled button.
 /// </summary>
 [RequireComponent(typeof(UiPointerState))]
@@ -14,6 +15,8 @@ using UnityEngine.UI;
 public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler, ISelectHandler, ISubmitHandler
 {
     const float BlendSpeed = 12f;
+    const float PadExtraScale = 0.04f;   // the pad's choice grows this much more than a hover
+    const float PadRingWidth = 5f;       // the yellow ring around it
     public RectTransform face;
     public Button button;
     public Shadow shadow;
@@ -35,6 +38,7 @@ public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnter
     Vector2 home;
     bool homeSet;
     float blend, eased;
+    Image padRing;
 
     // one graphic of a fill / ink pair: base is its resting colour, last what this component wrote
     class Tone { public Graphic g; public Color baseC, last; }
@@ -96,6 +100,9 @@ public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnter
         bool on = On;
         bool down = on && pointer.pressed;
         bool lit = on && hoverFx && pointer.Highlighted;
+        bool padOn = on && pointer.selected;
+        if (padOn && padRing == null && face != null) padRing = UiKit.Outline(face, PadRingWidth);
+        if (padRing != null) padRing.enabled = padOn;
 
         if (!on || !hoverFx) blend = 0f;   // disabled or locked: snap back, never blend
         else blend = Mathf.MoveTowards(blend, lit ? 1f : 0f, BlendSpeed * Time.unscaledDeltaTime);
@@ -104,14 +111,14 @@ public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerEnter
         if (face != null)
         {
             if (!homeSet) { home = face.anchoredPosition; homeSet = true; }
-            float s = Mathf.Lerp(1f, hoverScale, eased);
+            float s = Mathf.Lerp(1f, hoverScale + (padOn ? PadExtraScale : 0f), eased);
             // grow about the centre even when the pivot sits at a corner
             Vector2 grow = Vector2.Scale(face.pivot - new Vector2(0.5f, 0.5f), face.rect.size) * (s - 1f);
             face.anchoredPosition = home + grow + new Vector2(0f, down ? -depth : 0f);
             face.localScale = Vector3.one * s;
         }
         if (shadow != null) shadow.effectDistance = new Vector2(0f, down ? -(shadowDepth - depth) : -shadowDepth);
-        if (border != null) border.color = on && pointer.Highlighted ? borderHover : borderNormal;
+        if (border != null) border.color = padOn ? UiKit.Highlight : on && pointer.Highlighted ? borderHover : borderNormal;
         foreach (var (fill, ink) in swaps) Blend(fill, ink);
         group.alpha = on ? 1f : 0.4f;
     }

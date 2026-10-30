@@ -9,7 +9,8 @@ using UnityEngine.UI;
 /// Unity port of Assets/Minigame (index.html + script.js + style.css): find three "↑" cards
 /// among twelve within 55 seconds and 10 taps. スタート (and every restart) runs the shared 3-2-1
 /// countdown before the clock starts; a win holds for MinigameKit.ResultHold (skippable) and then
-/// rides the elevator to the next floor. Builds its whole UI at runtime, so the scene only needs a
+/// rides the elevator to the next floor, a loss holds the same way and goes back to the floor (where the game
+/// can't be started again for MinigameKit.ReplayWait). Builds its whole UI at runtime, so the scene only needs a
 /// camera, an EventSystem and this component.
 /// </summary>
 [RequireComponent(typeof(AudioSource))]
@@ -20,6 +21,7 @@ public class FloorMinigame : MonoBehaviour
     const float FLIP = 0.3f;
     const float HOLD = 0.5f;      // how long a wrong card stays face-up before turning back
     const int MAX_TAPS = 10;           // easy mode (was 7)
+    const float FocusRing = 30f;       // the pad's halo is this much wider than a card
 
     enum Dir { Up, Right, Down, Left }
     static readonly float[] ROT = { 0f, 90f, 180f, 270f };
@@ -179,6 +181,9 @@ public class FloorMinigame : MonoBehaviour
         UiKit.Place((RectTransform)restartPlayBtn.transform, ax, actionsY, w1, 46f);
         UiKit.Place((RectTransform)passBtn.transform, ax + w1 + 12f, actionsY, w2, 46f);
         restartPlayBtn.interactable = passBtn.interactable = false;
+        // the pad stays on the cards: Menu / OPTIONS pauses, and the pause card has リスタート
+        GamepadInput.NoPad(restartPlayBtn);
+        GamepadInput.NoPad(passBtn);
         restartPlayBtn.onClick.AddListener(StartGame);   // リスタート: new shuffle, timer and taps reset
         passBtn.onClick.AddListener(() => { if (state == State.Paused) Resume(); else Pause(); });   // 一時停止 / 続ける
 
@@ -197,6 +202,7 @@ public class FloorMinigame : MonoBehaviour
         var brt = (RectTransform)back.transform;
         UiKit.Place(brt, 16f, 12f, backText.preferredWidth + 60f, 46f);
         back.onClick.AddListener(() => SceneManager.LoadScene(floorScene));
+        GamepadInput.NoPad(back);   // mouse only: a stray push of the stick mustn't leave the game
 
         var confettiLayer = UiKit.Rect("Confetti", root);
         UiKit.Stretch(confettiLayer);
@@ -247,6 +253,7 @@ public class FloorMinigame : MonoBehaviour
         var startBtn = UiKit.MainButton(start, L.T("スタート！", "Start!"), out _);
         startBtn.onClick.AddListener(StartGame);
         GamepadInput.SetDefault(startBtn, GamepadInput.OverlayPriority);
+        GamepadInput.NoPad(startBtn);   // each card's only button: the stick never leaves it for the board behind
 
         // Win screen
         var win = Overlay(root, "WinScreen", out winScreen);
@@ -257,6 +264,7 @@ public class FloorMinigame : MonoBehaviour
         var nextBtn = UiKit.MainButton(win, L.T("次のステージへ", "Next Stage"), out _);
         nextBtn.onClick.AddListener(NextLevel);
         GamepadInput.SetDefault(nextBtn, GamepadInput.OverlayPriority);
+        GamepadInput.NoPad(nextBtn);
 
         // Game over screen
         var lose = Overlay(root, "LoseScreen", out loseScreen);
@@ -266,9 +274,10 @@ public class FloorMinigame : MonoBehaviour
         loseReason.fontSize = 20;
         loseScore = Stat(loseStats, L.T("発見数", "FOUND"), "0/3");
         loseNote = Reason(lose, "");
-        var againBtn = UiKit.MainButton(lose, L.T("もう一度", "Try Again"), out _);
-        againBtn.onClick.AddListener(StartGame);
-        GamepadInput.SetDefault(againBtn, GamepadInput.OverlayPriority);
+        var floorBtn = UiKit.MainButton(lose, L.T("フロアに戻る", "Back to the floor"), out _);
+        floorBtn.onClick.AddListener(BackToFloor);
+        GamepadInput.SetDefault(floorBtn, GamepadInput.OverlayPriority);
+        GamepadInput.NoPad(floorBtn);
 
         // Pass screen
         var pass = Overlay(root, "PassScreen", out passScreen);
@@ -281,7 +290,9 @@ public class FloorMinigame : MonoBehaviour
         var continueBtn = UiKit.MainButton(pass, L.T("続ける ▶", "Continue ▶"), out _);
         continueBtn.onClick.AddListener(Resume);
         GamepadInput.SetDefault(continueBtn, GamepadInput.OverlayPriority);
-        UiKit.SubButton(pass, L.T("↻ リスタート", "↻ Restart"), out _).onClick.AddListener(StartGame);
+        var passRestart = UiKit.SubButton(pass, L.T("↻ リスタート", "↻ Restart"), out _);
+        passRestart.onClick.AddListener(StartGame);
+        GamepadInput.Grid(new Selectable[] { continueBtn, passRestart }, 1);
 
         startScreen.SetActive(true);
         winScreen.SetActive(false);
@@ -427,9 +438,9 @@ public class FloorMinigame : MonoBehaviour
             c.pointer = c.root.gameObject.AddComponent<UiPointerState>();
             if (i == 5) GamepadInput.SetDefault(button, GamepadInput.BoardPriority);   // the pad starts near the middle
 
-            // the gamepad's cursor: a cyan halo behind the card, face up or down
-            c.focus = UiKit.Img("Focus", c.root, UiKit.Circle, UiKit.Accent);
-            UiKit.Center(c.focus.rectTransform, s + 18f, s + 18f);
+            // the gamepad's cursor: a yellow halo behind the card, face up or down
+            c.focus = UiKit.Img("Focus", c.root, UiKit.Circle, UiKit.Highlight);
+            UiKit.Center(c.focus.rectTransform, s + FocusRing, s + FocusRing);
             c.focus.raycastTarget = false;
 
             c.inner = UiKit.Stretch(UiKit.Rect("Inner", c.root));
@@ -470,6 +481,8 @@ public class FloorMinigame : MonoBehaviour
             cards.Add(c);
             ApplyCard(c, true);
         }
+        // the stick and D-pad move around the 4 × 3 cards only, wrapping at the edges
+        GamepadInput.Grid(cards.ConvertAll(c => (Selectable)c.root.GetComponent<Button>()), 4);
     }
 
     void Reveal(Card c)
@@ -609,7 +622,8 @@ public class FloorMinigame : MonoBehaviour
         // .card:not([disabled]):not(.flipped):hover / :active on the cover
         bool live = !c.disabled && !c.flipped;
         bool hover = live && c.pointer.Highlighted;
-        c.focus.enabled = c.pointer.selected || hover;
+        c.focus.enabled = state == State.Playing && (c.pointer.selected || hover);   // no cursor before the clock runs
+        c.focus.color = c.pointer.selected ? UiKit.Highlight : UiKit.Accent;   // the mouse's hover stays cyan
         bool press = live && c.pointer.pressed;
         float liftTarget = press ? -2f : hover ? 4f : 0f;
         float shadowTarget = press ? 3f : hover ? 10f : 6f;
@@ -735,6 +749,7 @@ public class FloorMinigame : MonoBehaviour
         float elapsed = Mathf.Min(TOTAL_TIME, Time.time - startAt);
         RenderTime(TOTAL_TIME - elapsed);
         foreach (var c in cards) if (!c.flipped) c.disabled = true;
+        MinigameKit.Ended(gameObject.scene.name);   // won or lost: a replay waits on the floor
 
         if (result == "win")
         {
@@ -754,8 +769,8 @@ public class FloorMinigame : MonoBehaviour
             loseReason.text = result == "time" ? L.T("時間切れ", "Time's up") : L.T("回数切れ", "Out of taps");
             loseScore.text = score + "/3";
             loseNote.text = result == "time"
-                ? L.T("時間切れ！もう一度！", "Out of time. Try again!")
-                : L.T("回数切れ！もう一度！", "Out of taps. Try again!");
+                ? L.T("時間切れ！また挑戦してね！", "Out of time. Try again later!")
+                : L.T("回数切れ！また挑戦してね！", "Out of taps. Try again later!");
             // show where every arrow was
             endTimer = StartCoroutine(Delay(result == "time" ? 0.15f : FLIP + 0.35f, () =>
             {
@@ -766,7 +781,12 @@ public class FloorMinigame : MonoBehaviour
                     Reveal(c);
                     c.ghost = true;
                 }
-                endTimer = StartCoroutine(Delay(FLIP + 0.5f, () => ShowOverlay(loseScreen)));
+                endTimer = StartCoroutine(Delay(FLIP + 0.5f, () =>
+                {
+                    ShowOverlay(loseScreen);
+                    // holds a moment (click / Space skips), then back to the floor
+                    endTimer = MinigameKit.ResultThenExit(this, canvasRoot, BackToFloor, MinigameKit.ResultHold);
+                }));
             }));
         }
     }
@@ -788,6 +808,14 @@ public class FloorMinigame : MonoBehaviour
             return;
         }
         Debug.LogWarning("FloorMinigame: next level scene not set or not in Build Settings; returning to the floor.");
+        SceneManager.LoadScene(floorScene);
+    }
+
+    // a loss: back to the 3D floor, where the play spot counts down the replay wait
+    void BackToFloor()
+    {
+        if (leaving) return;   // the result hold and 「フロアに戻る」 can both fire
+        leaving = true;
         SceneManager.LoadScene(floorScene);
     }
 

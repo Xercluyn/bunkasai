@@ -36,6 +36,7 @@ public static class UiKit
     public static readonly Color MainFill = Hex("#3ee0f5");
     public static readonly Color MainShadow = Hex("#0e7490");
     public static readonly Color Light = Hex("#e0f7ff"); // lit windows, flashes
+    public static readonly Color Highlight = Hex("#facc15"); // yellow, to stand out: the pad's choice, the quest guide
 
     public static Color Hex(string hex, float alpha = 1f)
     {
@@ -99,7 +100,7 @@ public static class UiKit
 
     // ---------- sprites ----------
     const int RoundRadius = 32;
-    static Sprite circle, ring, roundRect, glow, arrow, cardCover;
+    static Sprite circle, ring, roundRect, glow, arrow, arrowRim, cardCover;
 
     public static Sprite Circle => circle ? circle : (circle = MakeSprite(256, (x, y, s) =>
         new Color(1f, 1f, 1f, DiscAlpha(x, y, s, s * 0.5f))));
@@ -126,25 +127,46 @@ public static class UiKit
         return new Color(1f, 1f, 1f, a);
     }));
 
-    /// <summary>The up-arrow from script.js: SVG path "M50 8 L88 50 H64 V92 H36 V50 H12 Z".</summary>
-    public static Sprite Arrow => arrow ? arrow : (arrow = MakeSprite(128, (x, y, s) =>
+    // the up-arrow's outline, in SVG units (0..100, y-down)
+    static readonly Vector2[] ArrowPoly =
     {
-        Vector2[] poly =
-        {
-            new Vector2(50, 8), new Vector2(88, 50), new Vector2(64, 50), new Vector2(64, 92),
-            new Vector2(36, 92), new Vector2(36, 50), new Vector2(12, 50)
-        };
-        // 4x4 supersampling for smooth edges
+        new Vector2(50, 8), new Vector2(88, 50), new Vector2(64, 50), new Vector2(64, 92),
+        new Vector2(36, 92), new Vector2(36, 50), new Vector2(12, 50)
+    };
+    const float ArrowRimWidth = 7f;   // ArrowRim's thickness in SVG units (the arrow leaves 8 free at the edges)
+
+    /// <summary>The up-arrow from script.js: SVG path "M50 8 L88 50 H64 V92 H36 V50 H12 Z".</summary>
+    public static Sprite Arrow => arrow ? arrow : (arrow = ArrowSprite(p => InPolygon(ArrowPoly, p)));
+
+    /// <summary>An even band hugging the outside of Arrow (same size and place): lay it under or over Arrow for a rim.</summary>
+    public static Sprite ArrowRim => arrowRim ? arrowRim : (arrowRim = ArrowSprite(p =>
+        !InPolygon(ArrowPoly, p) && DistanceToPolygon(ArrowPoly, p) <= ArrowRimWidth));
+
+    // 128 px square sprite of the SVG-unit points where `inside` holds, 4x4 supersampled for smooth edges
+    static Sprite ArrowSprite(Func<Vector2, bool> inside) => MakeSprite(128, (x, y, s) =>
+    {
         int hits = 0;
         for (int i = 0; i < 4; i++)
             for (int j = 0; j < 4; j++)
             {
                 float sx = (x - 0.5f + (i + 0.5f) / 4f) / s * 100f;
                 float sy = (1f - (y - 0.5f + (j + 0.5f) / 4f) / s) * 100f;   // SVG is y-down
-                if (InPolygon(poly, new Vector2(sx, sy))) hits++;
+                if (inside(new Vector2(sx, sy))) hits++;
             }
         return new Color(1f, 1f, 1f, hits / 16f);
-    }));
+    });
+
+    static float DistanceToPolygon(Vector2[] poly, Vector2 p)
+    {
+        float best = float.MaxValue;
+        for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
+        {
+            Vector2 a = poly[j], ab = poly[i] - a;
+            float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
+            best = Mathf.Min(best, Vector2.Distance(p, a + ab * t));
+        }
+        return best;
+    }
 
     /// <summary>Card back from style.css `.cover`: gradient, stripes, rings and a translucent border.</summary>
     public static Sprite CardCover => cardCover ? cardCover : (cardCover = MakeSprite(256, (x, y, s) =>
@@ -309,6 +331,27 @@ public static class UiKit
         img.type = Image.Type.Sliced;
         img.pixelsPerUnitMultiplier = RoundRadius / radius;
     }
+
+    /// <summary>
+    /// A yellow (Highlight) rounded ring `width` wide just outside `face`, behind everything on it, following the
+    /// corners of the first rounded image on it. Turn it on and off through the returned image.
+    /// </summary>
+    public static Image Outline(RectTransform face, float width)
+    {
+        float radius = 0f;
+        foreach (var img in face.GetComponentsInChildren<Image>(true))
+            if ((radius = RadiusOf(img)) > 0f) break;
+        var ring = Box("Outline", face, Highlight, radius > 0f ? radius + width : 0f);
+        Stretch(ring.rectTransform, -width);
+        ring.transform.SetAsFirstSibling();
+        ring.raycastTarget = false;
+        ring.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        return ring;
+    }
+
+    /// <summary>The corner radius Round gave `img` (0 when it isn't rounded).</summary>
+    public static float RadiusOf(Image img) =>
+        img != null && img.sprite == roundRect && roundRect != null ? RoundRadius / img.pixelsPerUnitMultiplier : 0f;
 
     public static Text Label(Transform parent, string text, int size, Color color,
         TextAnchor anchor = TextAnchor.MiddleCenter, bool bold = true)

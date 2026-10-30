@@ -12,8 +12,10 @@ using UnityEngine.UI;
 /// (with a blip) and the object's cyan outline lights up; pressing E, Enter or the left mouse button (or clicking
 /// the prompt) leaves for the minigame scene a moment later, with a click and a whoosh. Nothing happens while the
 /// player is locked (intro, pause menu, ending). An object that can't be used yet (the elevator before the quest
-/// is cleared) gets a dim grey outline instead.
-/// Size and move the BoxCollider so it covers the floor right in front of the button.
+/// is cleared) gets a dim grey outline instead. For MinigameKit.ReplayWait seconds after its minigame ended the prompt
+/// counts down 「あと 12 秒」 and nothing starts it.
+/// Size and move the BoxCollider so it covers the floor right in front of the button; in play it reaches extraReach
+/// further on every side (the gizmo's outer box), so a first-time player doesn't have to stand exactly on it.
 /// </summary>
 [RequireComponent(typeof(BoxCollider))]
 [RequireComponent(typeof(Rigidbody))]
@@ -31,6 +33,9 @@ public class ElevatorPlayZone : MonoBehaviour
     [Tooltip("The object this zone is for (elevator, arcade box). Its InteractableOutline lights up while the prompt shows.")]
     public GameObject interactable;
 
+    [Tooltip("Metres the zone reaches beyond its BoxCollider on every side (left, right, front, back) while playing.")]
+    public float extraReach = 1f;
+
     [Tooltip("Only show the prompt when the player is also facing the button.")]
     public bool requireFacing = false;
 
@@ -45,6 +50,7 @@ public class ElevatorPlayZone : MonoBehaviour
     RectTransform buttonRect;
     Text labelText, keysText, keyBadge;
     bool keyPad;   // the prompt shows the gamepad's button
+    int waitShown; // whole seconds of the replay wait the prompt shows (0: none)
     bool leaving;
 
     /// <summary>True from a zone starting its minigame until the scene changes; the pause menu stays shut.</summary>
@@ -64,6 +70,7 @@ public class ElevatorPlayZone : MonoBehaviour
     void Awake()
     {
         ConfigurePhysics();
+        GrowReach();
         if (interactable != null) outline = interactable.GetComponent<InteractableOutline>();
         UiKit.EnsureEventSystem();
 
@@ -74,6 +81,7 @@ public class ElevatorPlayZone : MonoBehaviour
             buttonRect = (RectTransform)playButton.transform;
             buttonRect.anchorMin = buttonRect.anchorMax = buttonRect.pivot = new Vector2(0.5f, 0f);
             buttonRect.anchoredPosition = new Vector2(0f, 64f);   // under the toasts
+            UiKit.Outline((RectTransform)labelText.transform.parent, 4f);   // a yellow line around it, like the quest guide
 
             // key badge on the left of the label
             var face = labelText.transform.parent;
@@ -113,11 +121,14 @@ public class ElevatorPlayZone : MonoBehaviour
     // the language was switched
     void Relabel()
     {
+        waitShown = WaitSeconds;
+        if (playButton != null) playButton.interactable = waitShown == 0;   // greyed while it counts down
         if (labelText == null || keysText == null) return;
-        labelText.text = L.Tr(buttonLabel);
+        labelText.text = waitShown > 0 ? L.T($"あと {waitShown} 秒", $"Wait {waitShown}s") : L.Tr(buttonLabel);
         keyPad = GamepadInput.UsingPad;
         if (keyBadge != null) keyBadge.text = keyPad ? GamepadInput.InteractName : "E";
-        keysText.text = keyPad ? L.T($"{GamepadInput.InteractName} ボタン", $"{GamepadInput.InteractName} button") : L.T("E / クリック", "E / Click");
+        keysText.text = waitShown > 0 ? L.T("もうすぐまた遊べるよ", "You can play again soon")
+            : keyPad ? L.T($"{GamepadInput.InteractName} ボタン", $"{GamepadInput.InteractName} button") : L.T("E / クリック", "E / Click");
         buttonRect.sizeDelta = new Vector2(Mathf.Max(200f, labelText.preferredWidth + 76f), 54f);
     }
 
@@ -127,6 +138,16 @@ public class ElevatorPlayZone : MonoBehaviour
         var rb = GetComponent<Rigidbody>();
         rb.isKinematic = true;   // lets the CharacterController fire trigger events
         rb.useGravity = false;
+    }
+
+    // widen the box by extraReach metres on each side across the floor (local x and z), whatever the zone's scale
+    void GrowReach()
+    {
+        if (extraReach <= 0f) return;
+        var box = GetComponent<BoxCollider>();
+        var scale = transform.lossyScale;
+        box.size += new Vector3(2f * extraReach / Mathf.Max(0.0001f, Mathf.Abs(scale.x)), 0f,
+                                2f * extraReach / Mathf.Max(0.0001f, Mathf.Abs(scale.z)));
     }
 
     void OnTriggerEnter(Collider other)
@@ -171,16 +192,20 @@ public class ElevatorPlayZone : MonoBehaviour
                      !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject());
         // A / × on a gamepad, unless that press just closed the pause menu
         bool pad = GamepadInput.InteractPressed && !FloorPauseMenu.ClosedThisFrame;
-        if (keyPad != GamepadInput.UsingPad) Relabel();   // switched between the pad and keyboard + mouse
+        // switched between the pad and keyboard + mouse, or the replay wait ticked
+        if (keyPad != GamepadInput.UsingPad || waitShown != WaitSeconds) Relabel();
         if (key || click || pad) TryPlay();
     }
 
-    // E, a click or the prompt: not while the player is locked or already on the way
+    // E, a click or the prompt: not while the player is locked, already on the way or the replay wait runs
     void TryPlay()
     {
-        if (leaving || PlayerLock.Locked) return;
+        if (leaving || PlayerLock.Locked || WaitSeconds > 0) return;
         Play();
     }
+
+    // whole seconds before this zone's minigame can be played again (0: it can)
+    int WaitSeconds => Mathf.CeilToInt(MinigameKit.WaitLeft(minigameScene));
 
     bool Wants => player != null && Available && (!requireFacing || IsFacing());
 
@@ -250,5 +275,13 @@ public class ElevatorPlayZone : MonoBehaviour
         Gizmos.DrawCube(box.center, box.size);
         Gizmos.color = new Color(0.24f, 0.94f, 0.54f, 1f);
         Gizmos.DrawWireCube(box.center, box.size);
+        if (!Application.isPlaying && extraReach > 0f)
+        {
+            // how far it reaches in play (the box above grows by this at runtime)
+            var scale = transform.lossyScale;
+            Gizmos.DrawWireCube(box.center, box.size + new Vector3(
+                2f * extraReach / Mathf.Max(0.0001f, Mathf.Abs(scale.x)), 0f,
+                2f * extraReach / Mathf.Max(0.0001f, Mathf.Abs(scale.z))));
+        }
     }
 }

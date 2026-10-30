@@ -323,6 +323,7 @@ public class FourthFloorGame : MonoBehaviour
         brt.anchoredPosition = new Vector2(28f, 12f);
         brt.sizeDelta = new Vector2(backText.preferredWidth + 48f, 56f);
         back.onClick.AddListener(Leave);
+        GamepadInput.NoPad(back);   // mouse only: a stray push of the stick mustn't leave the game
 
         // the controls as buttons, centred under the page
         var hints = ButtonHints.Row(canvasRoot, UiKit.Muted, TextAnchor.MiddleCenter,
@@ -863,6 +864,7 @@ public class FourthFloorGame : MonoBehaviour
         Confetti(110);
         SetMessage(MsgAllDone, "ok", true);
         audioSource.PlayOneShot(Sfx.Win());
+        MinigameKit.Ended(gameObject.scene.name);   // a replay waits on the floor
         MinigameKit.ResultThenExit(this, canvasRoot, Leave, MinigameKit.ResultHold, 1.5f);   // the game ends by itself
     }
 
@@ -1072,7 +1074,7 @@ public class FourthFloorGame : MonoBehaviour
             }
             else if (hint) glow = Accent;
             else if (ready) glow = Accent;
-            else if (hover) glow = HoverGlow;
+            else if (hover) glow = b.pointer.selected ? UiKit.Highlight : HoverGlow;   // the pad's choice in yellow
             else if (b.complete) glow = new Color(Done.r, Done.g, Done.b, 0.67f);
             else if (hasSelection) glow = new Color(Accent.r, Accent.g, Accent.b, 0.6f);
             b.glow.color = Color.Lerp(b.glow.color, glow, k);
@@ -1092,7 +1094,7 @@ public class FourthFloorGame : MonoBehaviour
             if (hover && c.root.GetSiblingIndex() != c.root.parent.childCount - 1) c.root.SetAsLastSibling();
             float zoom = hover ? CardHoverZoom : sel ? 1.07f : 1f;
             c.face.localScale = Vector3.Lerp(c.face.localScale, Vector3.one * zoom, k);
-            c.glow.color = sel ? Accent : hover ? HoverGlow : Color.clear;
+            c.glow.color = sel ? Accent : hover ? (c.pointer.selected ? UiKit.Highlight : HoverGlow) : Color.clear;
         }
     }
 }

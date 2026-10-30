@@ -82,7 +82,7 @@ public class SecondFloorGame : MonoBehaviour
     int goal, money;
     float time, jackpotT = -1f;
     bool running, paused, playing;   // playing: a round's field is on the stage (S.items)
-    bool counting, won, leaving;     // counting: 3-2-1 before the clock runs; won: the yen is paid, the game is leaving
+    bool counting, won, leaving;     // counting: 3-2-1 before the clock runs; won: over (won or lost), the game is leaving
     int warnSec;                     // last whole second the timer showed, for the last-10-seconds beeps
     float overlayAt;                 // when the card appeared, so a held Space doesn't press it at once
     readonly List<Item> items = new List<Item>();
@@ -760,6 +760,7 @@ public class SecondFloorGame : MonoBehaviour
             else
             {
                 won = true;   // no restart from here: the yen below is paid exactly once
+                MinigameKit.Ended(gameObject.scene.name);   // a replay waits on the floor
                 GameProgress.Yen += money;   // the vending machine on the floor sells the ticket for this
                 bool isBest = bestTime <= 0f || totalUsed < bestTime;
                 if (isBest)
@@ -781,10 +782,13 @@ public class SecondFloorGame : MonoBehaviour
         else
         {
             audioSource.PlayOneShot(Sfx.Bad());
+            won = true;   // over: no restart from here (the restart keys check it too)
+            MinigameKit.Ended(gameObject.scene.name);   // a replay waits on the floor
             SetOverlay(time <= 0f ? L.T("タイムアップ", "Time's Up") : L.T("お金が尽きました", "No Money Left"),
-                L.T("あと " + Yen(goal - money) + "！もう一回！",
-                    Yen(goal - money) + " short. Try again!"),
-                L.T("もう一回", "Try Again"), StartGame, false, false);
+                L.T("あと " + Yen(goal - money) + "！また挑戦してね！",
+                    Yen(goal - money) + " short. Try again later!"),
+                L.T("フロアに戻る", "Back to the floor"), Leave, false, false);
+            MinigameKit.ResultThenExit(this, canvasRoot, Leave);   // the game ends by itself
         }
     }
 
@@ -878,13 +882,15 @@ public class SecondFloorGame : MonoBehaviour
         if (es != null && es.currentSelectedGameObject != null) es.SetSelectedGameObject(null);
 
         // keyboard, or the gamepad: A / × drops (and presses the card's button), Y / △ or D-pad up lets go,
-        // D-pad down drops too, Menu / OPTIONS pauses, View / SHARE restarts
+        // D-pad down drops too, Menu / OPTIONS pauses, View / SHARE restarts (only while paused, so a stray
+        // press can't skip the how-to card or throw a round away; the end card's own button plays again)
         var kb = Keyboard.current;
         bool pausePress = (kb != null && (kb.pKey.wasPressedThisFrame || kb.escapeKey.wasPressedThisFrame)) || GamepadInput.MenuPressed;
         bool firePress = (kb != null && (kb.downArrowKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame)) ||
                          GamepadInput.InteractPressed || GamepadInput.DpadDownPressed;
         bool cutPress = (kb != null && kb.upArrowKey.wasPressedThisFrame) || GamepadInput.NorthPressed || GamepadInput.DpadUpPressed;
-        bool restartPress = (kb != null && kb.rKey.wasPressedThisFrame) || GamepadInput.SelectPressed;
+        bool restartPress = (kb != null && kb.rKey.wasPressedThisFrame) ||
+                            (GamepadInput.SelectPressed && running && paused);
         bool cardPress = (kb != null && (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)) ||
                          GamepadInput.InteractPressed;
         if (running)

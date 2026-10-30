@@ -147,6 +147,7 @@ public class ThirdFloorGame : MonoBehaviour
         UiKit.Stretch(tt.rectTransform);
         var menuBtn = Pressable(column, W - 50f, 8f, 50f, 55f, Color.white, Ledge, 18f, 5f, "☰", 24, Ink, out _, out _, out _);
         menuButton = (RectTransform)menuBtn.transform;
+        GamepadInput.NoPad(menuBtn);   // Menu / OPTIONS opens it; the stick stays on the answers
         menuBtn.onClick.AddListener(() =>
         {
             if (menu.gameObject.activeSelf) CloseMenu();
@@ -200,6 +201,7 @@ public class ThirdFloorGame : MonoBehaviour
         picBtn.transition = Selectable.Transition.None;
         picBtn.targetGraphic = picHit;
         picBtn.onClick.AddListener(PlaySound);
+        GamepadInput.NoPad(picBtn);    // X / □ plays the word
         var picFx = picBtn.gameObject.AddComponent<UiPressFeedback>();
         picFx.face = pic; picFx.button = picBtn; picFx.depth = 0f; picFx.hoverScale = 1.03f;
         UiKit.Center(UiKit.Img("SunHalo", pic, UiKit.Circle, UiKit.Hex("#f4fcff")).rectTransform, 240f, 240f);
@@ -247,6 +249,7 @@ public class ThirdFloorGame : MonoBehaviour
         home.onClick.AddListener(Leave);
         homeBtn = home.gameObject;
         GamepadInput.SetDefault(home, GamepadInput.OverlayPriority);
+        GamepadInput.Grid(new Selectable[] { again, home }, 1);
         end.gameObject.SetActive(false);
 
         BuildMenu();
@@ -256,6 +259,7 @@ public class ThirdFloorGame : MonoBehaviour
         UiKit.Place((RectTransform)back.transform, 16f, 12f, backText.preferredWidth + 52f, 46f);
         back.onClick.AddListener(Leave);
         backBtn = back.gameObject;
+        GamepadInput.NoPad(back);      // mouse only: a stray push of the stick mustn't leave the game
     }
 
     // White card with a solid ledge underneath (box-shadow: 0 Npx 0 #b3d9f5). Returns the white face.
@@ -381,7 +385,8 @@ public class ThirdFloorGame : MonoBehaviour
     /* ---------- menu, help (both pause the round timer) ---------- */
     void OpenMenu(Vector3 worldPos)
     {
-        if (intro || helpOpen || leaving) return;   // not over the how-to-play card or the countdown
+        // not over the how-to-play card, the countdown or the end card (its 最初から would skip the replay wait)
+        if (intro || helpOpen || leaving || end.gameObject.activeSelf) return;
         menuOpen = true;
         HoldTimer();
         menuBlocker.SetActive(true);
@@ -569,6 +574,8 @@ public class ThirdFloorGame : MonoBehaviour
             opts.Add(o);
             i++;
         }
+        // the stick and D-pad move around the 2 × 2 answers only, never up to ☰, the picture or ← 戻る
+        GamepadInput.Grid(opts.Select(o => (Selectable)o.root.GetComponent<Button>()).ToList(), 2);
         int g = gen;
         StartCoroutine(Later(0.25f, () => { if (g == gen && idx < q.Count && q[idx] == cur) Say(cur.w); }));
     }
@@ -644,8 +651,9 @@ public class ThirdFloorGame : MonoBehaviour
         quiz.gameObject.SetActive(false);
         end.gameObject.SetActive(true);
         bool perfect = score >= PASS;   // cleared (PASS of ROUNDS, not necessarily all)
-        homeBtn.SetActive(perfect);
-        againBtn.SetActive(!perfect);   // a clear leaves on its own
+        homeBtn.SetActive(true);
+        againBtn.SetActive(false);      // either way it leaves on its own; a replay waits on the floor
+        MinigameKit.Ended(gameObject.scene.name);
         if (perfect)
         {
             GameProgress.ClearQuest(floorScene);   // the floor's QuestBanner shows クエストクリア！
@@ -665,7 +673,8 @@ public class ThirdFloorGame : MonoBehaviour
                 $"{score} of {ROUNDS} right.\nGet {PASS} right to clear.");
             sfx.PlayOneShot(Sfx.Bad());
             Say("So close!");
-            SayJa("もう一度がんばろう。", "Let's try again.");
+            SayJa("また挑戦してね。", "Try again later.");
+            MinigameKit.ResultThenExit(this, canvasRoot, Leave, MinigameKit.ResultHold);   // the game ends by itself
         }
     }
 
@@ -731,7 +740,7 @@ public class ThirdFloorGame : MonoBehaviour
         var mouse = Mouse.current;
         if (kb != null && kb.escapeKey.wasPressedThisFrame) CloseMenu();
         // gamepad: X / □ plays the word again, Menu / OPTIONS opens or closes ☰, B / ○ closes it
-        if (GamepadInput.WestPressed && quiz.gameObject.activeSelf && !menu.gameObject.activeSelf) PlaySound();
+        if (GamepadInput.WestPressed && quiz.gameObject.activeSelf && !menu.gameObject.activeSelf && !intro && !helpOpen) PlaySound();
         if (GamepadInput.BackPressed && menu.gameObject.activeSelf) CloseMenu();
         else if (GamepadInput.MenuPressed)
         {

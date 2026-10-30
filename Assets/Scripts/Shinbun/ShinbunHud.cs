@@ -89,7 +89,8 @@ public class ShinbunHud
         combo = UiKit.Label(panel.transform, "", 20, UiKit.Accent, TextAnchor.MiddleLeft);
         hud.alpha = 0f;
 
-        // Quit, upper right (always clickable); the first press only arms it
+        // Quit, upper right (always clickable); the first press only arms it. Mouse only: the pad has no way to it,
+        // so mashing buttons mid-run can't end the run
         quit = UiKit.SubButton(canvas, L.T("やめる", "Quit"), out quitText);
         quitRect = (RectTransform)quit.transform;
         quitRect.anchorMin = quitRect.anchorMax = quitRect.pivot = new Vector2(1f, 1f);
@@ -97,6 +98,7 @@ public class ShinbunHud
         quitRect.sizeDelta = new Vector2(QuitWidth, 46f);
         BestFit(quitText, 12);
         quit.onClick.AddListener(PressQuit);
+        GamepadInput.NoPad(quit);
         quitText.text = QuitLabel;
 
         // Judgement pop-up and a caption line near the bottom
@@ -155,7 +157,7 @@ public class ShinbunHud
 
     // ---------- quit ----------
 
-    /// <summary>Quit's click (or the gamepad's B / ○): the first press arms it, a second one within the time quits.</summary>
+    /// <summary>Quit's click: the first press arms it, a second one within the time quits.</summary>
     public void PressQuit()
     {
         if (!quit.gameObject.activeInHierarchy) return;
@@ -163,14 +165,7 @@ public class ShinbunHud
         else ArmQuit();
     }
 
-    // 「やめる」, with the pad's button while the pad is in use
-    static string QuitLabel => GamepadInput.T("やめる", "Quit", $"やめる（{GamepadInput.East}）", $"Quit ({GamepadInput.East})");
-
-    /// <summary>Rewrites Quit's label for the current input device (unless it's armed).</summary>
-    public void RefreshQuit()
-    {
-        if (quitDisarm == null) quitText.text = QuitLabel;
-    }
+    static string QuitLabel => L.T("やめる", "Quit");
 
     void ArmQuit()
     {
@@ -295,12 +290,13 @@ public class ShinbunHud
         GamepadInput.Bind(throwHelp, () => GamepadInput.T(
             $"<color={accent}>スペース</color> / <color={accent}>クリック</color> で投げる　/　早すぎ・見逃しは MISS",
             $"<color={accent}>Space</color> / <color={accent}>click</color> to throw　/　Too early or missed = MISS",
-            $"<color={accent}>{GamepadInput.South}</color> で投げる　/　早すぎ・見逃しは MISS　/　やめる：{GamepadInput.East}",
-            $"<color={accent}>{GamepadInput.South}</color> to throw　/　Too early or missed = MISS　/　Quit: {GamepadInput.East}"));
+            $"<color={accent}>{GamepadInput.South}</color> で投げる　/　早すぎ・見逃しは MISS",
+            $"<color={accent}>{GamepadInput.South}</color> to throw　/　Too early or missed = MISS"));
 
         var start = UiKit.MainButton(card.transform, L.T("▶ スタート", "▶ Start"), out _);
         start.onClick.AddListener(() => onStart());
         GamepadInput.SetDefault(start, GamepadInput.CardPriority);
+        GamepadInput.NoPad(start);   // the card's only button: the stick never leaves it
         return dim.gameObject;
     }
 
@@ -360,7 +356,7 @@ public class ShinbunHud
 
     // ---------- results ----------
 
-    public void ShowResults(int finalScore, int done, int total, int perfects, int traps, Action onReturn, Action onRetry)
+    public void ShowResults(int finalScore, int done, int total, int perfects, int traps, Action onReturn)
     {
         ShowHud(false);
         HidePrompt();
@@ -390,7 +386,6 @@ public class ShinbunHud
         var back = UiKit.MainButton(card.transform, L.T("5階に戻る", "Back to 5F"), out _);
         back.onClick.AddListener(() => onReturn());
         GamepadInput.SetDefault(back, GamepadInput.OverlayPriority);
-        var retry = UiKit.SubButton(card.transform, L.T("もう一度", "Try Again"), out _);
-        retry.onClick.AddListener(() => onRetry());
+        GamepadInput.NoPad(back);   // the card's only button (a replay waits on the floor)
     }
 }

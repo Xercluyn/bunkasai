@@ -18,9 +18,14 @@ public class QuestGuide : MonoBehaviour
 
     enum Kind { None, Game, Ticket, Elevator }
 
-    const float ArrowHalf = 26f;   // half the edge arrow (46) at the top of its pulse
+    const float ArrowHalf = 33f;   // half the edge arrow (58) at the top of its pulse
     const float LabelGap = 8f;     // space between the edge arrow and its label
-    const float MarkerTop = 84f;   // the marker's label top above its target point (34 + 34 tall + 6 bob + 10 room)
+    const float MarkerTop = 92f;   // the marker's label top above its target point (42 + 34 tall + 6 bob + 10 room)
+    const float PillY = 42f;       // the marker's label sits this far above its target point, clear of the ▼
+    // cyan with a yellow edge: the arrows' yellow rim and the labels' outer yellow line
+    static readonly Color GuideCyan = UiKit.Accent, GuideShadow = UiKit.AccentShadow;
+    const float LabelRim = 2f;     // the yellow line outside a label's cyan border
+    const float LabelBorder = 2f;  // the label's cyan border, as thick as the yellow line
 
     RectTransform canvasRect, marker, markerBob, edge, edgeLabel, hintRect;
     Text markerText, edgeText, hintText;
@@ -38,29 +43,26 @@ public class QuestGuide : MonoBehaviour
         marker = UiKit.Rect("Marker", canvasRect);
         marker.anchorMin = marker.anchorMax = new Vector2(0.5f, 0.5f);
         markerBob = UiKit.Rect("Bob", marker);
-        var pill = UiKit.Box("Label", markerBob, UiKit.WithAlpha(UiKit.Bg2, 0.9f), 14f, UiKit.Accent, 2f);
+        // both are points on the target: the label and the ▼ are placed from it (a sized rect's bottom edge would
+        // drop the label onto the ▼)
+        marker.sizeDelta = markerBob.sizeDelta = Vector2.zero;
+        var pill = GuideBox("Label", markerBob, 14f);
         var prt = pill.rectTransform;
         prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0f);
         prt.pivot = new Vector2(0.5f, 0f);
-        prt.anchoredPosition = new Vector2(0f, 34f);
+        prt.anchoredPosition = new Vector2(0f, PillY);
         prt.sizeDelta = new Vector2(220f, 34f);
         markerText = UiKit.Label(prt, "", 17, UiKit.Fg);
         markerText.horizontalOverflow = HorizontalWrapMode.Overflow;
         UiKit.Stretch(markerText.rectTransform, 4f);
-        var down = UiKit.Img("Arrow", markerBob, UiKit.Arrow, UiKit.Accent);
-        var drt = down.rectTransform;
-        drt.anchoredPosition = new Vector2(0f, 14f);
-        drt.sizeDelta = new Vector2(30f, 30f);
+        var drt = GuideArrow("Arrow", markerBob, 40f);
+        drt.anchoredPosition = new Vector2(0f, 19f);
         drt.localEulerAngles = new Vector3(0f, 0f, 180f);
-        UiKit.HardShadow(down, UiKit.AccentShadow, 3f);
 
         // arrow on the screen edge when the target is out of view
-        var e = UiKit.Img("EdgeArrow", canvasRect, UiKit.Arrow, UiKit.Accent);
-        edge = e.rectTransform;
+        edge = GuideArrow("EdgeArrow", canvasRect, 58f);
         edge.anchorMin = edge.anchorMax = new Vector2(0.5f, 0.5f);
-        edge.sizeDelta = new Vector2(46f, 46f);
-        UiKit.HardShadow(e, UiKit.AccentShadow, 3f);
-        var el = UiKit.Box("EdgeLabel", canvasRect, UiKit.WithAlpha(UiKit.Bg2, 0.9f), 12f, UiKit.Accent, 2f);
+        var el = GuideBox("EdgeLabel", canvasRect, 12f);
         edgeLabel = el.rectTransform;
         edgeLabel.anchorMin = edgeLabel.anchorMax = new Vector2(0.5f, 0.5f);
         edgeText = UiKit.Label(edgeLabel, "", 15, UiKit.Fg);
@@ -78,6 +80,29 @@ public class QuestGuide : MonoBehaviour
         hint = hb.gameObject;
 
         foreach (var g in canvasRect.GetComponentsInChildren<Graphic>()) g.raycastTarget = false;   // never blocks clicks
+    }
+
+    // A cyan arrow (pointing up) with an even yellow rim all round
+    static RectTransform GuideArrow(string name, Transform parent, float size)
+    {
+        var arrow = UiKit.Img(name, parent, UiKit.Arrow, GuideCyan);
+        var rt = arrow.rectTransform;
+        rt.sizeDelta = new Vector2(size, size);
+        UiKit.HardShadow(arrow, GuideShadow, 3f);
+        UiKit.Stretch(UiKit.Img("Rim", rt, UiKit.ArrowRim, UiKit.Highlight).rectTransform);
+        return rt;
+    }
+
+    // A label box: dark fill, cyan border, an equally thin yellow line outside it
+    static Image GuideBox(string name, Transform parent, float radius)
+    {
+        var box = UiKit.Box(name, parent, UiKit.WithAlpha(UiKit.Bg2, 0.9f), radius, UiKit.Highlight, LabelRim + LabelBorder);
+        var border = UiKit.Img("Border", box.transform, null, GuideCyan);
+        UiKit.Round(border, radius - LabelRim);
+        UiKit.Stretch(border.rectTransform, LabelRim);
+        border.transform.SetAsFirstSibling();   // under the fill
+        border.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        return box;
     }
 
     void Update()
@@ -125,7 +150,7 @@ public class QuestGuide : MonoBehaviour
             pill.sizeDelta = new Vector2(w, 34f);
             // near a side edge the label slides inwards, the ▼ stays on the target
             float over = Mathf.Max(0f, Mathf.Abs(local.x) + w * 0.5f - (half.x - 8f));
-            pill.anchoredPosition = new Vector2(-Mathf.Sign(local.x) * over, 34f);
+            pill.anchoredPosition = new Vector2(-Mathf.Sign(local.x) * over, PillY);
         }
         else
         {

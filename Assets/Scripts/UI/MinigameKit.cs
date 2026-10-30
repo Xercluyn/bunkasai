@@ -7,13 +7,33 @@ using UnityEngine.UI;
 /// <summary>
 /// Shared pieces for the minigames, so they all start and end the same way: a how-to-play card with a Start
 /// button, a 3-2-1 countdown, a result hold that leaves on its own (or on click / Space) and small feedback
-/// tweens. Everything runs on unscaled time and is built with UiKit; pass `scale` for canvases whose reference
+/// tweens. A game that has ended (won or lost) goes back to its floor, and its play spot there stays shut for
+/// ReplayWait seconds (Ended / WaitLeft). Everything runs on unscaled time and is built with UiKit; pass `scale` for canvases whose reference
 /// resolution isn't 1280×720 (4F uses 1920×1080: 1.5).
 /// </summary>
 public static class MinigameKit
 {
     /// <summary>Seconds a win/result stays before the game leaves by itself.</summary>
     public const float ResultHold = 3f;
+
+    /// <summary>Seconds an ended minigame can't be started again from its floor.</summary>
+    public const float ReplayWait = 15f;
+
+    // minigame scene → when it last ended (realtime, so it runs on through scene loads and pauses)
+    static readonly System.Collections.Generic.Dictionary<string, float> endedAt =
+        new System.Collections.Generic.Dictionary<string, float>();
+
+    /// <summary>The minigame in `scene` has just ended (won or lost): its play spot waits ReplayWait seconds.</summary>
+    public static void Ended(string scene)
+    {
+        if (!string.IsNullOrEmpty(scene)) endedAt[scene] = Time.realtimeSinceStartup;
+    }
+
+    /// <summary>Seconds left before the minigame in `scene` can be played again (0 when it can).</summary>
+    public static float WaitLeft(string scene) =>
+        !string.IsNullOrEmpty(scene) && endedAt.TryGetValue(scene, out var t)
+            ? Mathf.Max(0f, ReplayWait - (Time.realtimeSinceStartup - t))
+            : 0f;
 
     /// <summary>The 2D AudioSource on `host`, added if missing.</summary>
     public static AudioSource Audio(GameObject host)
@@ -96,6 +116,7 @@ public static class MinigameKit
         UiKit.Stretch(keys);
         button.onClick.AddListener(card.Close);
         GamepadInput.SetDefault(button, GamepadInput.CardPriority);
+        GamepadInput.NoPad(button);   // the card's only button: the stick has nowhere to go but the game behind
         return dim.gameObject;
     }
 
@@ -226,7 +247,11 @@ public static class MinigameKit
     static int shakeIds;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void NewPlay() => shaking.Clear();
+    static void NewPlay()
+    {
+        shaking.Clear();
+        endedAt.Clear();
+    }
 
     static IEnumerator ShakeRoutine(RectTransform rt, float px, float dur)
     {

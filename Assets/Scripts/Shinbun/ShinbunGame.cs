@@ -115,6 +115,7 @@ public class ShinbunGame : MonoBehaviour
         yield return Countdown();
         yield return Run();
         hud.HideQuit();   // cleared from here on: leaving must clear the quest
+        MinigameKit.Ended(gameObject.scene.name);   // a replay waits on the floor
         yield return Ending();
 
         audioSource.PlayOneShot(sfxWin);
@@ -125,10 +126,11 @@ public class ShinbunGame : MonoBehaviour
             MinigameKit.ResultThenExit(this, hud.Canvas, () => Leave(true), MinigameKit.ResultHold);
             yield break;
         }
-        hud.ShowResults(score, delivered, deliverTotal, perfects, trapsHit,
-            () => Leave(true), () => SceneManager.LoadScene(gameObject.scene.name));
+        hud.ShowResults(score, delivered, deliverTotal, perfects, trapsHit, () => Leave(true));
+        MinigameKit.ResultThenExit(this, hud.Canvas, () => Leave(true), ResultsHold);   // then back to the floor
     }
 
+    const float ResultsHold = 8f;   // the full results card has more to read than a goal card
     const int MinDeliveries = 4;   // green doors in every run, however the dice fall
 
     // Plain first and last; in between mostly deliveries with some traps, never two traps in a row,
@@ -287,19 +289,6 @@ public class ShinbunGame : MonoBehaviour
         var mesh = new Mesh { name = "Skyline Ring", vertices = verts, uv = uvs, triangles = tris };
         mesh.RecalculateBounds();
         return mesh;
-    }
-
-    bool quitPad;   // Quit's label names the pad's button
-
-    void Update()
-    {
-        if (hud == null) return;
-        if (GamepadInput.BackPressed) hud.PressQuit();   // B / ○ works like clicking Quit
-        if (quitPad != GamepadInput.UsingPad)
-        {
-            quitPad = GamepadInput.UsingPad;
-            hud.RefreshQuit();
-        }
     }
 
     void LateUpdate()
